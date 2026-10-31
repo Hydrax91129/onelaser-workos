@@ -46,7 +46,7 @@ test('AI insights use aggregated facts only and replace the rule-based text when
 test('OKR analysis compares my and team completion with time elapsed', () => {
   const { window } = load(['reports.js'], base({ objectives:[{ id:'o1', title:'Grow sales', owner_id:'u2', level:'personal' }, { id:'o2', title:'Mine', owner_id:'u1', level:'personal' }] }));
   const html = window.WorkOSReports.okr();
-  assert.match(html, /我的 OKR 完成度/); assert.match(html, /团队 OKR 完成度/); assert.match(html, /本月时间进度/); assert.match(html, /Amy/);
+  assert.match(html, /我的 OKR 完成度/); assert.match(html, /团队 OKR 完成度/); assert.match(html, /目标周期进度/); assert.match(html, /Amy/);
 });
 
 test('supply chain uses injected inventory: aged stock is purple, factory stock is transferred before a new PO', () => {
