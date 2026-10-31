@@ -118,7 +118,7 @@
     },
     okr(f) {
       const out = [];
-      out.push(f.myPct === null || f.myPct === undefined ? tr('你本月还没有可计算进度的 OKR，先为目标补充可量化的关键结果。', 'None of your OKRs has measurable progress yet — add quantified key results.') : tr(`你的 OKR 完成 ${f.myPct}%，本月时间已过 ${f.monthElapsedPct}%${f.myPct >= f.monthElapsedPct - 10 ? '，进度正常' : '，落后于时间进度'}。`, `Your OKRs are ${f.myPct}% done with ${f.monthElapsedPct}% of the month gone${f.myPct >= f.monthElapsedPct - 10 ? ' — on pace' : ' — behind schedule'}.`));
+      out.push(f.myPct === null || f.myPct === undefined ? tr('你的 OKR 暂时还没有可计算的进度，先为目标补充可量化的关键结果。', 'None of your OKRs has measurable progress yet — add quantified key results.') : tr(`你的 OKR 完成 ${f.myPct}%，目标周期已过 ${f.monthElapsedPct}%${f.myPct >= f.monthElapsedPct - 10 ? '，进度正常' : '，落后于时间进度'}。`, `Your OKRs are ${f.myPct}% done with ${f.monthElapsedPct}% of the objective cycle elapsed${f.myPct >= f.monthElapsedPct - 10 ? ' — on pace' : ' — behind schedule'}.`));
       if (f.myLaggingKrs) out.push(tr(`有 ${f.myLaggingKrs} 个关键结果明显落后，建议本周更新一次进展并说明下一步。`, `${f.myLaggingKrs} key results are clearly behind — post an update with next steps this week.`));
       if (f.teamPct !== null && f.teamPct !== undefined) out.push(tr(`团队 ${f.teamPeople} 人整体 OKR 完成 ${f.teamPct}%${f.peopleBehind.length ? `，${list(f.peopleBehind)} 落后较多，值得一对一聊一下` : '，大家进度比较均衡'}。`, `The team's ${f.teamPeople} people average ${f.teamPct}%${f.peopleBehind.length ? `; ${list(f.peopleBehind)} are furthest behind — worth a 1:1` : ' and progress is even'}.`));
       if (f.peopleWithoutKrs.length) out.push(tr(`${list(f.peopleWithoutKrs)} 的目标还没有关键结果，无法衡量进度。`, `${list(f.peopleWithoutKrs)} have objectives without key results, so progress can't be measured.`));
@@ -274,13 +274,13 @@
     const buckets = [[tr('已达成 ≥100%', 'Achieved ≥100%'), allKrs.filter(x => (x.v ?? 0) >= 100).length, '#00c875'], [tr('正常', 'On pace'), allKrs.filter(x => x.v !== null && x.v < 100 && x.v >= pace - 10).length, '#579bfc'], [tr('有风险', 'At risk'), allKrs.filter(x => x.v !== null && x.v < pace - 10 && x.v >= pace - 25).length, '#fdab3d'], [tr('落后', 'Behind'), allKrs.filter(x => x.v !== null && x.v < pace - 25).length, '#e2445c'], [tr('无法衡量', 'Not measurable'), allKrs.filter(x => x.v === null).length, '#c4c4c4']];
     const status = (p) => p === null || p === undefined ? [tr('未开始', 'No data'), '#c4c4c4'] : p >= pace - 10 ? [tr('正常', 'On pace'), '#00c875'] : p >= pace - 25 ? [tr('有风险', 'At risk'), '#fdab3d'] : [tr('落后', 'Behind'), '#e2445c'];
     return `<div class="ri">
-      <div class="page-heading"><div><div class="eyebrow">REPORTS · OKR</div><h1>${tr('OKR 分析', 'OKR analysis')}</h1><p>${tr(`把 OKR 完成度和时间进度放在一起看：目标周期已过 ${pace}%，完成度低于时间进度越多，风险越大。`, `OKR completion against time: ${pace}% of the month has passed — the further completion lags, the higher the risk.`)}</p></div></div>
+      <div class="page-heading"><div><div class="eyebrow">REPORTS · OKR</div><h1>${tr('OKR 分析', 'OKR analysis')}</h1><p>${tr(`把 OKR 完成度和时间进度放在一起看：目标周期已过 ${pace}%，完成度低于时间进度越多，风险越大。`, `OKR completion against time: ${pace}% of the objective cycle has passed — the further completion lags, the higher the risk.`)}</p></div></div>
       ${slot('okr')}
       <div class="ri-kpis">
         <div class="ri-kpi">${ring(myPct, 96, toneFor(myPct, pace))}<div><span>${tr('我的 OKR 完成度', 'My OKR completion')}</span><strong style="color:${status(myPct)[1]}">${status(myPct)[0]}</strong><em>${objs.length} ${tr('个目标', 'objectives')} · ${allKrs.length} ${tr('个关键结果', 'key results')}</em></div></div>
         <div class="ri-kpi">${ring(teamPct, 96, toneFor(teamPct, pace))}<div><span>${tr('团队 OKR 完成度', 'Team OKR completion')}</span><strong style="color:${status(teamPct)[1]}">${status(teamPct)[0]}</strong><em>${people.length} ${tr('人有目标', 'people with objectives')}</em></div></div>
         <div class="ri-kpi">${ring(companyPct, 96, toneFor(companyPct, pace))}<div><span>${tr('公司目标完成度', 'Company objectives')}</span><strong style="color:${status(companyPct)[1]}">${status(companyPct)[0]}</strong><em>${company.length} ${tr('个公司目标', 'company objectives')}</em></div></div>
-        <div class="ri-kpi time">${ring(pace, 96, '#9699a6')}<div><span>${tr('本月时间进度', 'Month elapsed')}</span><strong>${pace}%</strong><em>${tr('完成度应接近这个数字', 'Completion should be close to this')}</em></div></div>
+        <div class="ri-kpi time">${ring(pace, 96, '#9699a6')}<div><span>${tr('目标周期进度', 'Objective cycle elapsed')}</span><strong>${pace}%</strong><em>${tr('完成度应接近这个数字', 'Completion should be close to this')}</em></div></div>
       </div>
       <div class="ri-grid">
         <section class="ri-panel"><h3>${icon('user')} ${tr('我的目标与关键结果', 'My objectives & key results')}</h3>
