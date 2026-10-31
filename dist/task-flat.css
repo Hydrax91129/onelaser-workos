@@ -1,4 +1,4 @@
-/* Flat, responsive task board: no sideways scrolling; columns share the width and fold away on narrow screens. */
+/* Responsive board: fluid desktop columns and a readable, internally scrolling narrow table. */
 .mb-table,.mb-table.mb-fluid,.mb-subtable,.mb-personal-table{min-width:0!important;width:100%;table-layout:fixed}
 .mb-table-scroll{overflow:visible!important}
 .mb-task-head,.mb-task-cell,.mb-subtable .mb-task-head,.mb-subtable .mb-task-cell{width:auto!important;position:static!important;box-shadow:none!important}
@@ -37,3 +37,18 @@ td.mb-color-cell[style]>button{background:var(--cell-bg)}
 .mb-dropzone{display:flex;align-items:center;gap:10px;border:2px dashed rgba(127,140,180,.55);border-radius:10px;padding:14px 16px;cursor:pointer;font-size:13px;line-height:1.5;transition:background .15s,border-color .15s}
 .mb-dropzone .ph{font-size:22px;opacity:.8}.mb-dropzone b{font-weight:700}
 .mb-dropzone:hover,.mb-dropzone.mb-drag-over{border-color:#579bfc;background:rgba(87,155,252,.12)}
+
+.mb-task-cell .mb-title{min-width:0;flex:1 1 auto}
+@media(max-width:820px){
+ .mb-group,.mb-table-scroll{min-width:0;max-width:100%}
+ .mb-table-scroll{overflow-x:auto!important;overscroll-behavior-x:contain}
+ .mb-table,.mb-table.mb-fluid,.mb-subtable,.mb-personal-table{min-width:680px!important}
+ .mb-task-cell>div{height:auto;min-height:44px}
+ .mb-task-cell .mb-title{min-width:110px}
+}
+
+.mb-saved-completion{border-bottom:1px solid var(--mb-line);padding:18px 0;margin-bottom:16px}
+.mb-saved-completion h3{font-size:16px;margin:0 0 10px}.mb-saved-completion h4{font-size:13px;margin:14px 0 6px}
+.mb-result-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
+
+.mb-table td.mb-color-cell>button{height:auto;min-height:36px;white-space:normal}

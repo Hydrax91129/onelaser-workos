@@ -79,7 +79,7 @@
   function render() {
     const publicView=!state.actor&&publicKnowledgeRoute(),wikiActive=state.page==='knowledge'&&!/^#knowledge\/archive(?:[/?]|$)/.test(window.location.hash||'')&&(!!state.actor||publicView);
     window.WorkOSWiki?.configure({language:i18n.lang,changed:render,active:wikiActive,canViewArchive:!!state.actor});
-    if(state.actor)window.WorkOSTaskBoard?.configure({api,actor:state.actor,directory:state.directory,language:i18n.lang,toast,newTask,openTask,onTasksChanged:items=>{state.tasks=items;}});
+    if(state.actor)window.WorkOSTaskBoard?.configure({api,actor:state.actor,directory:state.directory,capabilities:state.capabilities,language:i18n.lang,toast,newTask,openTask,onTasksChanged:items=>{state.tasks=items;}});
     if(state.actor){const rc={api,state:()=>state,lang:()=>i18n.lang,rerender:render};window.WorkOSReports?.configure(rc);window.WorkOSInsights?.configure(rc);}
     if(state.actor)window.WorkOSPeople?.configure({api,state:()=>state,lang:()=>i18n.lang,rerender:render,toast,explainError,openTask,newTask,integrations:()=>state.actor?.isAdmin===true?integrationBody():'',refreshMe:async()=>{state.actor={...state.actor,...await api.get('/me')};},apiBase:window.WORKOS_CONFIG.apiBase||'/api'});
     if(state.actor)window.WorkOSProducts?.configure({api,state:()=>state,lang:()=>i18n.lang,rerender:render,toast,overlay,closeOverlay,modal});

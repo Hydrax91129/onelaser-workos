@@ -38,10 +38,11 @@
     const overdue = open.filter(x => new Date(x.due_at).getTime() < t);
     const dueSoon = open.filter(x => { const d = new Date(x.due_at).getTime(); return d >= t && d < t + 3 * DAY; });
     const accepted = list.filter(x => x.status === 'accepted');
-    const onTime = accepted.filter(x => !x.accepted_at || new Date(x.accepted_at) <= new Date(x.due_at));
+    const timed = accepted.filter(x => x.accepted_at && Number.isFinite(new Date(x.accepted_at).getTime()) && Number.isFinite(new Date(x.due_at).getTime()));
+    const onTime = timed.filter(x => new Date(x.accepted_at) <= new Date(x.due_at));
     const by = s => list.filter(x => x.status === s).length;
     return { total:list.length, open:open.length, overdue:overdue.length, dueSoon:dueSoon.length, accepted:accepted.length, revision:by('revision'), blocked:by('blocked'), submitted:by('submitted'), doing:by('doing'), planned:by('planned'),
-      completion:list.length ? Math.round(accepted.length / list.length * 100) : null, onTime:accepted.length ? Math.round(onTime.length / accepted.length * 100) : null, overdueList:overdue, dueSoonList:dueSoon };
+      completion:list.length ? Math.round(accepted.length / list.length * 100) : null, onTime:timed.length ? Math.round(onTime.length / timed.length * 100) : null, onTimeKnown:timed.length, onTimeUnknown:accepted.length - timed.length, overdueList:overdue, dueSoonList:dueSoon };
   }
   function myObjectives() { return S().objectives.filter(o => o.owner_id === me().id && o.level !== 'company'); }
   function okrPeople() {
@@ -49,8 +50,8 @@
     S().objectives.filter(o => o.owner_id && o.level !== 'company').forEach(o => { if (!byOwner.has(o.owner_id)) byOwner.set(o.owner_id, []); byOwner.get(o.owner_id).push(o); });
     return [...byOwner.entries()].map(([id, objs]) => ({ id, name:nameOf(id), objs, pct:avgPct(objs), krs:objs.flatMap(o => S().krs.filter(k => k.objective_id === o.id)) })).sort((a, b) => (a.pct ?? -1) - (b.pct ?? -1));
   }
-  function projectRows() {
-    const pj = window.WorkOSProjects; if (!pj?._data) return [];
+  function projectRows(includeSample = false) {
+    const pj = window.WorkOSProjects; if (!pj?._data || (pj._data.sample === true && !includeSample)) return [];
     const { projects, tasks } = pj._data, today = new Date().toISOString().slice(0, 10);
     return projects.map(p => {
       const ts = tasks.filter(t => t.project === p.id), done = ts.filter(t => t.status === 'done').length;
@@ -68,19 +69,19 @@
       const toReview = S().tasks.filter(t => t.reviewer_id === me().id && t.status === 'submitted').length;
       const objs = myObjectives(), period = objs[0]?.planning?.period;
       const pj = projectRows().filter(r => r.mine);
-      const pjTasks = window.WorkOSProjects?._data?.tasks.filter(t => t.owner === me().id && t.status !== 'done').length || 0;
-      return { name:me().display_name, openTasks:mine.open, overdue:mine.overdue, dueIn3Days:mine.dueSoon, returned:mine.revision, blocked:mine.blocked, toReview, completionPct:mine.completion, onTimePct:mine.onTime,
+      const pjTasks = window.WorkOSProjects?._data?.sample === true ? 0 : window.WorkOSProjects?._data?.tasks.filter(t => t.owner === me().id && t.status !== 'done').length || 0;
+      return { name:me().display_name, openTasks:mine.open, overdue:mine.overdue, dueIn3Days:mine.dueSoon, returned:mine.revision, blocked:mine.blocked, toReview, completionPct:mine.completion, onTimePct:mine.onTime, onTimeKnown:mine.onTimeKnown, onTimeUnknown:mine.onTimeUnknown,
         okrObjectives:objs.length, okrPct:avgPct(objs), monthElapsedPct:monthElapsed(period), projects:pj.length, riskyProjects:pj.filter(r => r.risk >= 30).map(r => r.name).slice(0, 3), openProjectTasks:pjTasks };
     },
     okr() {
       const objs = myObjectives(), period = objs[0]?.planning?.period, people = okrPeople();
       const behind = people.filter(p => p.pct !== null && p.pct < monthElapsed(period) - 15);
-      return { myObjectives:objs.length, myPct:avgPct(objs), monthElapsedPct:monthElapsed(period), myLaggingKrs:objs.flatMap(o => S().krs.filter(k => k.objective_id === o.id)).filter(k => (krPct(k) ?? 0) < monthElapsed(period) - 15).length,
+      return { myObjectives:objs.length, myPct:avgPct(objs), monthElapsedPct:monthElapsed(period), myLaggingKrs:objs.flatMap(o => S().krs.filter(k => k.objective_id === o.id)).filter(k => krPct(k) !== null && krPct(k) !== undefined && krPct(k) < monthElapsed(period) - 15).length,
         teamPeople:people.length, teamPct:avgPct(people.flatMap(p => p.objs)), peopleBehind:behind.map(p => p.name).slice(0, 4), peopleWithoutKrs:people.filter(p => !p.krs.length).map(p => p.name).slice(0, 4),
         companyPct:avgPct(S().objectives.filter(o => o.level === 'company')) };
     },
     project() {
-      const rows = projectRows();
+      const rows = projectRows(true);
       return { projects:rows.length, highRisk:rows.filter(r => r.risk >= 60).map(r => `${r.name} (${r.risk})`).slice(0, 3), mediumRisk:rows.filter(r => r.risk >= 30 && r.risk < 60).map(r => r.name).slice(0, 3),
         overdueTasks:rows.reduce((n, r) => n + r.overdue, 0), stuckTasks:rows.reduce((n, r) => n + r.stuck, 0), avgProgressPct:rows.length ? Math.round(rows.reduce((n, r) => n + r.progress, 0) / rows.length) : null,
         behindSchedule:rows.filter(r => r.progress < r.elapsed - 10).map(r => `${r.name}: ${r.progress}% done / ${r.elapsed}% time`).slice(0, 3) };
@@ -89,13 +90,13 @@
       const team = window.WorkOSPeople?._ui?.team;
       if (team?.members?.length) {
         const m = team.members, t = team.totals;
-        return { scope:team.scope, people:m.length, total:t.total, accepted:t.accepted, completionPct:t.completionRate, onTimePct:t.onTimeRate, overdue:t.overdue,
+        return { scope:team.scope, people:m.length, total:t.total, accepted:t.accepted, completionPct:t.completionRate, onTimePct:t.onTimeRate, onTimeKnown:t.onTimeKnown, onTimeUnknown:t.onTimeUnknown, overdue:t.overdue,
           mostOverdue:[...m].sort((a, b) => b.stats.overdue - a.stats.overdue).filter(x => x.stats.overdue).slice(0, 3).map(x => `${x.display_name} (${x.stats.overdue})`),
           lowestCompletion:[...m].filter(x => x.stats.completionRate !== null).sort((a, b) => a.stats.completionRate - b.stats.completionRate).slice(0, 2).map(x => `${x.display_name} ${x.stats.completionRate}%`),
           returned:m.reduce((n, x) => n + (x.stats.revision || 0), 0) };
       }
       const f = taskFacts(S().tasks);
-      return { scope:'visible', total:f.total, accepted:f.accepted, completionPct:f.completion, onTimePct:f.onTime, overdue:f.overdue, returned:f.revision, blocked:f.blocked, awaitingReview:f.submitted };
+      return { scope:'visible', total:f.total, accepted:f.accepted, completionPct:f.completion, onTimePct:f.onTime, onTimeKnown:f.onTimeKnown, onTimeUnknown:f.onTimeUnknown, overdue:f.overdue, returned:f.revision, blocked:f.blocked, awaitingReview:f.submitted };
     },
   };
 
@@ -107,8 +108,9 @@
       if (f.overdue) out.push(tr(`你有 ${f.overdue} 项任务已经逾期，建议今天先处理它们，或者和负责人说明新的完成时间。`, `${f.overdue} of your tasks are overdue — handle them first today, or agree a new date with the reviewer.`));
       else if (f.openTasks) out.push(tr(`你手上有 ${f.openTasks} 项进行中的任务，目前没有逾期，节奏很好。`, `You have ${f.openTasks} open tasks and nothing overdue — good pace.`));
       else out.push(tr('目前没有分派给你的进行中任务，可以主动认领新工作或推进 OKR。', 'No open tasks right now — a good moment to pick up new work or push your OKRs.'));
-      if (f.okrPct !== null && f.okrPct !== undefined) out.push(f.okrPct >= f.monthElapsedPct - 10 ? tr(`OKR 完成 ${f.okrPct}%，本月时间已过 ${f.monthElapsedPct}%，进度跟得上。`, `OKRs are ${f.okrPct}% done with ${f.monthElapsedPct}% of the month gone — on pace.`) : tr(`OKR 完成 ${f.okrPct}%，但本月时间已过 ${f.monthElapsedPct}%，需要加快关键结果的推进。`, `OKRs are ${f.okrPct}% done but ${f.monthElapsedPct}% of the month is gone — speed up your key results.`));
-      else out.push(tr('你还没有设置本月 OKR，先定 1–3 个目标，工作会更聚焦。', 'You have no OKRs this month yet — set 1–3 objectives to stay focused.'));
+      if (f.okrPct !== null && f.okrPct !== undefined) out.push(f.okrPct >= f.monthElapsedPct - 10 ? tr(`OKR 完成 ${f.okrPct}%，目标周期已过 ${f.monthElapsedPct}%，进度跟得上。`, `OKRs are ${f.okrPct}% done with ${f.monthElapsedPct}% of the objective cycle elapsed — on pace.`) : tr(`OKR 完成 ${f.okrPct}%，但目标周期已过 ${f.monthElapsedPct}%，需要加快关键结果的推进。`, `OKRs are ${f.okrPct}% done but ${f.monthElapsedPct}% of the objective cycle elapsed — speed up your key results.`));
+      else if (f.okrObjectives) out.push(tr(`已有 ${f.okrObjectives} 个目标，进度暂不可计算；请补充关键结果的量化指标或测量记录。`, `You have ${f.okrObjectives} objectives; progress is unknown. Add measurable key results or measurements.`));
+      else out.push(tr('你还没有设置 OKR，先定 1–3 个目标，工作会更聚焦。', 'You have no OKRs yet — set 1–3 objectives to stay focused.'));
       if (f.returned || f.toReview) out.push(tr(`${f.returned ? `${f.returned} 项成果被退回需要补充` : ''}${f.returned && f.toReview ? '，' : ''}${f.toReview ? `${f.toReview} 项同事的成果等你验收` : ''}，及时处理能让团队不卡住。`, `${f.returned ? `${f.returned} deliverables were returned for more evidence` : ''}${f.returned && f.toReview ? '; ' : ''}${f.toReview ? `${f.toReview} colleague submissions await your review` : ''} — clearing these keeps the team moving.`));
       if (f.riskyProjects?.length) out.push(tr(`你参与的项目里，${list(f.riskyProjects)} 有延期风险，留意相关任务。`, `${list(f.riskyProjects)} — projects you are on — risk slipping; watch your tasks there.`));
       else if (f.dueIn3Days) out.push(tr(`未来 3 天有 ${f.dueIn3Days} 项任务到期，提前准备好验收材料。`, `${f.dueIn3Days} tasks are due in 3 days — prepare the evidence early.`));
@@ -132,7 +134,9 @@
       return out.slice(0, 4);
     },
     task(f) {
-      const out = [tr(`${f.people ? `团队 ${f.people} 人` : '可见范围内'}共 ${f.total} 项任务，完成度 ${f.completionPct ?? '—'}%，准时率 ${f.onTimePct ?? '—'}%。`, `${f.people ? `${f.people} people` : 'Visible tasks'}: ${f.total} tasks, ${f.completionPct ?? '—'}% complete, ${f.onTimePct ?? '—'}% on time.`)];
+      const percent = v => typeof v === 'number' && Number.isFinite(v) ? `${v}%` : '—';
+      const out = [tr(`${f.people ? `团队 ${f.people} 人` : '可见范围内'}共 ${f.total} 项任务，完成度 ${percent(f.completionPct)}，准时率 ${percent(f.onTimePct)}。`, `${f.people ? `${f.people} people` : 'Visible tasks'}: ${f.total} tasks, ${percent(f.completionPct)} complete, ${percent(f.onTimePct)} on time.`)];
+      if (f.onTimeUnknown) out.push(tr(`有 ${f.onTimeUnknown} 项已验收任务缺少有效验收时间，准时率仅覆盖 ${f.onTimeKnown || 0} 项已核实记录。`, `${f.onTimeUnknown} accepted tasks have no valid acceptance time; on-time rate covers ${f.onTimeKnown || 0} verified records.`));
       if (f.overdue) out.push(f.mostOverdue?.length ? tr(`有 ${f.overdue} 项任务逾期，主要集中在 ${list(f.mostOverdue)}。`, `${f.overdue} tasks are overdue, mostly with ${list(f.mostOverdue)}.`) : tr(`有 ${f.overdue} 项任务逾期。`, `${f.overdue} tasks are overdue.`));
       else out.push(tr('没有逾期任务，执行情况良好。', 'No overdue tasks — execution is healthy.'));
       if (f.lowestCompletion?.length) out.push(tr(`完成度较低的是 ${list(f.lowestCompletion)}，可以看看是否任务太多或标准不清楚。`, `Lowest completion: ${list(f.lowestCompletion)} — check for overload or unclear acceptance criteria.`));
@@ -248,7 +252,7 @@
       <section class="ri-hero"><div class="ri-hero-text"><span class="ri-eyebrow">${icon('sun-horizon')} ${new Intl.DateTimeFormat(lang() === 'en' ? 'en-US' : 'zh-CN', { weekday:'long', month:'long', day:'numeric' }).format(new Date())}</span>
           <h1>${esc(greet)}${lang() === 'en' ? ', ' : '，'}${esc(a.display_name)} 👋</h1><p>${esc(tr(cheer[0], cheer[1]))}</p>
           <div class="ri-hero-actions"><button class="btn primary" data-live-action="new-task">${icon('plus')} ${tr('新建任务', 'New task')}</button><button class="btn" data-live-page="tasks">${icon('list-checks')} ${tr('去任务中心', 'Open Task hub')}</button><button class="btn" data-live-page="okr">${icon('target')} ${tr('更新 OKR', 'Update OKRs')}</button></div></div>
-        <div class="ri-hero-rings"><div>${ring(f.completionPct, 112, '#00c875', tr('任务完成', 'Tasks done'))}<span>${tf.accepted}/${tf.total} ${tr('已验收', 'accepted')}</span></div><div>${ring(f.okrPct, 112, toneFor(f.okrPct, pace), 'OKR')}<span>${tr(`本月已过 ${pace}%`, `${pace}% of month gone`)}</span></div><div>${ring(f.onTimePct, 112, '#579bfc', tr('准时率', 'On time'))}<span>${tr('按时验收的比例', 'Accepted by due date')}</span></div></div></section>
+        <div class="ri-hero-rings"><div>${ring(f.completionPct, 112, '#00c875', tr('任务完成', 'Tasks done'))}<span>${tf.accepted}/${tf.total} ${tr('已验收', 'accepted')}</span></div><div>${ring(f.okrPct, 112, toneFor(f.okrPct, pace), 'OKR')}<span>${tr(`目标周期已过 ${pace}%`, `${pace}% of objective cycle elapsed`)}</span></div><div>${ring(f.onTimePct, 112, '#579bfc', tr('准时率', 'On time'))}<span>${f.onTimeUnknown ? tr(`验收时间覆盖 ${f.onTimeKnown}/${f.onTimeKnown + f.onTimeUnknown}`, `Acceptance time coverage ${f.onTimeKnown}/${f.onTimeKnown + f.onTimeUnknown}`) : tr('按时验收的比例', 'Accepted by due date')}</span></div></div></section>
       ${slot('home')}
       ${leaderboards()}
       <h2 class="ri-h2">${icon('list-checks')} ${tr('还没做完的事', 'Still to do')}${allClear ? `<span class="ri-ok">${icon('check-circle')} ${tr('全部清零，太棒了！', 'All clear — great job!')}</span>` : ''}</h2>
@@ -270,7 +274,7 @@
     const buckets = [[tr('已达成 ≥100%', 'Achieved ≥100%'), allKrs.filter(x => (x.v ?? 0) >= 100).length, '#00c875'], [tr('正常', 'On pace'), allKrs.filter(x => x.v !== null && x.v < 100 && x.v >= pace - 10).length, '#579bfc'], [tr('有风险', 'At risk'), allKrs.filter(x => x.v !== null && x.v < pace - 10 && x.v >= pace - 25).length, '#fdab3d'], [tr('落后', 'Behind'), allKrs.filter(x => x.v !== null && x.v < pace - 25).length, '#e2445c'], [tr('无法衡量', 'Not measurable'), allKrs.filter(x => x.v === null).length, '#c4c4c4']];
     const status = (p) => p === null || p === undefined ? [tr('未开始', 'No data'), '#c4c4c4'] : p >= pace - 10 ? [tr('正常', 'On pace'), '#00c875'] : p >= pace - 25 ? [tr('有风险', 'At risk'), '#fdab3d'] : [tr('落后', 'Behind'), '#e2445c'];
     return `<div class="ri">
-      <div class="page-heading"><div><div class="eyebrow">REPORTS · OKR</div><h1>${tr('OKR 分析', 'OKR analysis')}</h1><p>${tr(`把 OKR 完成度和时间进度放在一起看：本月已过 ${pace}%，完成度低于时间进度越多，风险越大。`, `OKR completion against time: ${pace}% of the month has passed — the further completion lags, the higher the risk.`)}</p></div></div>
+      <div class="page-heading"><div><div class="eyebrow">REPORTS · OKR</div><h1>${tr('OKR 分析', 'OKR analysis')}</h1><p>${tr(`把 OKR 完成度和时间进度放在一起看：目标周期已过 ${pace}%，完成度低于时间进度越多，风险越大。`, `OKR completion against time: ${pace}% of the month has passed — the further completion lags, the higher the risk.`)}</p></div></div>
       ${slot('okr')}
       <div class="ri-kpis">
         <div class="ri-kpi">${ring(myPct, 96, toneFor(myPct, pace))}<div><span>${tr('我的 OKR 完成度', 'My OKR completion')}</span><strong style="color:${status(myPct)[1]}">${status(myPct)[0]}</strong><em>${objs.length} ${tr('个目标', 'objectives')} · ${allKrs.length} ${tr('个关键结果', 'key results')}</em></div></div>

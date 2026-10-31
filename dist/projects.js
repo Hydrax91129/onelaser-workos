@@ -75,7 +75,7 @@
   const ui = { view:'home', project:null, tab:'list', task:null, filter:'mine', cell:null, adding:null, myGroup:'due', newProject:false };
   const TODAY = '2026-10-31';
   const L = o => o && typeof o === 'object' ? (o[lang()] ?? o.zh) : o;
-  const me = () => ctx?.state?.().actor?.id && PEOPLE[ctx.state().actor.id] ? ctx.state().actor.id : 'u-kc';
+  const me = () => ctx?.state?.().actor?.id || null;
   const person = id => PEOPLE[id] || { name:id, role:{ zh:'', en:'' } };
   const hue = id => { let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
   const ini = id => { const n = person(id).name; return /^[\x00-\x7f]+$/.test(n) ? n.split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase() : n.slice(-2); };
@@ -231,7 +231,7 @@
           <dt>${tr('优先级', 'Priority')}</dt><dd>${pill(PRIORITY, t.priority)}</dd>
           <dt>${tr('所属项目', 'Project')}</dt><dd><span class="pj-tag" style="--c:${p.color}">${esc(L(p.name))}</span> · ${esc(L(g.name))}</dd>
         </dl>
-        <div class="pj-sync">${icon('arrows-clockwise')} ${tr(`已自动同步到 ${person(t.owner).name} 的「我的任务」和任务中心，到期前会提醒。`, `Synced to ${person(t.owner).name}’s My tasks and Task hub automatically; a reminder is sent before the due date.`)}</div>
+        <div class="pj-sync">${icon('arrows-clockwise')} ${tr(`示例演示：分派给 ${person(t.owner).name} 的「我的任务」和任务中心；示例不会发送提醒或写入任务中心。`, `Sample preview for ${person(t.owner).name}’s My tasks and Task hub automatically; samples do not send reminders or create live tasks.`)}</div>
         <section><h3>${tr('描述', 'Description')}</h3><p class="pj-text pj-muted">${esc(t.desc || tr('添加更详细的说明、验收标准或参考链接……', 'Add details, acceptance criteria or links…'))}</p></section>
         <section><h3>${tr('子任务', 'Subtasks')} ${t.subtasks.length ? `<span>${t.subtasks.filter(s => s.done).length}/${t.subtasks.length}</span>` : ''}</h3><ul class="pj-subs">${t.subtasks.map((s, i) => `<li><button class="pj-check ${s.done ? 'on' : ''}" data-pj="toggle-sub" data-id="${t.id}" data-i="${i}" role="checkbox" aria-checked="${s.done}">${icon('check')}</button><span class="${s.done ? 'pj-strike' : ''}">${esc(L(s.t))}</span></li>`).join('')}</ul><button class="pj-addline">${icon('plus')} ${tr('添加子任务', 'Add subtask')}</button></section>
         <section><h3>${tr('评论', 'Comments')}</h3>${t.comments.map(c => `<div class="pj-comment">${av(c.by, 26)}<div><div><strong>${esc(person(c.by).name)}</strong> <span>${fmt(c.at)}</span></div><p>${esc(L(c.text))}</p></div></div>`).join('')}<form class="pj-comment-form" id="pj-comment" data-id="${t.id}">${av(me(), 26)}<input name="text" required placeholder="${tr('写评论，@提及同事……', 'Comment, @mention someone…')}"><button class="pj-btn small primary">${tr('发送', 'Send')}</button></form></section>
@@ -311,7 +311,7 @@
       case 'tab': ui.tab = t.dataset.v; ui.adding = null; return rerender();
       case 'open-task': return openTask(id);
       case 'cell': ui.cell = ui.cell && ui.cell.id === id && ui.cell.f === t.dataset.f ? null : { id, f:t.dataset.f }; return rerender();
-      case 'set-cell': task[t.dataset.f] = t.dataset.v; ui.cell = null; ctx.toast(t.dataset.f === 'owner' ? tr(`已分派给 ${person(t.dataset.v).name}，已出现在 TA 的「我的任务」`, `Assigned to ${person(t.dataset.v).name}; now in their My tasks`) : tr('已更新', 'Updated')); return rerender();
+      case 'set-cell': task[t.dataset.f] = t.dataset.v; ui.cell = null; ctx.toast(t.dataset.f === 'owner' ? tr(`已分派给 ${person(t.dataset.v).name}；仅为示例，不会写入真实任务`, `Assigned to ${person(t.dataset.v).name}; sample only, no live task created`) : tr('已更新', 'Updated')); return rerender();
       case 'toggle-done': task.status = task.status === 'done' ? 'working' : 'done'; rerender(); return repaintPanel();
       case 'toggle-sub': task.subtasks[+t.dataset.i].done = !task.subtasks[+t.dataset.i].done; rerender(); return repaintPanel();
       case 'add-task': ui.adding = t.dataset.group; return rerender();
@@ -324,8 +324,8 @@
     const f = e.target; if (!ctx || !f.id?.startsWith('pj-')) return;
     e.preventDefault();
     const v = Object.fromEntries(new FormData(f));
-    if (f.id === 'pj-add') { const p = proj(ui.project); tasks.push(T(p.id, f.dataset.group, { zh:v.title, en:v.title }, v.owner, 'todo', 'medium', TODAY, v.due)); ctx.toast(tr(`任务已添加，并同步到 ${person(v.owner).name} 的「我的任务」`, `Task added and synced to ${person(v.owner).name}’s My tasks`)); return rerender(); }
-    if (f.id === 'pj-status') { const p = proj(ui.project); p.health = v.health; p.updates.unshift({ by:me(), at:TODAY, health:v.health, text:{ zh:v.text, en:v.text } }); ui.adding = null; ctx.toast(tr('状态更新已发布，项目成员会收到通知', 'Status update posted; members are notified')); return rerender(); }
+    if (f.id === 'pj-add') { const p = proj(ui.project); tasks.push(T(p.id, f.dataset.group, { zh:v.title, en:v.title }, v.owner, 'todo', 'medium', TODAY, v.due)); ctx.toast(tr(`示例任务已添加，仅在原型中展示给 ${person(v.owner).name} 的「我的任务」`, `Sample task added in the prototype for ${person(v.owner).name}’s My tasks`)); return rerender(); }
+    if (f.id === 'pj-status') { const p = proj(ui.project); p.health = v.health; p.updates.unshift({ by:me(), at:TODAY, health:v.health, text:{ zh:v.text, en:v.text } }); ui.adding = null; ctx.toast(tr('示例状态已更新；不会通知真实成员', 'Sample status updated; no notifications sent')); return rerender(); }
     if (f.id === 'pj-comment') { const t = tasks.find(x => x.id === f.dataset.id); t.comments.push({ by:me(), at:TODAY, text:{ zh:v.text, en:v.text } }); repaintPanel(); return rerender(); }
     if (f.id === 'pj-new') { const id = 'p' + (++seq); const tplGroups = { launch:[['设计','Design','#579bfc'],['打样与测试','Prototype & test','#a25ddc'],['上市准备','Launch prep','#fdab3d']], campaign:[['策划','Plan','#579bfc'],['素材','Creative','#a25ddc'],['执行','Run','#00c875'],['复盘','Review','#fdab3d']], show:[['展位','Booth','#579bfc'],['物流','Shipping','#a25ddc'],['邀约','Invites','#00c875']], blank:[['待办','To do','#579bfc']] }[v.tpl] || [];
       projects.unshift({ id, name:{ zh:v.name, en:v.name }, color:'#ff7575', emoji:'rocket-launch', owner:me(), members:[me()], start:v.start, end:v.end, health:'on_track', desc:{ zh:'', en:'' }, groups:tplGroups.map((g, i) => ({ id:'g' + i, name:{ zh:g[0], en:g[1] }, color:g[2] })), milestones:[], updates:[] });
@@ -333,13 +333,6 @@
   });
 
   /* Task hub inbox: every open project task assigned to me shows up in the Task hub automatically. */
-  function taskInbox() {
-    if (!ctx) return '';
-    const mine = tasks.filter(t => t.owner === me() && t.status !== 'done').sort((a, b) => a.due.localeCompare(b.due));
-    if (!mine.length) return '';
-    const late = mine.filter(overdue).length;
-    return `<section class="pj-inbox ${ui.inboxOpen === false ? 'closed' : ''}"><button class="pj-inbox-head" data-pj="inbox-toggle">${icon('folder-simple')} <strong>${tr('来自项目管理的任务', 'From Projects')}</strong><span>${mine.length}</span>${late ? `<em>${late} ${tr('项逾期', 'overdue')}</em>` : ''}<small>${tr('项目里分派给你的任务会自动出现在这里', 'Project tasks assigned to you appear here automatically')}</small>${icon(ui.inboxOpen === false ? 'caret-down' : 'caret-up')}</button>
-      ${ui.inboxOpen === false ? '' : `<div class="pj-inbox-list">${mine.map(t => { const p = proj(t.project); return `<button class="pj-my-row pj-inbox-row" data-pj="open-task" data-id="${t.id}"><span class="pj-check"></span><span class="pj-my-title">${esc(L(t.title))}</span><span class="pj-tag" style="--c:${p.color}">${esc(L(p.name))}</span>${pill(STATUS, t.status, 'small')}<span class="pj-due ${overdue(t) ? 'late' : ''}">${fmt(t.due)}</span></button>`; }).join('')}</div>`}</section>`;
-  }
-  window.WorkOSProjects = { configure(next) { ctx = next; }, render, analysis, taskInbox, _data:{ projects, tasks }, _ui:ui };
+  function taskInbox() { return ''; } // Sample projects never become live assignments.
+  window.WorkOSProjects = { configure(next) { ctx = next; }, render, analysis, taskInbox, _data:{ sample:true, projects, tasks }, _ui:ui };
 })();
