@@ -178,6 +178,18 @@
     ['.pd-media-add', h('上传图片 / 视频','为产品添加主图、细节图和视频。','','Upload media','Add product images and video.','')],
     ['.pd-select', h('供应链状态','产品生命周期阶段：开发中 → 上新中 → 在售 → 清库存 → 计划停售 → 停售。','状态会影响补货建议和清库存提示。','Supply status','Lifecycle stage.','It drives replenishment and clearance hints.')],
     ['.pd-check input', h('销售渠道','这个产品在哪些渠道上架销售。','','Sales channels','Where this product is listed.','')],
+    ['[data-mb="assign"]', h('Assign Task 下达任务','给公司任何同事下达任务，跨部门也可以。','任务会进入对方的任务中心，你是验收人；AI 会自动跟进、催办，逾期时同时提醒你。','Assign Task','Give a task to anyone in the company, across departments.','It lands in their task center, you review it, and AI follows up.')],
+    ['#live-assign-task [name="assigneeId"]', h('指派给','选择要接这项任务的同事，按工作地点分组。','','Assign to','The colleague who will do it, grouped by location.','')],
+    ['#live-assign-task [name="title"]', h('任务名称','一句话说清楚要做什么。','以动词开头，具体到结果。','Task name','One line saying what to do.','')],
+    ['#live-assign-task [name="dueAt"]', h('截止时间','对方必须完成的时间。','AI 会在到期前 3 天、1 天和逾期时提醒对方。','Due','When it must be done.','AI reminds them 3 and 1 days before and when overdue.')],
+    ['#live-assign-task [name="priority"]', h('优先级','让对方知道这件事有多急。','','Priority','How urgent it is.','')],
+    ['#live-assign-task [name="description"]', h('期望成果','你希望对方交出什么、达到什么效果。','写得越清楚，对方越不会做偏，AI 评分也越准。','Expected outcome','What you expect delivered.','Clear expectations prevent rework.')],
+    ['#live-assign-task [name="criteria"]', h('验收标准','一行一条，你验收时逐条检查。','','Acceptance criteria','One per line; you check each when reviewing.','')],
+    ['.mb-src-direct', h('任务来源：直接下达','这项任务是某位同事直接下达的，下达人就是验收人。','','Source: assigned','Assigned directly by a colleague, who also reviews it.','')],
+    ['.mb-src-okr', h('任务来源：OKR','这项任务来自一条关键结果（KR）。','完成它会推动对应 OKR 的进度。','Source: OKR','Comes from a key result.','')],
+    ['.mb-src-project', h('任务来源：项目','这项任务来自项目管理。','','Source: project','Comes from a project.','')],
+    ['.ri-assign .ri-row', h('打开任务','查看任务详情、写进展或提交成果。','','Open task','View details, post progress or submit the result.','')],
+    ['.ri-nudge', h('AI 跟进提醒','AI 根据截止日期和更新情况自动发出的提醒。','点击打开对应任务处理。','AI follow-up','Automatic reminder based on due date and activity.','Click to open the task.')],
     // ---- Sidebar section headers ----
     ['[data-nav-toggle]', h('菜单分组','点击收起或展开这一组菜单。','常用的分组保持展开，不常用的收起，下次打开会记住。','Menu group','Collapse or expand this group.','Your choice is remembered.')],
     // ---- OKR: new objective / key result forms (why each field matters) ----

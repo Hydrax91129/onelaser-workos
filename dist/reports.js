@@ -191,6 +191,35 @@
     return `<div class="ri-stack">${parts.filter(p => p[1]).map(([label, n, color]) => `<span style="flex:${n};background:${color}" title="${esc(label)} ${n}"></span>`).join('')}</div><ul class="ri-legend">${parts.map(([label, n, color]) => `<li><i style="background:${color}"></i>${esc(label)}<b>${n}</b></li>`).join('')}</ul>`;
   }
 
+  /* ---------- assigned work: who gave me tasks, what I assigned, AI follow-ups ---------- */
+  let assign = null, assignAt = 0, assignLoading = false;
+  function loadAssign() {
+    if (!S().capabilities?.assignTasks || assignLoading || (assign && Date.now() - assignAt < 60000)) return;
+    assignLoading = true;
+    Promise.all([ctx.api.get('/tasks/assignments'), ctx.api.get('/nudges')]).then(([a, n]) => { assign = { ...a, nudges:n.items || [], unread:n.unread || 0 }; assignAt = Date.now(); })
+      .catch(() => { assign = assign || { toMe:[], byMe:[], nudges:[], unread:0 }; assignAt = Date.now(); }).finally(() => { assignLoading = false; ctx.rerender(); });
+  }
+  const isDone = t => t.status === 'accepted' || t.board_status === 'done';
+  const dueTag = t => { const d = new Date(t.due_at).getTime(), days = Math.ceil((d - Date.now()) / 864e5); if (isDone(t)) return `<em class="ri-due done">${tr('已完成', 'Done')}${t.completion?.ai_score != null ? ' ' + t.completion.ai_score + '/10' : ''}</em>`; if (days < 0) return `<em class="ri-due over">${tr(`逾期 ${-days} 天`, `${-days}d overdue`)}</em>`; if (days <= 3) return `<em class="ri-due soon">${tr(`剩 ${days} 天`, `${days}d left`)}</em>`; return `<em class="ri-due">${new Date(t.due_at).toLocaleDateString(lang() === 'en' ? 'en-US' : 'zh-CN', { month:'short', day:'numeric' })}</em>`; };
+  const srcLabel = t => t.source_kind === 'okr' ? `<span class="ri-src okr">${icon('target')} OKR</span>` : t.source_kind === 'project' ? `<span class="ri-src">${icon('folder')} ${tr('项目', 'Project')}</span>` : `<span class="ri-src direct">${icon('paper-plane-tilt')} ${esc(t.assigned_by_name || '')}</span>`;
+  function assignPanel() {
+    if (!S().capabilities?.assignTasks) return '';
+    loadAssign();
+    if (!assign) return '';
+    const toMe = assign.toMe.filter(t => !isDone(t)), byMe = assign.byMe, open = byMe.filter(t => !isDone(t));
+    const late = open.filter(t => new Date(t.due_at).getTime() < Date.now()).length;
+    const nudges = assign.nudges.slice(0, 4);
+    if (!toMe.length && !byMe.length && !nudges.length) return '';
+    return `<div class="ri-grid ri-assign">
+      <section class="ri-panel"><h3>${icon('tray-arrow-down')} ${tr('别人给我下达的任务', 'Assigned to me')} <b>${toMe.length}</b></h3>
+        ${toMe.length ? toMe.slice(0, 6).map(t => `<button class="ri-row" data-live-task="${esc(t.id)}">${srcLabel(t)}<span class="ri-row-t">${esc(t.title)}</span>${dueTag(t)}</button>`).join('') : `<p class="ri-empty">${tr('目前没有别人下达给你的任务。', 'Nothing assigned to you right now.')}</p>`}
+        ${nudges.length ? `<div class="ri-nudges"><h4>${icon('robot')} ${tr('AI 跟进提醒', 'AI follow-ups')}${assign.unread ? ` <b>${assign.unread}</b>` : ''}</h4>${nudges.map(n => `<button class="ri-nudge ${n.read ? '' : 'unread'}" data-live-task="${esc(n.taskId)}"><span>${esc(n.message)}</span><em>${n.role === 'assigner' ? tr(`抄送你 · ${esc(n.ownerName || '')}`, `cc · ${esc(n.ownerName || '')}`) : ''} ${new Date(n.createdAt).toLocaleString(lang() === 'en' ? 'en-US' : 'zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' })}</em></button>`).join('')}</div>` : ''}
+      </section>
+      <section class="ri-panel"><h3>${icon('paper-plane-tilt')} ${tr('我下达的任务', 'Assigned by me')} <b>${open.length}</b>${late ? `<span class="ri-late">${tr(`${late} 项逾期`, `${late} overdue`)}</span>` : ''}</h3>
+        ${byMe.length ? byMe.slice(0, 6).map(t => `<button class="ri-row" data-live-task="${esc(t.id)}"><span class="ri-src">${icon('user')} ${esc(t.owner_name || '')}</span><span class="ri-row-t">${esc(t.title)}</span>${dueTag(t)}</button>`).join('') : `<p class="ri-empty">${tr('在任务中心点“Assign Task”给同事下达任务，AI 会帮你跟进。', 'Use Assign Task in the Task hub; AI will follow up for you.')}</p>`}
+      </section></div>`;
+  }
+
   /* ---------- team leaderboards (aggregated counts for the whole department) ---------- */
   let board = null, boardLoading = false;
   function loadBoard() {
@@ -254,6 +283,7 @@
           <div class="ri-hero-actions"><button class="btn primary" data-live-action="new-task">${icon('plus')} ${tr('新建任务', 'New task')}</button><button class="btn" data-live-page="tasks">${icon('list-checks')} ${tr('去任务中心', 'Open Task hub')}</button><button class="btn" data-live-page="okr">${icon('target')} ${tr('更新 OKR', 'Update OKRs')}</button></div></div>
         <div class="ri-hero-rings"><div>${ring(f.completionPct, 112, '#00c875', tr('任务完成', 'Tasks done'))}<span>${tf.accepted}/${tf.total} ${tr('已验收', 'accepted')}</span></div><div>${ring(f.okrPct, 112, toneFor(f.okrPct, pace), 'OKR')}<span>${tr(`目标周期已过 ${pace}%`, `${pace}% of objective cycle elapsed`)}</span></div><div>${ring(f.onTimePct, 112, '#579bfc', tr('准时率', 'On time'))}<span>${f.onTimeUnknown ? tr(`验收时间覆盖 ${f.onTimeKnown}/${f.onTimeKnown + f.onTimeUnknown}`, `Acceptance time coverage ${f.onTimeKnown}/${f.onTimeKnown + f.onTimeUnknown}`) : tr('按时验收的比例', 'Accepted by due date')}</span></div></div></section>
       ${slot('home')}
+      ${assignPanel()}
       ${leaderboards()}
       <h2 class="ri-h2">${icon('list-checks')} ${tr('还没做完的事', 'Still to do')}${allClear ? `<span class="ri-ok">${icon('check-circle')} ${tr('全部清零，太棒了！', 'All clear — great job!')}</span>` : ''}</h2>
       <div class="ri-todo">${todo.map(([ic, label, n, color, note]) => `<div class="ri-todo-card ${n ? '' : 'zero'}" style="--c:${color}"><span>${icon(ic)} ${label}</span><strong>${n}</strong><em>${note}</em></div>`).join('')}</div>

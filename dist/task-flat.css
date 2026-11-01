@@ -52,3 +52,12 @@ td.mb-color-cell[style]>button{background:var(--cell-bg)}
 .mb-result-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
 
 .mb-table td.mb-color-cell>button{height:auto;min-height:36px;white-space:normal}
+.mb-src{display:inline-flex;align-items:center;gap:3px;margin-left:6px;font-size:11px;line-height:1;padding:3px 6px;border-radius:999px;white-space:nowrap;vertical-align:1px;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.mb-src-direct{background:#e8f0ff;color:#245bdb}.mb-src-okr{background:#f1e8ff;color:#7a3fd1}.mb-src-project{background:#e6f7f1;color:#0f8a5f}
+html[data-theme=dark] .mb-src-direct{background:#24324f;color:#9dbbff}html[data-theme=dark] .mb-src-okr{background:#33264a;color:#c9a6ff}
+.mb-assign{background:#fff;border:1px solid #3370ff;color:#3370ff}
+.assign-intro{display:flex;gap:8px;align-items:flex-start;background:#f4f7ff;border-radius:8px;padding:10px 12px;margin-bottom:12px;line-height:1.55}
+html[data-theme=dark] .assign-intro{background:#232a3a}
+.mb-task-cell>div:has(.mb-src-line){flex-wrap:wrap;height:auto;row-gap:0;padding-top:4px;padding-bottom:5px}
+.mb-src-line{order:10;flex:0 0 100%;display:flex;padding-left:28px;min-width:0}
+.mb-src-line .mb-src{margin-left:0;max-width:100%}
