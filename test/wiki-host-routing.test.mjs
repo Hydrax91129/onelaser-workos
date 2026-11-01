@@ -67,13 +67,13 @@ async function harness({ hash = '', executive = false, fetchOverride = () => und
 test('browser Back to the empty initial hash restores the current role default page', async () => {
   for (const executive of [false, true]) {
     const h = await harness({ executive });
-    assert.equal(h.document.querySelector('.breadcrumb strong').textContent, 'My workbench');
+    assert.equal(h.document.querySelector('.breadcrumb strong').textContent, 'Work Center');
     await h.click('[data-live-page="knowledge"]');
     assert.equal(h.window.location.hash, '#knowledge/');
     assert.ok(h.document.querySelector('.wiki-root'));
     await h.back();
     assert.equal(h.window.location.hash, '');
-    assert.equal(h.document.querySelector('.breadcrumb strong').textContent, 'My workbench');
+    assert.equal(h.document.querySelector('.breadcrumb strong').textContent, 'Work Center');
     assert.equal(h.document.querySelector('.wiki-root'), null);
     assert.equal(h.wikiContexts.at(-1).active, false);
   }

@@ -34,7 +34,7 @@
     overview: h('个人工作台',
       '你的首页：一眼看到今天还有哪些事没做、哪些地方没做好，以及任务完成度、OKR 进度和准时率。',
       '先看“还没做完的事”的彩色卡片（逾期、即将到期、被退回、等我验收、有阻塞），再处理“需要你处理”列表；“自动分析 / AI 分析”用几句话总结你现在最该关注什么。',
-      'My workbench',
+      'Work Center',
       'Your home page: what is still undone or not going well today, plus task completion, OKR progress and on-time rate.',
       'Check the colored “Still to do” cards first (overdue, due soon, returned, awaiting my review, blocked), then work through “Needs your action”; the analysis card sums up what matters most right now.'),
     'okr-analysis': h('OKR 分析',
@@ -280,7 +280,7 @@
     ['#pp-disable [name="reassignTo"]', h('任务转交','他的未完成任务转给谁；等他验收的任务改由其上级验收。','','Hand over to','Who takes their open tasks.','')],
     // Navigation (left sidebar)
     ['[data-live-page="executive"].nav-item', h('老板看板','全公司只读总览，适合管理层每天快速了解进度。','点击进入，查看 OKR 进度、部门交付和待协调事项。','Executive overview','Company-wide read-only view for leadership.','Open it to see OKR progress, delivery and items that need coordination.')],
-    ['[data-live-page="overview"].nav-item', h('个人工作台','个人表现和需要你注意的任务、项目。','每天上班先点这里。','My workbench','Your performance and what needs your attention.','Start each day here.')],
+    ['[data-live-page="overview"].nav-item', h('个人工作台','个人表现和需要你注意的任务、项目。','每天上班先点这里。','Work Center','Your performance and what needs your attention.','Start each day here.')],
     ['[data-live-page="team"].nav-item', h('任务分析','看所有向你汇报的同事的任务完成情况。','有下属才会有数据；汇报线由管理员设置。','Task analysis','Task outcomes of everyone who reports to you.','Data appears once reporting lines are set.')],
     ['[data-live-page="project-analysis"].nav-item', h('项目分析','项目进展、及时性和延期可能性。','','Project analysis','Project progress, timeliness and delay risk.','')],
     ['[data-live-page="products"].nav-item', h('产品管理','查询产品、补齐产品属性。','仅限授权人员。','Product catalog','Look up products and complete their attributes.','Restricted access.')],
@@ -302,8 +302,8 @@
     ['[data-wiki-assistant-open]', h('AI 产品助手','基于已核对的知识库回答产品问题。','输入机型和问题，例如“Hydra 如何对焦”。回答仅供参考，以 Wiki 原文为准。','AI product assistant','Answers product questions from reviewed knowledge.','Type the model and question, e.g. “How do I focus the Hydra?”. Check the Wiki article for the final word.')],
 
     // Top bar
-    ['[data-live-lang="zh"]', h('切换到中文','把界面文字切换成中文。','界面文字随之切换；OKR 里大家写的内容会自动翻译成这个语言，标“译”的点一下可看原文。','Switch to Chinese','Shows the interface in Chinese.','OKR text people wrote is auto-translated too; click the Tr badge for the original.')],
-    ['[data-live-lang="en"]', h('Switch to English','把界面文字切换成英文，方便美国同事使用。','界面文字随之切换；OKR 里大家写的内容会自动翻译成这个语言，标“译”的点一下可看原文。','Switch to English','Shows the interface in English.','OKR text people wrote is auto-translated too; click the Tr badge for the original.')],
+    ['[data-live-lang="zh"]', h('切换到中文','把界面文字切换成中文。','界面文字、同事姓名随之切换；OKR 里大家写的内容会自动翻译，标“译”的点一下可看原文。','Switch to Chinese','Shows the interface in Chinese.','Names switch too, and OKR text is auto-translated; click the Tr badge for the original.')],
+    ['[data-live-lang="en"]', h('Switch to English','把界面文字切换成英文，方便美国同事使用。','界面文字、同事姓名随之切换；OKR 里大家写的内容会自动翻译，标“译”的点一下可看原文。','Switch to English','Shows the interface in English.','Names switch too, and OKR text is auto-translated; click the Tr badge for the original.')],
     ['[data-live-action="theme"]', h('日间 / 夜间主题','切换浅色或深色界面，保护眼睛。','点击切换，选择会保存在当前浏览器。','Light / dark theme','Switches between light and dark mode.','Click to toggle; your choice is saved in this browser.')],
     ['[data-live-action="refresh"]', h('刷新数据','从服务器重新读取最新数据。','同事刚更新了内容、而你这里没变化时点击。','Refresh data','Reloads the latest data from the server.','Click when a colleague has updated something you don’t see yet.')],
 

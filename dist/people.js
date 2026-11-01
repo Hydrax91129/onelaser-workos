@@ -138,6 +138,8 @@
         </section>
         <section class="pp-panel"><h2>${tr('联系方式', 'Contact details')}</h2>
           <form id="pp-profile" class="form-grid">
+            ${field('nameZh', tr('中文名', 'Chinese name'), a.name_zh, 'text', 'maxlength="40" required placeholder="' + tr('例如：陈一', 'e.g. 陈一') + '"')}
+            ${field('nameEn', tr('英文名', 'English name'), a.name_en, 'text', 'maxlength="60" required pattern="[A-Za-z0-9 .\'\\-]+" placeholder="Yi Chen"')}
             ${field('title', tr('职位', 'Title'), a.title, 'text', 'maxlength="80" placeholder="' + tr('例如：销售经理', 'e.g. Sales manager') + '"')}
             ${field('phone', tr('电话', 'Phone'), a.phone, 'tel', 'maxlength="40" placeholder="+1 949 555 0100"')}
             ${field('email', tr('邮箱', 'Email'), a.email, 'email', 'maxlength="200"')}
@@ -171,7 +173,7 @@
   async function loadOrg() {
     ui.orgLoading = true; ui.orgError = '';
     try {
-      ui.org = await ctx.api.get('/org/members');
+      ui.org = await ctx.api.get('/org/members'); window.WorkOSNames?.apply(ui.org.items);
       if (canInvite()) { try { ui.invites = await ctx.api.get('/org/invites'); } catch { ui.invites = { items:[], emailDelivery:false }; } }
     } catch (e) { ui.orgError = ctx.explainError(e); }
     finally { ui.orgLoading = false; if (S().page === 'org') ctx.rerender(); }
@@ -225,6 +227,7 @@
       `<div class="pp-seg"><button class="${ui.orgView === 'table' ? 'active' : ''}" data-pp="org-view" data-v="table">${icon('table')} ${tr('成员与权限', 'Members & access')}</button><button class="${ui.orgView === 'chart' ? 'active' : ''}" data-pp="org-view" data-v="chart">${icon('tree-structure')} ${tr('汇报线图', 'Org chart')}</button></div>`);
     if (ui.orgError) return `<div class="pp">${head}<div class="pp-alert">${esc(ui.orgError)}</div></div>`;
     if (!ui.org) return `<div class="pp">${head}<p class="pp-hint">${tr('正在读取…', 'Loading…')}</p></div>`;
+    window.WorkOSNames?.apply(ui.org.items);
     const items = ui.org.items.filter(u => u.active !== false), disabled = ui.org.items.filter(u => u.active === false);
     if (ui.orgView === 'chart') return `<div class="pp">${head}${orgChart(items)}</div>`;
     const loginBadge = u => u.login_email ? `<span class="pp-badge mail">${icon('envelope-simple')} ${tr('邮箱', 'Email')}</span>` : u.dingtalk ? `<span class="pp-badge ding">${tr('钉钉', 'DingTalk')}</span>` : '';
@@ -234,7 +237,7 @@
     const check = (u, grant, disabled = false) => `<label class="pp-switch"><input type="checkbox" data-pp-grant="${grant}" data-id="${esc(u.id)}" ${(u.grants || []).includes(grant) ? 'checked' : ''} ${disabled ? 'disabled' : ''}><span></span></label>`;
     return `<div class="pp">${head}${canInvite() && !ui.inviteOpen ? `<div class="pp-org-actions"><button class="btn primary" data-pp="invite-open">${icon('user-plus')} ${tr('邀请成员', 'Invite member')}</button><span class="pp-hint">${tr('邀请不在钉钉里的人加入；关闭“状态”开关即可停用某人。', 'Invite people outside DingTalk; turn off Status to disable someone.')}</span></div>` : ''}${invitePanel(items)}
       <section class="pp-panel pp-table-panel"><table class="pp-table pp-org" data-help-table="pp-org"><thead><tr><th>${tr('成员', 'Member')}</th><th>${tr('职位', 'Title')}</th><th>${tr('工作地点', 'Work location')}</th><th>${tr('直属上级', 'Manager')}</th><th>${tr('角色', 'Role')}</th><th>${tr('管理员', 'Admin')}</th><th>${tr('产品管理区', 'Product hub')}</th><th>${tr('成本明细', 'Cost detail')}</th><th>${tr('状态', 'Status')}</th></tr></thead><tbody>
-      ${items.map(u => `<tr><td><div class="pp-person">${avatar(u, 30)}<div><strong>${esc(u.display_name)}</strong><span>${esc(u.login_email || u.email || u.phone || '')} ${loginBadge(u)}</span></div></div></td>
+      ${items.map(u => `<tr><td><div class="pp-person">${avatar(u, 30)}<div><strong>${esc(u.display_name)}</strong><span>${esc(u.login_email || u.email || u.phone || '')} ${loginBadge(u)}</span><span class="pp-names"><input class="pp-inline pp-name ${u.name_zh ? '' : 'missing'}" data-pp-field="nameZh" data-id="${esc(u.id)}" value="${esc(u.name_zh || '')}" maxlength="40" placeholder="${tr('中文名', 'Chinese name')}"><input class="pp-inline pp-name ${u.name_en ? '' : 'missing'}" data-pp-field="nameEn" data-id="${esc(u.id)}" value="${esc(u.name_en || '')}" maxlength="60" placeholder="${tr('英文名', 'English name')}"></span></div></div></td>
         <td><input class="pp-inline" data-pp-field="title" data-id="${esc(u.id)}" value="${esc(u.title || '')}" maxlength="80" placeholder="${tr('职位', 'Title')}"></td>
         <td><input class="pp-inline" data-pp-field="location" data-id="${esc(u.id)}" value="${esc(u.location || '')}" maxlength="80" placeholder="${tr('如 Irvine, CA / 武汉', 'e.g. Irvine, CA')}" list="pp-locations"></td>
         <td><select class="pp-inline" data-pp-field="managerId" data-id="${esc(u.id)}">${opt('', tr('无（最高层）', 'None (top)'), u.manager_id || '')}${items.filter(x => x.id !== u.id).map(x => opt(x.id, x.display_name, u.manager_id)).join('')}</select></td>
@@ -258,7 +261,7 @@
   const flagOf = l => (FLAGS.find(([re]) => re.test(l)) || [, '🌐'])[1];
   async function loadChart() {
     ui.chartLoading = true; ui.chartError = '';
-    try { ui.chart = await ctx.api.get('/org/chart'); } catch (e) { ui.chartError = ctx.explainError(e); }
+    try { ui.chart = await ctx.api.get('/org/chart'); window.WorkOSNames?.apply(ui.chart.items); } catch (e) { ui.chartError = ctx.explainError(e); }
     finally { ui.chartLoading = false; if (['orgchart', 'org'].includes(S().page)) ctx.rerender(); }
   }
   function orgChart(items) {
@@ -268,11 +271,11 @@
     const locColor = l => LOC_COLORS[locs.indexOf(l) % LOC_COLORS.length] || '#c4c4c4';
     const size = id => (kids.get(id) || []).reduce((n, k) => n + 1 + size(k.id), 0);
     const node = u => { const ch = kids.get(u.id) || [], collapsed = ui.chartCollapsed.has(u.id), l = locKey(u), dim = ui.chartLoc && l !== ui.chartLoc;
-      return `<li><div class="pp-oc-card ${u.id === me()?.id ? 'me' : ''} ${dim ? 'dim' : ''}" style="--lc:${locColor(l)}">${avatar(u, 44)}<div class="pp-oc-text"><strong>${esc(u.display_name)}</strong><span class="pp-oc-title">${esc(u.title || (u.role === 'manager' ? tr('主管', 'Manager') : tr('员工', 'Employee')))}</span><span class="pp-oc-loc"><span class="pp-flag" aria-hidden="true">${l ? flagOf(l) : '📍'}</span> ${esc(l || tr('未填写所在地', 'No location'))}</span></div>
+      return `<li><div class="pp-oc-card ${u.id === me()?.id ? 'me' : ''} ${dim ? 'dim' : ''}" style="--lc:${locColor(l)}">${avatar(u, 44)}<div class="pp-oc-text"><strong>${esc(u.display_name)}</strong><span class="pp-oc-title">${esc(u.title ? (window.WorkOSTranslate?.text(u.title) ?? u.title) : (u.role === 'manager' ? tr('主管', 'Manager') : tr('员工', 'Employee')))}</span><span class="pp-oc-loc"><span class="pp-flag" aria-hidden="true">${l ? flagOf(l) : '📍'}</span> ${esc(l ? (window.WorkOSTranslate?.text(l) ?? l) : tr('未填写所在地', 'No location'))}</span></div>
         ${ch.length ? `<button class="pp-oc-toggle" data-pp="chart-toggle" data-id="${esc(u.id)}" aria-expanded="${!collapsed}" title="${collapsed ? tr('展开下属', 'Show reports') : tr('收起下属', 'Hide reports')}">${collapsed ? `+${size(u.id)}` : icon('minus')}</button>` : ''}</div>${ch.length && !collapsed ? `<ul>${ch.map(node).join('')}</ul>` : ''}</li>`; };
     const roots = kids.get('__root') || [];
     const unassigned = roots.filter(u => !kids.get(u.id)?.length && roots.length > 1), tops = roots.filter(u => !unassigned.includes(u));
-    const legend = locs.length ? `<div class="pp-oc-legend">${icon('map-pin')} ${locs.map(l => `<button class="${ui.chartLoc === l ? 'on' : ''}" data-pp="chart-loc" data-v="${esc(l)}" style="--lc:${locColor(l)}"><i></i>${flagOf(l)} ${esc(l)} <b>${items.filter(u => locKey(u) === l).length}</b></button>`).join('')}</div>` : '';
+    const legend = locs.length ? `<div class="pp-oc-legend">${icon('map-pin')} ${locs.map(l => `<button class="${ui.chartLoc === l ? 'on' : ''}" data-pp="chart-loc" data-v="${esc(l)}" style="--lc:${locColor(l)}"><i></i>${flagOf(l)} ${esc(window.WorkOSTranslate?.text(l) ?? l)} <b>${items.filter(u => locKey(u) === l).length}</b></button>`).join('')}</div>` : '';
     return `<section class="pp-panel pp-oc-panel"><div class="pp-oc-bar">${legend}<span class="pp-oc-count">${tr(`共 ${items.length} 人`, `${items.length} people`)}</span><button class="pp-btn small" data-pp="chart-expand">${icon('arrows-out-simple')} ${tr('全部展开', 'Expand all')}</button></div>
       <div class="pp-orgchart"><ul>${tops.map(node).join('')}</ul></div>${unassigned.length ? `<h3 class="pp-sub-h">${tr('尚未设置汇报线', 'No reporting line yet')}</h3><div class="pp-unassigned">${unassigned.map(u => `<span>${avatar(u, 24)} ${esc(u.display_name)}${u.title ? ` · ${esc(u.title)}` : ''}${locKey(u) ? ` · ${esc(locKey(u))}` : ''}</span>`).join('')}</div>` : ''}</section>`;
   }
@@ -282,13 +285,14 @@
     if (!ui.chart && !ui.chartLoading && !ui.chartError) loadChart();
     if (ui.chartError) return `<div class="pp">${head}<div class="pp-alert">${esc(ui.chartError)}</div></div>`;
     if (!ui.chart) return `<div class="pp">${head}<p class="pp-hint">${tr('正在读取…', 'Loading…')}</p></div>`;
+    window.WorkOSNames?.apply(ui.chart.items);
     return `<div class="pp">${head}${orgChart(ui.chart.items)}${me()?.isAdmin ? `<p class="pp-hint">${icon('pencil-simple')} ${tr('要修改汇报线、岗位或工作地点：管理员在“组织与权限”里直接修改。', 'Admins change reporting lines, titles and work locations in Organization & permissions.')}</p>` : ''}</div>`;
   }
   async function patchMember(id, body) {
     try {
       const row = await ctx.api.request('/org/members/' + encodeURIComponent(id), { method:'PATCH', body });
       ui.org.items = ui.org.items.map(u => u.id === id ? { ...u, ...row } : u);
-      const dirUser = S().directory.find(u => u.id === id); if (dirUser) Object.assign(dirUser, { title:row.title, location:row.location, manager_id:row.manager_id, role:row.role });
+      const dirUser = S().directory.find(u => u.id === id); if (dirUser) Object.assign(dirUser, { title:row.title, location:row.location, manager_id:row.manager_id, role:row.role, name_zh:row.name_zh, name_en:row.name_en });
       if (id === me().id) await ctx.refreshMe();
       if ('managerId' in body && ctx.reloadDirectory) { try { await ctx.reloadDirectory(); } catch {} }
       ui.team = null; ui.chart = null; ctx.toast(tr('已保存', 'Saved'));
@@ -367,7 +371,7 @@
     if (!ctx || f.id !== 'pp-profile') return;
     e.preventDefault();
     const v = Object.fromEntries(new FormData(f));
-    try { await ctx.api.request('/me/profile', { method:'PATCH', body:v }); await ctx.refreshMe(); ui.chart = null; const self = S().directory.find(u => u.id === me().id); if (self) Object.assign(self, v); ui.profileMsg = tr('已保存', 'Saved'); ctx.toast(tr('个人资料已保存', 'Profile saved')); }
+    try { await ctx.api.request('/me/profile', { method:'PATCH', body:v }); await ctx.refreshMe(); if (S().actor) { S().actor._dn = undefined; } ui.chart = null; const self = S().directory.find(u => u.id === me().id); if (self) Object.assign(self, v); ui.profileMsg = tr('已保存', 'Saved'); ctx.toast(tr('个人资料已保存', 'Profile saved')); }
     catch (err) { ui.profileMsg = ctx.explainError(err); }
     ctx.rerender();
   });

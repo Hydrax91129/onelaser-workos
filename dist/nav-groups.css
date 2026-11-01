@@ -14,3 +14,14 @@ html:not([data-theme=dark]) .nav-sec-name{filter:brightness(.8)}
 .nav-group-items .nav-item{margin:1px 0}
 .nav-group-items .nav-item.active{box-shadow:inset 3px 0 0 var(--sec)}
 .nav-group-items .nav-item span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nav-group-items .nav-item .nav-test{flex:0 0 auto;writing-mode:horizontal-tb;padding:1px 5px;font-size:10.5px}
+/* resizable, scrollable sidebar */
+@media (min-width:671px){
+  .app-shell{grid-template-columns:var(--sidebar-w,240px) minmax(0,1fr)!important}
+  .app-shell>.sidebar{width:var(--sidebar-w,240px)!important;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-gutter:stable}
+  .sidebar-resizer{position:fixed;top:0;bottom:0;left:calc(var(--sidebar-w,240px) - 4px);width:8px;cursor:col-resize;z-index:30;touch-action:none}
+  .sidebar-resizer::after{content:"";position:absolute;top:0;bottom:0;left:3px;width:2px;background:transparent;transition:background .15s}
+  .sidebar-resizer:hover::after,.sidebar-resizing .sidebar-resizer::after{background:#3370ff}
+  .sidebar-resizing{cursor:col-resize;user-select:none}
+  .app-shell>.sidebar .nav-item span{white-space:normal;line-height:1.25}
+}
+.sidebar::-webkit-scrollbar{width:8px}.sidebar::-webkit-scrollbar-thumb{background:rgba(127,127,127,.35);border-radius:8px}.sidebar::-webkit-scrollbar-thumb:hover{background:rgba(127,127,127,.6)}

@@ -13,7 +13,8 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   const lang = () => (ctx?.lang?.() || window.WorkI18n?.lang) === 'en' ? 'en' : 'zh';
   const cjk = s => (s.match(/[㐀-鿿豈-﫿]/g) || []).length, latin = s => (s.match(/[A-Za-z]/g) || []).length;
-  const mainLang = s => { const c = cjk(s), l = latin(s); if (!c && l < 2) return null; return c * 3 >= l ? 'zh' : 'en'; };
+  // Text already written in both languages (e.g. "销售经理 Sales Manager") is shown as is.
+  const mainLang = s => { const c = cjk(s), l = latin(s); if (!c && l < 2) return null; if (c >= 2 && /[A-Za-z]{3,}/.test(s) && /[\u3400-\u9fff]{2,}/.test(s) && l >= 4) return null; return c * 3 >= l ? 'zh' : 'en'; };
   const enabled = () => ctx?.capabilities?.()?.autoTranslate === true;
   function want(text, target) {
     const key = target + '|' + text;
@@ -58,5 +59,12 @@
   const toggle = el => { const k = el.dataset.txToggle; showOriginal.has(k) ? showOriginal.delete(k) : showOriginal.add(k); ctx?.rerender?.(); };
   document.addEventListener('click', e => { const b = e.target.closest?.('[data-tx-toggle]'); if (!b) return; e.preventDefault(); e.stopPropagation(); toggle(b); }, true);
   document.addEventListener('keydown', e => { const b = e.target.closest?.('[data-tx-toggle]'); if (!b || (e.key !== 'Enter' && e.key !== ' ')) return; e.preventDefault(); e.stopPropagation(); toggle(b); }, true);
+  /* People's names follow the interface language: name_zh / name_en, falling back to the original display name. */
+  const names = {
+    name(u) { if (!u) return ''; const base = u._dn ?? u.display_name ?? ''; return lang() === 'en' ? (u.name_en || u.name_zh || base) : (u.name_zh || u.name_en || base); },
+    apply(list) { for (const u of list || []) { if (!u || typeof u !== 'object') continue; if (u._dn === undefined) u._dn = u.display_name; u.display_name = names.name(u); } return list; },
+    missing(u) { return !!u && (!u.name_zh || !u.name_en); },
+  };
+  window.WorkOSNames = names;
   window.WorkOSTranslate = { configure(next) { ctx = next; }, html, text, _cache:cache, _mainLang:mainLang };
 })();
