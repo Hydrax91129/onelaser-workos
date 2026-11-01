@@ -55,6 +55,7 @@
       ${list([
         tr('点击任务右侧的对话图标，写进度更新。', 'Click the speech-bubble icon on a task to post a progress update.'),
         tr('拖动任务左侧，可以把它移到另一个分组；也可以右键点击任务，选择“移动到分组”。', 'Drag a task by its left edge to another group, or right-click it and choose “Move to group”.'),
+        tr('“最后更新”列显示任务已经几天没有更新：绿色 2 天内、浅绿 4 天内、白色 7 天内、灰色 8–9 天、黑色 10 天以上。', 'The Last update column shows how many days a task has gone without an update: green within 2 days, light green within 4, white within 7, grey 8–9, black 10 or more.'),
         tr('完成后 3 天内可以修改结果；超过 3 天，结果和分数锁定。', 'You can revise a result within 3 days of finishing; after that the result and score are locked.')
       ])}`],
 
@@ -79,7 +80,7 @@
         tr('新建目标（O），填写分值。一个月所有目标合计必须正好 <b>100 分</b>（不能超过），例如 O1 = 40 分。', 'Add an objective (O) and give it points. All objectives for the month must total exactly <b>100 points</b> (never more), e.g. O1 = 40.'),
         tr('在目标下添加关键结果（KR），填写<b>目标值</b>：可以写“完成”，也可以写任何明确的数字，例如“30 条询盘”。', 'Under it add key results (KR) with a <b>target</b>: “Done”, or any clear number such as “30 enquiries”.'),
         tr('给每条 KR 填权重，表示占这个目标的百分比。同一目标下所有 KR 的权重合计必须<b>正好 100%</b>：系统不允许超过 100%，不到 100% 时这个目标的 KR 不能评分。', 'Give each KR a weight: its share of the objective. KR weights under one objective must add up to <b>exactly 100%</b>: the system refuses more than 100%, and KRs cannot be scored until they reach 100%.'),
-        tr('保存后，每条 KR 自动变成你的任务，进入任务中心。', 'Once saved, each KR becomes a task in your Task Center.')
+        tr('全部填好后点击<b>“最终发布”</b>（目标合计 100 分、每个目标的 KR 合计 100% 才能发布）。发布后 OKR 锁定，自己不能再改，只有你的领导可以在月中调整，调整后你会收到通知；每条 KR 在发布时自动变成你的任务。', 'When everything is filled in, click <b>Publish</b> (objectives must total 100 points and each objective’s KRs 100%). After publishing the OKR is locked: you can no longer change it, only your leader can adjust it during the month (you will be told); each KR becomes a task for you.')
       ])}
       <h3>${tr('评分等级', 'Score levels')}</h3>
       <div class="ug-levels">
@@ -100,7 +101,7 @@
         <tr><th>${tr('11 月 25 日 – 30 日', 'Nov 25 – 30')}</th><td>${tr('员工自评。30 日前没有自评的 KR，系统自动按 0 分自评。', 'Self scoring. Any KR without a self score by the 30th is scored 0 automatically.')}</td></tr>
         <tr><th>${tr('11 月 30 日 – 12 月 3 日', 'Nov 30 – Dec 3')}</th><td>${tr('领导评分，系统每天催办，直到评分完成。', 'Leader scoring, with daily reminders until it is done.')}</td></tr>
       </tbody></table>
-      <p>${tr('“团队 OKR”左侧按“我的下属、平级同事、我的上级、其他同事”分组，方便领导查看和评分。', 'In Team OKRs the list is grouped into my reports, peers, my managers and others, so leaders can review and score quickly.')}</p>
+      <p>${tr('“团队 OKR”左侧分为“我的汇报线”（下属）、“团队 OKR（平级同事）”、“我的上级”和“其他同事”。每个人名下显示三个状态：本月 OKR 建立（是否已最终发布）、自评进度、领导评分进度。', 'Team OKRs lists my reporting line, team OKRs (peers), my managers and others. Under each name three stages show: OKR set up (published or not), self-score progress and leader-score progress.')}</p>
       ${note('OKR 页面顶部的时间条会显示当前处在哪个阶段。', 'The timeline at the top of the OKR page shows which phase you are in.')}`],
 
     ['projects', 'ph-squares-four', '项目管理', 'Projects', () => `

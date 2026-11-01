@@ -299,3 +299,24 @@ html[data-theme=dark] .okb-evidence-rule{color:#f3cf72}
 .okb-score-form .okb-form-error{flex-basis:100%}
 .okb-warn-bad{color:#d92c2c;font-weight:600}
 .okb-form-tip.bad{color:#d92c2c;font-weight:600}
+.okb-levels-static{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.okb-levels-static .okb-level{cursor:default}
+
+/* Final publish bar */
+.okb-pub{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;margin:10px 0 4px;padding:10px 14px;border-radius:10px;font-size:13px;border:1px solid var(--okb-line,#e6e8ef)}
+.okb-pub b{font-weight:700}.okb-pub span{color:var(--okb-faint,#7a8096);flex:1;min-width:200px}
+.okb-pub.done{background:#ecfaf2;border-color:#bfe9cc;color:#167a48}
+.okb-pub.ready{background:#eef3ff;border-color:#c9d7ff;color:#245bdb}
+.okb-pub.pending{background:#fff7e0;border-color:#ffe08a;color:#8a6100}
+.okb-pub-confirm{display:inline-flex!important;align-items:center;gap:8px;flex:none!important;color:inherit!important;font-weight:600}
+html[data-theme=dark] .okb-pub.done{background:#173326;border-color:#285b40;color:#7fe0a8}
+html[data-theme=dark] .okb-pub.ready{background:#1f2c4d;border-color:#35508f;color:#a9c2ff}
+html[data-theme=dark] .okb-pub.pending{background:#3a3220;border-color:#6b5a2a;color:#f3cf72}
+/* Team list stage chips */
+.okb-stages{display:inline-flex;gap:3px;margin-left:auto;flex:none}
+.okb-stage{font-style:normal;font-size:10.5px;line-height:1;padding:3px 5px;border-radius:5px;background:#eef0f3;color:#7a8096;white-space:nowrap}
+.okb-stage b{font-weight:700}
+.okb-stage.done{background:#dff6e8;color:#167a48}.okb-stage.part{background:#fff1cc;color:#8a6100}
+html[data-theme=dark] .okb-stage{background:#2a2d38;color:#9aa0b4}html[data-theme=dark] .okb-stage.done{background:#173326;color:#7fe0a8}html[data-theme=dark] .okb-stage.part{background:#3a3220;color:#f3cf72}
+.okb-people li button:has(.okb-stages){flex-wrap:wrap;row-gap:4px}
+.okb-people li button .okb-stages{flex-basis:100%;margin-left:36px;justify-content:flex-start}

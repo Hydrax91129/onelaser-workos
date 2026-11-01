@@ -56,7 +56,7 @@ test('user guide opens from the top bar, follows the page and covers every rule'
 test('self score needs a written explanation or a file; team OKR groups reports, peers and managers', () => {
   const okr = read('okr-board.js');
   assert.match(okr, /SELF_SCORE|至少 10 个字/); assert.match(okr, /uploadEvidence\(k\.task_id, f\)/); assert.match(okr, /body\.attachmentIds = ids/);
-  for (const t of ['我的下属', '平级同事', '我的上级', '其他同事']) assert.ok(okr.includes(t), t);
+  for (const t of ['我的汇报线', '团队 OKR（平级同事）', '我的上级', '其他同事']) assert.ok(okr.includes(t), t);
   assert.match(okr, /function relationOf\(id\)/);
 });
 
@@ -73,4 +73,11 @@ test('KR weights under an objective must add up to exactly 100%: no automatic sh
   assert.match(okr, /const weightsOk = o =>/); assert.match(okr, /ready = kind !== 'kr' \|\| weightsOk\(o\)/);
   assert.doesNotMatch(okr, /平分剩余部分/); assert.doesNotMatch(okr, /Math\.max\(1, Math\.round\(\(100 - used\)/);
   assert.match(okr, /这条最多只能填/); assert.match(okr, /补齐到正好 100% 后才能评分/);
+});
+
+test('final publish locks the OKR for its owner, leaders may still edit, team list shows three stages', () => {
+  const okr = read('okr-board.js');
+  assert.match(okr, /'\/okr\/publish'/); assert.match(okr, /const lockedFor = o =>/); assert.match(okr, /canEdit = o => !!o && !lockedFor\(o\)/);
+  assert.match(okr, /function stageChips/); for (const t of ['建立', '自评', '领导']) assert.ok(okr.includes(`tr('${t}'`), t);
+  assert.match(okr, /0 未开展、25 严重滞后、50 部分完成、75 接近完成、100 完成、125 完成且卓越/);
 });

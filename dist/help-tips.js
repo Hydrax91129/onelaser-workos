@@ -376,7 +376,7 @@
     ['[data-okr="tab"][data-value="team"]', h('团队 OKR','左侧选成员，查看他们的目标和进度。','了解同事在做什么、哪里有风险。','Team OKRs','Pick a person on the left to see their objectives and progress.','See what colleagues work on and where the risks are.')],
     ['[data-okr="tab"][data-value="align"]', h('对齐视图','以树状展示公司 → 部门 → 个人目标的支撑关系。','检查每个人的目标是否都对齐到了公司目标。','Alignment','A tree of company → department → personal objectives.','Check that personal goals support company goals.')],
     ['[data-okr="cycle-prev"], [data-okr="cycle-next"], [data-okr-cycle]', h('切换周期','选择要查看或填写的月份周期。','新建的目标会归入当前选中的周期。','Change cycle','Choose the monthly cycle to view or plan.','New objectives go into the selected cycle.')],
-    ['[data-okr="rubric"]', h('评分标准','查看评分档位和权重规则。','完成 80 分，卓越 100 分；KR 权重合计应等于目标权重。','Scoring guide','Score levels and weight rules.','Complete 80, exceptional 100; KR weights should equal the objective weight.')],
+    ['[data-okr="rubric"]', h('评分标准','查看评分档位和权重规则。','六档：0 / 25 / 50 / 75 / 100 完成 / 125 完成且卓越；同一目标下 KR 权重合计正好 100%。','Scoring guide','Score levels and weight rules.','Six levels: 0 / 25 / 50 / 75 / 100 done / 125 exceptional; KR weights under one objective total exactly 100%.')],
     ['[data-okr="person"]', h('查看成员','切换到这位同事的 OKR。','右侧数字是整体进度。','View person','Switch to this person’s OKRs.','The number is their overall progress.')],
     ['[data-okr-search]', h('搜索成员','按姓名快速找到同事。','','Search people','Find a colleague by name.','')],
     ['[data-okr="add-o"]', h('添加目标','在当前周期新建一个目标（O）。','写清楚想达成什么，并填写权重（占本周期总分的比例）；创建后会自动打开“添加关键结果”。','Add objective','Creates an objective (O) in the current cycle.','State what you want to achieve and its weight (share of the period); the key-result row opens next.')],
