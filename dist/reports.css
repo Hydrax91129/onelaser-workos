@@ -71,3 +71,8 @@ html[data-theme=dark] .ri-cheer{background:linear-gradient(90deg,#1c3a2e,#3d3220
 .ri-lb-n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ri-lb-n em{font-style:normal;font-size:11px;background:var(--c);color:#fff;border-radius:6px;padding:0 5px}
 .ri-lb strong{font-size:16px;font-variant-numeric:tabular-nums}.ri-lb strong small{font-size:11px;color:var(--ri-sub);font-weight:400;margin-left:1px}
 @media (max-width:1200px){.ri-lbs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:680px){
+  .ri-hero-rings{gap:8px;width:100%;overflow:hidden}
+  .ri-hero-rings>div{flex:1 1 0;min-width:0;padding:8px 4px;text-align:center}
+  .ri-hero-rings svg{width:84px;height:84px}
+}

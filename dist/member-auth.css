@@ -1,0 +1,25 @@
+/* Email sign-in for invited members and the invite acceptance page */
+.email-login{margin-top:22px;text-align:left}
+.email-login-sep{display:flex;align-items:center;gap:10px;color:#8f959e;font-size:12px;margin-bottom:12px}
+.email-login-sep::before,.email-login-sep::after{content:"";flex:1;height:1px;background:#e3e5e8}
+.email-login-tabs{display:inline-flex;gap:4px;background:#f2f3f5;border-radius:8px;padding:3px;margin-bottom:10px}
+.email-login-tabs button{border:0;background:none;padding:6px 12px;border-radius:6px;font:inherit;font-size:12.5px;color:#646a73;cursor:pointer}
+.email-login-tabs button.active{background:#fff;color:#1f2329;box-shadow:0 1px 2px #0000001a}
+.email-login-form{display:flex;flex-direction:column;gap:9px}
+.email-login-form input{border:1px solid #dee0e3;border-radius:8px;padding:10px 12px;font:inherit;font-size:14px;background:#fff;color:#1f2329;width:100%;box-sizing:border-box}
+.email-login-form input[readonly]{background:#f5f6f7;color:#646a73}
+.email-login-form label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:#646a73}
+.email-login-form .btn{justify-content:center}
+.email-login-form .link-btn{border:0;background:none;color:#3370ff;font:inherit;font-size:12.5px;cursor:pointer;align-self:flex-start;padding:0}
+.invite-panel{max-width:460px;width:100%;margin:0 auto;text-align:left}
+.invite-panel h2{font-size:20px;line-height:1.35}
+html[data-theme=dark] .email-login-sep::before,html[data-theme=dark] .email-login-sep::after{background:#3a3a40}
+html[data-theme=dark] .email-login-tabs{background:#232327}
+html[data-theme=dark] .email-login-tabs button.active{background:#2a2a2f;color:#ebebeb}
+html[data-theme=dark] .email-login-form input{background:#2a2a2f;border-color:#3a3a40;color:#ebebeb}
+html[data-theme=dark] .email-login-form input[readonly]{background:#232327}
+.no-access{max-width:520px;margin:40px auto;text-align:center}
+.no-access .panel-body{padding:36px 28px}
+.no-access-icon{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;margin:0 auto 12px;background:#fff1d6;color:#a86500}
+.no-access h2{font-size:18px;margin-bottom:8px}
+.no-access .btn{margin-top:16px}

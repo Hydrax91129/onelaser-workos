@@ -18,7 +18,7 @@ window.WorkOSTaskBoard=(()=>{
  const scoreText=t=>t.board_status==='done'?' · '+scoreLabel(t.completion):'';
  const completionNotice=c=>c?.ai_status==='scored'?tr('已完成，AI 评分已保存','Completed — AI score saved'):c?.ai_status==='pending'?tr('已完成，AI 正在评分','Completed — AI is scoring'):c?.ai_status==='failed'?tr('成果已保存，AI 评分失败，可在任务讨论中重试','Result saved — AI scoring failed; retry in task updates'):tr('成果已保存，AI 评分未配置；配置后可在任务讨论中补评分','Result saved — AI scoring is not configured; retry in task updates after setup');
 
- const tr=(zh,en)=>ctx.language==='en'?en:zh,word=x=>x?.[ctx.language==='en'?'en':'zh']||'',name=id=>ctx.directory?.find(u=>u.id===id)?.display_name||id||'—';
+ const tr=(zh,en)=>ctx.language==='en'?en:zh,word=x=>x?.[ctx.language==='en'?'en':'zh']||'',name=id=>ctx.directory?.find(u=>u.id===id)?.display_name||(ctx.former?.find(u=>u.id===id)?.display_name?ctx.former.find(u=>u.id===id).display_name+tr('（已停用）',' (disabled)'):'')||id||'—';
  const columns=[['owner','负责人','Owner'],['priority','优先级','Priority'],['status','状态','Status'],['category','自定义分类','Custom category'],['due','截止日期','Due date'],['updated','更新日期','Last update']];
  const view=()=>data?.view||{sort:[],groupBy:'group',hidden:[],collapsed:[]};
  const label=(kind,id)=>data?.config?.[kind]?.find(l=>l.id===id);

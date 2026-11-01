@@ -118,3 +118,43 @@ html[data-theme=dark] .pp-orgchart li::before,html[data-theme=dark] .pp-orgchart
 .pp-oc-toggle:hover{color:inherit;border-color:#579bfc}
 .pp-admin-int{margin-top:16px}.pp-admin-int .integration-grid{margin-top:8px}
 .pp-flag{font-size:14px;line-height:1}
+/* ---- member lifecycle: invite, status, disabled list ---- */
+.pp-org-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px}
+.pp-org-actions .pp-hint{margin:0}
+.pp-invite{border-color:#b9cdfd;background:linear-gradient(180deg,rgba(51,112,255,.05),transparent 60%),var(--pp-card)}
+.pp-invite-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pp-invite-head h3{margin:0;font-size:15px;display:flex;align-items:center;gap:8px}
+.pp-invite-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 16px;margin-top:10px}
+.pp-invite-form label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--pp-sub)}
+.pp-invite-form input,.pp-invite-form select,.pp-disable-form select{border:1px solid var(--pp-line);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px;background:var(--pp-card);color:var(--pp-text);min-width:0}
+.pp-invite-grants{grid-column:1/-1;display:flex;gap:18px;flex-wrap:wrap}
+.pp-check{flex-direction:row!important;align-items:center;gap:6px!important;font-size:13px!important;color:var(--pp-text)!important}
+.pp-invite-actions{grid-column:1/-1;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pp-invite-actions .pp-hint{margin:0}
+.pp-invite-link{display:flex;gap:8px;margin-top:6px}
+.pp-invite-link input{flex:1;min-width:0;border:1px solid var(--pp-line);border-radius:8px;padding:8px 10px;font:inherit;font-size:12.5px;background:var(--pp-soft);color:var(--pp-text)}
+.pp-btn.primary{background:var(--pp-blue);border-color:var(--pp-blue);color:#fff}
+.pp-btn.danger{color:#d83931;border-color:#f3c3c0}
+.pp-btn.danger:hover{background:#fff1f0}
+.pp-btn[disabled]{opacity:.55;cursor:not-allowed}
+.pp-badge{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;line-height:1;padding:3px 6px;border-radius:999px;margin-left:4px;vertical-align:1px}
+.pp-badge.mail{background:#e8f0ff;color:#245bdb}
+.pp-badge.ding{background:#e6f7ff;color:#0f6fb8}
+html[data-theme=dark] .pp-badge.mail{background:#24324f;color:#9dbbff}
+html[data-theme=dark] .pp-badge.ding{background:#17384a;color:#8fd0f5}
+.pp-status{white-space:nowrap}
+.pp-status-on{font-size:12px;color:#1f9d55;margin-left:4px}
+.pp-switch.status input:checked+span{background:#1f9d55}
+.pp-disable-row td{background:#fff8f7;border-bottom:1px solid #f3c3c0}
+html[data-theme=dark] .pp-disable-row td{background:#3a2626}
+.pp-disable-form{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.pp-disable-form>div:first-child{flex:1 1 360px}
+.pp-disable-form .pp-hint{margin:4px 0 0}
+.pp-disable-form label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--pp-sub)}
+.pp-disable-actions{display:flex;gap:8px}
+.pp-disabled .pp-person.dim{opacity:.6}
+.pp-muted{color:var(--pp-faint);font-size:12.5px}
+.pp-right{text-align:right}
+.pp-sub-h b{font-weight:500;color:var(--pp-faint);margin-left:4px}
+.pp-invites td{padding:8px 10px}
+@media (max-width:760px){.pp-invite-link{flex-direction:column}.pp-table-panel{overflow-x:auto}}

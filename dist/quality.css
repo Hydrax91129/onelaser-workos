@@ -75,3 +75,12 @@ html[data-theme=dark] .qa-form{background:#33291a}
 .qa-times{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}.qa-times div{background:var(--qa-soft);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}.qa-times strong{font-size:20px}.qa-times span{font-size:11.5px;color:var(--qa-sub);line-height:1.4}
 .qa-table.small td,.qa-table.small th{padding:6px 8px;font-size:12.5px}
 @media (max-width:1200px){.qa-two{grid-template-columns:1fr}.qa-times{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:680px){
+  .qa-tree summary{grid-template-columns:40px minmax(0,1fr) 70px;gap:8px}
+  .qa-tree summary>:nth-child(3){display:none}
+  .qa-tree ul{margin-left:8px}
+  .qa-tree li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
+  .qa-tree li .qa-tn{flex:1 1 120px;min-width:0}
+  .qa-tree li .qa-tbar{display:none}
+  .qa-table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
