@@ -71,8 +71,8 @@ test('task sources name the project and O/KR; updates button has a label; work c
 test('KR weights under an objective must add up to exactly 100%: no automatic shares, capped input, scoring waits', () => {
   const okr = read('okr-board.js');
   assert.match(okr, /const weightsOk = o =>/); assert.match(okr, /ready = kind !== 'kr' \|\| weightsOk\(o\)/);
-  assert.doesNotMatch(okr, /平分剩余部分/); assert.doesNotMatch(okr, /Math\.max\(1, Math\.round\(\(100 - used\)/);
-  assert.match(okr, /这条最多只能填/); assert.match(okr, /补齐到正好 100% 后才能评分/);
+  assert.doesNotMatch(okr, /平分剩余部分/); assert.doesNotMatch(okr, /Math\.max\(1, Math\.round\(\(100 - used\)/); assert.match(okr, /const companyMine = \(\) =>/); assert.match(okr, /function stageLegend/);
+  assert.match(okr, /其他 KR 自动调整为/); assert.match(okr, /rebalance:true/); assert.match(okr, /补齐到正好 100% 后才能评分/);
 });
 
 test('final publish locks the OKR for its owner, leaders may still edit, team list shows three stages', () => {

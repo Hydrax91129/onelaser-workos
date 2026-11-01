@@ -42,7 +42,7 @@
   }
   const leaderOf = ownerId => { if (!ownerId || ownerId === me()?.id) return false; const u = [...(orgChart || []), ...S().directory].find(x => x.id === ownerId); return me()?.isAdmin === true || u?.manager_id === me()?.id || (isManager() && (!u || u.department_id === me()?.department_id)); };
   const lockedFor = o => !!o && o.level !== 'company' && !!publication(o.owner_id, periodOf(o)) && !leaderOf(o.owner_id);
-  const canEdit = o => !!o && !lockedFor(o) && o.level !== 'company' && o.department_id === me()?.department_id && (isManager() || (o.level === 'personal' && o.owner_id === me()?.id));
+  const canEdit = o => !!o && !lockedFor(o) && (o.level === 'company' ? companyMine() : o.department_id === me()?.department_id && (isManager() || (o.level === 'personal' && o.owner_id === me()?.id)));
   const canPost = o => !!o && (o.level === 'company' ? isManager() : o.department_id === me()?.department_id && (isManager() || o.owner_id === me()?.id));
   const canCreateFor = ownerId => (isManager() || ownerId === me()?.id) && !(publication(ownerId, ui.cycle) && !leaderOf(ownerId));
 
@@ -82,7 +82,9 @@
     const total = weighted ? items.reduce((s, x) => s + x.w, 0) : items.length;
     return Math.round(items.reduce((s, x) => s + x.p * (weighted ? x.w : 1), 0) / total);
   }
-  const objectivesOf = ownerId => order(S().objectives.filter(o => inCycle(o) && (ownerId === '__company' ? o.level === 'company' : o.owner_id === ownerId && o.level !== 'company')));
+  // The top leader (an administrator without a manager) owns the company OKR: it is their own OKR, not a separate list.
+  const companyMine = () => !!me() && !me().manager_id && me().isAdmin === true;
+  const objectivesOf = ownerId => order(S().objectives.filter(o => inCycle(o) && (ownerId === '__company' ? o.level === 'company' : (o.owner_id === ownerId && o.level !== 'company') || (ownerId === me()?.id && companyMine() && o.level === 'company'))));
   /* Team list sections: my direct and indirect reports, peers who share my manager, my managers, everyone else. */
   let orgChart = null, chartLoading = false;
   function chartPeople() {
@@ -108,6 +110,11 @@
     const self = items.filter(x => x.scores?.self).length, lead = items.filter(x => x.scores?.manager).length, pub = publication(id, ui.cycle);
     return { items:items.length, self, lead, pub, setup:pub ? 'done' : objs.length ? 'part' : 'none' };
   }
+  function stageLegend() {
+    return `<div class="okb-stage-legend"><div class="okb-stage-legend-row"><b>${tr('每人三个状态', 'Three stages')}</b><button type="button" class="okb-stage-help-btn" data-okr="stage-help" aria-expanded="${!!ui.stageHelp}">${icon('question')} ${tr('说明', 'Help')}</button></div>
+      <div class="okb-stage-legend-row"><i class="okb-stage done">${tr('建立', 'Set')}</i><i class="okb-stage done">${tr('自评', 'Self')}</i><i class="okb-stage done">${tr('领导', 'Leader')}</i><span>${tr('绿 = 完成 · 黄 = 进行中 · 灰 = 未开始', 'green done · amber in progress · grey not started')}</span></div>
+      ${ui.stageHelp ? `<dl class="okb-stage-help"><dt>${tr('① 建立', '① Set')}</dt><dd>${tr('本月 OKR 是否已“最终发布”。✓ = 已发布；“未发布” = 已填写但还没发布；— = 还没填写。设置期：上月 25 日至本月 5 日。', 'Whether this month’s OKR is published. ✓ published; “draft” filled in but not published; — not started. Window: 25th of last month to the 5th.')}</dd><dt>${tr('② 自评', '② Self')}</dt><dd>${tr('员工已自评的项数 / 需要评分的项数（每条 KR 算一项，没有 KR 的目标算一项）。自评期：本月 25 日至 30 日，逾期按 0 分。', 'Items the owner has self-scored / items to score (each KR, or an objective without KRs). Window: the 25th to the 30th; missing ones count as 0.')}</dd><dt>${tr('③ 领导', '③ Leader')}</dt><dd>${tr('领导已评分的项数 / 需要评分的项数。领导评分期：本月 30 日至下月 3 日。', 'Items the leader has scored / items to score. Window: the 30th to the 3rd of next month.')}</dd></dl>` : ''}</div>`;
+  }
   function stageChips(id, objs) {
     const st = stages(id, objs), cls = (n, t) => !t ? 'none' : n >= t ? 'done' : n ? 'part' : 'none';
     const chips = [[st.setup, tr('建立', 'Set'), st.pub ? '✓' : objs.length ? tr('未发布', 'draft') : '—', tr('本月 OKR 建立：', 'OKR set up: ') + (st.pub ? tr('已最终发布', 'published') : objs.length ? tr('已填写，未发布', 'drafted, not published') : tr('未填写', 'not started'))],
@@ -125,7 +132,7 @@
     S().objectives.filter(inCycle).forEach(o => { if (o.level !== 'company' && o.owner_id) ids.add(o.owner_id); });
     if (me()) ids.add(me().id);
     let list = [...ids].sort((a, b) => a === me()?.id ? -1 : b === me()?.id ? 1 : nameOf(a).localeCompare(nameOf(b)));
-    if (S().objectives.some(o => inCycle(o) && o.level === 'company')) list = ['__company', ...list];
+    if (!companyMine() && S().objectives.some(o => inCycle(o) && o.level === 'company')) list = ['__company', ...list];
     const q = ui.search.trim().toLowerCase();
     return q ? list.filter(id => (id === '__company' ? tr('公司目标', 'Company objectives') : nameOf(id)).toLowerCase().includes(q)) : list;
   }
@@ -224,13 +231,13 @@
   }
   function newKrForm(o) {
     if (simple()) {
-      const used = krsOf(o).reduce((n, k) => n + (Number.isFinite(k.planning?.weight) ? k.planning.weight : 0), 0), left = Math.max(0, Math.round((100 - used) * 100) / 100);
+      const ks = krsOf(o), used = krSum(o), left = Math.max(0, Math.round((100 - used) * 100) / 100), def = left > 0 ? left : Math.round(100 / (ks.length + 1));
       return `<form class="okb-new-kr okb-new-kr-simple" id="okr-new-kr" data-objective-id="${esc(o.id)}">
         <span class="okb-kr-tag">KR${krsOf(o).length + 1}</span>
         <input name="title" placeholder="${tr('关键结果：怎样证明目标达成，例如：新增 30 家经销商', 'Key result, e.g. Sign 30 new dealers')}" required minlength="2" maxlength="300" data-okr-autofocus>
         <label class="okb-mini okb-target"><span>${tr('目标值', 'Target')}</span><input name="targetText" required maxlength="120" placeholder="${tr('填“完成”，或明确数字：30 家 / 3%', '“Done”, or a number: 30 dealers / 3%')}"></label>
-        <label class="okb-mini"><span>${tr('权重 %（占本目标）', 'Weight % of objective')}</span><input name="weight" type="number" min="0.01" max="${left || 0.01}" step="0.01" value="${left || ''}" required ${left > 0 ? '' : 'disabled'}></label>
-        <div class="okb-form-actions"><span class="okb-form-tip ${left > 0 ? '' : 'bad'}">${left > 0 ? tr(`= ${num(oPoints(o))} 分 × 权重；同一目标下 KR 合计必须正好 100%，还剩 ${num(left)}%`, `= ${num(oPoints(o))} pts × weight · KRs must total exactly 100% · ${num(left)}% left`) : tr('本目标的 KR 权重已满 100%，请先调低其他 KR 的权重，再添加新 KR。', 'KR weights already total 100%; lower another KR before adding one.')}</span><button class="okb-btn primary small" type="submit" ${left > 0 ? '' : 'disabled'}>${tr('添加', 'Add')}</button><button class="okb-btn small" type="button" data-okr="cancel-add">${tr('取消', 'Cancel')}</button></div>
+        <label class="okb-mini"><span>${tr('权重 %（占本目标）', 'Weight % of objective')}</span><input name="weight" type="number" min="1" max="${ks.length ? 100 - ks.length : 100}" step="0.01" value="${def}" required data-okr-weight-preview="kr" data-objective="${esc(o.id)}"></label>
+        <div class="okb-form-actions"><span class="okb-form-tip" data-okr-preview>${previewText('kr', o.id, def)}</span><button class="okb-btn primary small" type="submit">${tr('添加', 'Add')}</button><button class="okb-btn small" type="button" data-okr="cancel-add">${tr('取消', 'Cancel')}</button></div>
         <p class="okb-form-error" role="alert"></p>
       </form>`;
     }
@@ -256,7 +263,7 @@
       <span class="okb-o-tag">O</span>
       <input name="title" placeholder="${tr('输入目标，例如：Q4 销售额增长 20%', 'Objective, e.g. Grow Q4 sales 20%')}" required minlength="3" maxlength="300" data-okr-autofocus>
       ${simple() ? `<input name="description" class="okb-o-desc-input" maxlength="4000" placeholder="${tr('怎样算完成？（可选）例如：转化率从 2% 提升到 3%', 'What does done look like? (optional)')}">` : ''}
-      ${simple() ? (() => { const used = S().objectives.filter(x => x.owner_id === ownerId && x.planning?.period === (ui.cycle || nowPeriod()) && x.level !== 'company').reduce((n, x) => n + (Number(x.planning?.weight) || 0), 0), left = Math.max(0, Math.round((100 - used) * 100) / 100); return `<label class="okb-mini"><span>${tr('分值（分）', 'Points')}</span><input name="weight" type="number" min="0.01" max="100" step="0.01" required value="${left || ''}" title="${tr(`所有目标合计 100 分，还剩 ${left} 分`, `All objectives add up to 100; ${left} left`)}"></label><span class="okb-form-tip">${tr(`所有目标合计 100 分，还剩 ${left} 分`, `All objectives add up to 100 · ${left} left`)}</span>`; })() : ''}
+      ${simple() ? (() => { const mine = objectivesOf(ownerId), used = mine.reduce((n, x) => n + (Number(x.planning?.weight) || 0), 0), left = Math.round((100 - used) * 100) / 100, def = left > 0 ? left : Math.round(100 / (mine.length + 1)); return `<label class="okb-mini"><span>${tr('分值（分）', 'Points')}</span><input name="weight" type="number" min="1" max="${mine.length ? 100 - mine.length : 100}" step="0.01" required value="${def}" data-okr-weight-preview="o" title="${tr('所有目标合计 100 分；超出时其他目标按比例自动调低', 'Objectives total 100; others are scaled down automatically')}"></label><span class="okb-form-tip" data-okr-preview>${mine.length && left <= 0 ? tr('其他目标会按比例自动调整，保持合计 100 分', 'Other objectives are scaled to keep the total at 100') : ''}</span>`; })() : ''}
       ${simple() ? `<details class="okb-more-fields"><summary>${tr('更多设置（可不填）', 'More settings (optional)')}</summary>` : ''}
       ${simple() ? '' : `<label class="okb-mini"><span>${tr('权重 %', 'Weight %')}</span><input name="weight" type="number" min="0.01" max="100" step="0.01" required></label>`}
       ${isManager() ? `<label class="okb-mini"><span>${tr('负责人', 'Owner')}</span><select name="ownerId">${owners.map(u => `<option value="${esc(u.id)}" ${u.id === ownerId ? 'selected' : ''}>${esc(u.display_name)}</option>`).join('')}</select></label>
@@ -364,6 +371,14 @@
   }
 
   /* ---------- person view ---------- */
+  /* What the others become after this weight is set (same proportional rule as the server). */
+  function previewText(kind, objectiveId, w) {
+    const others = kind === 'kr' ? krsOf(objectiveById(objectiveId)).map((k, i) => ({ label:'KR' + (i + 1), w:Number(k.planning?.weight) || 0 })) : [];
+    if (!others.length) return tr('同一目标下 KR 权重合计 100%', 'KR weights total 100%');
+    const sum = others.reduce((a, b) => a + b.w, 0), target = Math.max(0, 100 - (Number(w) || 0));
+    if (Math.abs(sum - target) < 0.01) return tr(`= ${num(oPoints(objectiveById(objectiveId)) * (Number(w) || 0) / 100)} 分；合计正好 100%`, `= ${num(oPoints(objectiveById(objectiveId)) * (Number(w) || 0) / 100)} pts; total exactly 100%`);
+    return tr('其他 KR 自动调整为：', 'Others become: ') + others.map(x => `${x.label} ${num(Math.round((sum > 0 ? x.w * target / sum : target / others.length) * 100) / 100)}%`).join('、');
+  }
   function readiness(objs) {
     const problems = [], total = objs.reduce((s, o) => s + (Number(o.planning?.weight) > 0 ? Number(o.planning.weight) : 0), 0);
     if (!objs.length) problems.push(tr('还没有目标', 'No objectives yet'));
@@ -419,7 +434,7 @@
       ${cycleBanner()}
       <nav class="okb-tabs" role="tablist">${tabs.map(([id, label, ic]) => `<button type="button" role="tab" aria-selected="${ui.tab === id}" class="${ui.tab === id ? 'active' : ''}" data-okr="tab" data-value="${id}">${icon(ic)} ${label}</button>`).join('')}<span class="okb-tabs-spacer"></span><button type="button" class="okb-btn small" data-okr="rubric">${icon('info')} ${tr('评分标准', 'Scoring guide')}</button></nav>
       ${ui.tab === 'align' ? alignView() : `<div class="okb-layout ${ui.tab === 'mine' ? 'okb-solo' : ''}">
-        ${ui.tab === 'team' ? `<aside class="okb-people"><label class="okb-search">${icon('magnifying-glass')}<input data-okr-search placeholder="${tr('搜索成员', 'Search people')}" value="${esc(ui.search)}"></label><ul>${peopleSections().map(([label, ids]) => (label ? `<li class="okb-people-group"><span>${label}</span><b>${ids.length}</b></li>` : '') + ids.map(id => { const objs = objectivesOf(id), pct = averagePct(objs); return `<li><button type="button" class="${ui.person === id ? 'active' : ''}" data-okr="person" data-id="${esc(id)}">${id === '__company' ? `<span class="okb-avatar okb-company">${icon('buildings')}</span>` : avatar(id)}<span class="okb-people-name">${esc(id === '__company' ? tr('公司目标', 'Company objectives') : nameOf(id))}${id === me()?.id ? ` <em>${tr('我', 'Me')}</em>` : ''}</span>${simple() && id !== '__company' ? stageChips(id, objs) : `<span class="okb-people-pct">${objs.length ? (pct === null ? objs.length + tr(' 个', '') : pct + '%') : '—'}</span>`}</button></li>`; }).join('')).join('') || `<li class="okb-hint">${tr('没有匹配的成员', 'No matching people')}</li>`}</ul></aside>` : ''}
+        ${ui.tab === 'team' ? `<aside class="okb-people"><label class="okb-search">${icon('magnifying-glass')}<input data-okr-search placeholder="${tr('搜索成员', 'Search people')}" value="${esc(ui.search)}"></label>${simple() ? stageLegend() : ''}<ul>${peopleSections().map(([label, ids]) => (label ? `<li class="okb-people-group"><span>${label}</span><b>${ids.length}</b></li>` : '') + ids.map(id => { const objs = objectivesOf(id), pct = averagePct(objs); return `<li><button type="button" class="${ui.person === id ? 'active' : ''}" data-okr="person" data-id="${esc(id)}">${id === '__company' ? `<span class="okb-avatar okb-company">${icon('buildings')}</span>` : avatar(id)}<span class="okb-people-name">${esc(id === '__company' ? tr('公司目标', 'Company objectives') : nameOf(id))}${id === me()?.id ? ` <em>${tr('我', 'Me')}</em>` : ''}</span>${simple() && id !== '__company' ? stageChips(id, objs) : `<span class="okb-people-pct">${objs.length ? (pct === null ? objs.length + tr(' 个', '') : pct + '%') : '—'}</span>`}</button></li>`; }).join('')).join('') || `<li class="okb-hint">${tr('没有匹配的成员', 'No matching people')}</li>`}</ul></aside>` : ''}
         <div class="okb-main">${ui.person ? personView(ui.person) : ''}</div>
       </div>`}
     </div>`;
@@ -490,6 +505,11 @@
   const patchKr = (k, body) => ctx.api.request('/key-results/' + encodeURIComponent(k.id), { method:'PATCH', body:{ expectedMetaVersion:k.meta_version || 1, ...body } });
   const findKr = id => S().krs.find(k => k.id === id);
 
+  document.addEventListener('input', e => {
+    const el = e.target; if (!el.matches?.('[data-okr-weight-preview]')) return;
+    const tip = el.closest('form')?.querySelector('[data-okr-preview]'); if (!tip) return;
+    if (el.dataset.okrWeightPreview === 'kr') tip.textContent = previewText('kr', el.dataset.objective, el.value);
+  });
   document.addEventListener('click', async event => {
     if (!ctx || !S().actor) return;
     const t = event.target.closest('[data-okr]');
@@ -530,6 +550,7 @@
       case 'source': return ctx.openObjectiveSource(id);
       case 'rubric': return rubricDialog();
       case 'publish': ui.confirm = { kind:'publish' }; return rerender();
+      case 'stage-help': ui.stageHelp = !ui.stageHelp; return rerender();
       case 'publish-confirm': {
         const period = ui.cycle; ui.confirm = null;
         const ok = await mutate(() => ctx.api.post('/okr/publish', { period }), tr('OKR 已最终发布，KR 已变成你的任务', 'OKR published; your KRs are now tasks'));
@@ -562,11 +583,11 @@
       if (!raw) return;
       let ok = false;
       if (kind === 'o-title') { const o = objectiveById(id); if (raw === o.title) ok = true; else ok = await mutate(() => patchO(o, { title:raw }), tr('已保存', 'Saved')); }
-      if (kind === 'o-weight') ok = await mutate(() => patchO(objectiveById(id), { weight:Number(raw) }), tr('已保存', 'Saved'));
+      if (kind === 'o-weight') ok = await mutate(() => patchO(objectiveById(id), { weight:Number(raw), ...(simple() ? { rebalance:true } : {}) }), simple() ? tr('已保存，其他目标已按比例调整', 'Saved; other objectives rescaled') : tr('已保存', 'Saved'));
       if (kind === 'kr-title') { const k = findKr(id); if (raw === k.title) ok = true; else ok = await mutate(() => patchKr(k, { title:raw }), tr('已保存', 'Saved')); }
-      if (kind === 'kr-weight') { const k = findKr(id), o = objectiveById(k.objective_id), w = Number(raw), others = krSum(o) - (Number(k.planning?.weight) > 0 ? Number(k.planning.weight) : 0), max = Math.round((100 - others) * 100) / 100;
-        if (w > max + 0.001 && w > (Number(k.planning?.weight) || 0)) { ctx.toast?.(tr(`同一目标下 KR 权重合计必须正好 100%，这条最多只能填 ${num(Math.max(0, max))}%。`, `KR weights must total exactly 100%; this one can be at most ${num(Math.max(0, max))}%.`)); return; }
-        ok = await mutate(() => patchKr(k, { weight:w }), tr('已保存', 'Saved')); }
+      if (kind === 'kr-weight') { const k = findKr(id), o = objectiveById(k.objective_id), w = Number(raw), n = krsOf(o).length - 1;
+        if (n && w > 100 - n) { ctx.toast?.(tr(`其他 KR 每条至少保留 1%，这条最多 ${100 - n}%。`, `Leave at least 1% for each other KR; at most ${100 - n}%.`)); return; }
+        ok = await mutate(() => patchKr(k, { weight:w, ...(simple() ? { rebalance:true } : {}) }), n ? tr('已保存，其他 KR 已按比例调整', 'Saved; other KRs rescaled') : tr('已保存', 'Saved')); }
       if (ok) ui.editing = null;
       return rerender();
     }
@@ -574,10 +595,11 @@
       const o = objectiveById(form.dataset.objectiveId), text = String(v.targetText || '').trim(), m = /^([0-9]+(?:\.[0-9]+)?)\s*(.*)$/.exec(text);
       const left = Math.round((100 - krSum(o)) * 100) / 100, w = Number(v.weight);
       if (!(w > 0)) { if (err) err.textContent = tr('请填写这条 KR 的权重。', 'Enter this KR’s weight.'); return; }
-      if (w > left + 0.001) { if (err) err.textContent = tr(`同一目标下 KR 权重合计必须正好 100%，这条最多只能填 ${num(Math.max(0, left))}%。`, `KR weights must total exactly 100%; this one can be at most ${num(Math.max(0, left))}%.`); return; }
+      if (krsOf(o).length && w > 100 - krsOf(o).length) { if (err) err.textContent = tr(`其他 KR 每条至少保留 1%，这条最多 ${100 - krsOf(o).length}%。`, `Leave at least 1% for each other KR; at most ${100 - krsOf(o).length}%.`); return; }
       const planning = { weight:w, description:'', targetText:text };
       const body = m && Number(m[1]) > 0 ? { title:v.title.trim(), baseline:0, target:Number(m[1]), direction:'increase', unit:(m[2] || '').trim().slice(0, 30) || tr('项', 'units'), planning } : { title:v.title.trim(), baseline:0, target:1, direction:'increase', unit:'完成', planning };
-      const ok = await mutate(() => ctx.api.post('/objectives/' + encodeURIComponent(o.id) + '/key-results', body), tr('关键结果已添加', 'Key result added'));
+      body.rebalance = true;
+      const ok = await mutate(() => ctx.api.post('/objectives/' + encodeURIComponent(o.id) + '/key-results', body), left >= w - 0.001 ? tr('关键结果已添加', 'Key result added') : tr('关键结果已添加，其他 KR 已按比例调整', 'Key result added; other KRs rescaled'));
       if (ok) ui.adding = { kind:'kr', id:o.id };
       rerender(); return;
     }
@@ -609,8 +631,8 @@
     if (form.id === 'okr-new-o') {
       const period = ui.cycle || nowPeriod();
       const owner = v.ownerId || me().id, used = S().objectives.filter(x => x.owner_id === owner && x.planning?.period === period && x.level !== 'company').reduce((n, x) => n + (Number(x.planning?.weight) || 0), 0), autoWeight = Math.round((100 - used) * 100) / 100;
-      if (simple() && (v.weight ? Number(v.weight) > autoWeight + 0.001 : autoWeight <= 0)) { if (err) err.textContent = autoWeight > 0 ? tr(`本周期所有目标合计必须正好 100 分，这个目标最多只能填 ${num(autoWeight)} 分。`, `Objectives must total exactly 100 points; this one can be at most ${num(autoWeight)}.`) : tr('本周期目标分值已满 100 分，请先调低其他目标的分值。', 'Objectives already total 100 points; lower another one first.'); return; }
-      const body = { title:v.title.trim(), level:v.level || 'personal', ownerId:owner, planning:{ period, weight:v.weight ? Number(v.weight) : Math.min(100, autoWeight), location:'', description:String(v.description || '').trim(), type:'mandatory', bonusIncluded:false, scoringDueDate:dueDateFor(period) }, ...(collab() && v.parentObjectiveId ? { parentObjectiveId:v.parentObjectiveId } : {}) };
+      const asCompany = simple() && companyMine() && owner === me().id;
+      const body = { title:v.title.trim(), level:asCompany ? 'company' : (v.level || 'personal'), ...(asCompany ? {} : { ownerId:owner }), planning:{ period, weight:v.weight ? Number(v.weight) : Math.min(100, autoWeight), location:'', description:String(v.description || '').trim(), type:'mandatory', bonusIncluded:false, scoringDueDate:dueDateFor(period) }, ...(simple() ? { rebalance:true } : {}), ...(collab() && v.parentObjectiveId ? { parentObjectiveId:v.parentObjectiveId } : {}) };
       let createdId = null;
       const ok = await mutate(async () => { const r = await ctx.api.post('/objectives', body); createdId = r?.id; }, simple() ? tr('目标已创建，接着添加关键结果（目标值可以写“完成”或明确数字）', 'Objective created — add key results (target: “done” or a number)') : tr('目标已创建，接着添加关键结果吧', 'Objective created — now add its key results'));
       if (ok) { ui.adding = createdId ? { kind:'kr', id:createdId } : null; if (ui.tab === 'team') ui.person = body.ownerId; ui.cycle = period; }

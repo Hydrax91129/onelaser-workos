@@ -320,3 +320,12 @@ html[data-theme=dark] .okb-pub.pending{background:#3a3220;border-color:#6b5a2a;c
 html[data-theme=dark] .okb-stage{background:#2a2d38;color:#9aa0b4}html[data-theme=dark] .okb-stage.done{background:#173326;color:#7fe0a8}html[data-theme=dark] .okb-stage.part{background:#3a3220;color:#f3cf72}
 .okb-people li button:has(.okb-stages){flex-wrap:wrap;row-gap:4px}
 .okb-people li button .okb-stages{flex-basis:100%;margin-left:36px;justify-content:flex-start}
+
+.okb-people{overflow-x:hidden}
+.okb-stage-legend{margin:8px 4px 4px;padding:8px 10px;border-radius:10px;background:#f6f8ff;border:1px solid #dfe6ff;font-size:12px;display:flex;flex-direction:column;gap:6px}
+.okb-stage-legend-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.okb-stage-legend-row b{flex:1;font-size:12.5px}.okb-stage-legend-row span{color:var(--okb-faint,#7a8096);font-size:11px;margin-left:2px}
+.okb-stage-help-btn{border:1px solid #c9d7ff;background:#fff;color:#245bdb;border-radius:999px;padding:2px 9px;font:inherit;font-size:12px;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+.okb-stage-help{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 8px;font-size:12px;line-height:1.5}
+.okb-stage-help dt{font-weight:700}.okb-stage-help dd{margin:0;color:#4b5263}
+html[data-theme=dark] .okb-stage-legend{background:#1f2433;border-color:#35508f}html[data-theme=dark] .okb-stage-help-btn{background:#1d1f27}html[data-theme=dark] .okb-stage-help dd{color:#b8bccb}
