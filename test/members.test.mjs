@@ -34,6 +34,7 @@ test('org page shows a status switch per member, locks self/executives, and list
   window.WorkOSPeople._ui.org = { items:members };
   const html = window.WorkOSPeople.org();
   assert.match(html, /data-pp-status data-id="u2"/);
+  assert.match(html, /data-pp-field="location" data-id="u3"/, 'admins edit work location inline');
   assert.doesNotMatch(html, /data-pp-status data-id="kc"/, 'cannot disable yourself or an executive');
   assert.match(html, /已停用成员[\s\S]*Gone[\s\S]*data-pp="enable" data-id="u9"/);
   assert.match(html, /data-pp="invite-open"/);
@@ -64,12 +65,12 @@ test('inviting a member posts the form and shows the one-time link', async () =>
   window.WorkOSPeople._ui.org = { items:members }; window.WorkOSPeople._ui.invites = { items:[], emailDelivery:false }; window.WorkOSPeople._ui.inviteOpen = true;
   document.body.innerHTML = window.WorkOSPeople.org();
   const f = document.getElementById('pp-invite');
-  f.querySelector('[name=displayName]').value = 'Mike'; f.querySelector('[name=email]').value = 'mike@example.com';
+  f.querySelector('[name=displayName]').value = 'Mike'; f.querySelector('[name=location]').value = 'Lake Forest, CA'; f.querySelector('[name=email]').value = 'mike@example.com';
   f.querySelectorAll('[name=managerId] option').forEach(o => o.removeAttribute('selected')); f.querySelector('[name=managerId] option[value="u2"]').setAttribute('selected', ''); f.querySelector('[name=products]').checked = true;
   f.dispatchEvent(new window.Event('submit', { bubbles:true, cancelable:true }));
   await new Promise(r => setTimeout(r, 0));
   const post = calls.find(c => c[1] === '/org/invites');
-  assert.equal(post[2].email, 'mike@example.com'); assert.equal(post[2].managerId, 'u2'); assert.equal(JSON.stringify(post[2].grants), '["products"]');
+  assert.equal(post[2].email, 'mike@example.com'); assert.equal(post[2].location, 'Lake Forest, CA'); assert.equal(post[2].managerId, 'u2'); assert.equal(JSON.stringify(post[2].grants), '["products"]');
   const html = window.WorkOSPeople.org();
   assert.match(html, /邀请已生成/); assert.match(html, /#invite\/a{43}/); assert.match(html, /待接受的邀请[\s\S]*Mike/);
 });

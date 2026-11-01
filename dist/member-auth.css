@@ -23,3 +23,9 @@ html[data-theme=dark] .email-login-form input[readonly]{background:#232327}
 .no-access-icon{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;margin:0 auto 12px;background:#fff1d6;color:#a86500}
 .no-access h2{font-size:18px;margin-bottom:8px}
 .no-access .btn{margin-top:16px}
+/* auto-translation marker */
+.tx-badge{display:inline-flex;align-items:center;justify-content:center;margin-left:5px;padding:0 4px;min-width:16px;height:16px;border-radius:4px;font-size:10px;font-weight:600;line-height:1;vertical-align:2px;background:#e8f0ff;color:#3370ff;cursor:pointer;user-select:none}
+.tx-badge:hover{background:#3370ff;color:#fff}
+.tx-orig .tx-badge{background:#f2f3f5;color:#646a73}
+html[data-theme=dark] .tx-badge{background:#24324f;color:#9dbbff}
+html[data-theme=dark] .tx-orig .tx-badge{background:#2f2f35;color:#a9a9b0}

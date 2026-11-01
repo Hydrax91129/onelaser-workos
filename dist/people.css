@@ -158,3 +158,5 @@ html[data-theme=dark] .pp-disable-row td{background:#3a2626}
 .pp-sub-h b{font-weight:500;color:var(--pp-faint);margin-left:4px}
 .pp-invites td{padding:8px 10px}
 @media (max-width:760px){.pp-invite-link{flex-direction:column}.pp-table-panel{overflow-x:auto}}
+.pp-locked-field{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-height:36px;padding:7px 10px;border:1px dashed var(--pp-line);border-radius:8px;background:var(--pp-soft);color:var(--pp-text);font-size:13px}
+.pp-locked-field small{flex-basis:100%;color:var(--pp-faint);font-size:11.5px}

@@ -64,10 +64,10 @@
       'Search or filter by product line and status; “Needs attributes” lists SKUs missing data — open one, fill it in and save.'),
     orgchart: h('组织架构',
       '整个公司的汇报关系图，每张卡片显示名字、岗位和所在地。',
-      '顶部按所在地筛选会突出显示该地的人；卡片下方的按钮可以收起或展开下属。岗位和汇报线由管理员维护，所在地在“个人设置”里自己填写。',
+      '顶部按所在地筛选会突出显示该地的人；卡片下方的按钮可以收起或展开下属。岗位、汇报线和工作地点都由管理员在“组织与权限”里维护。',
       'Org chart',
       'The company’s reporting lines; each card shows the person’s name, role and location.',
-      'Click a location at the top to highlight its people; the button under a card collapses or expands its reports. Admins maintain titles and reporting lines; everyone sets their own location in Personal settings.'),
+      'Click a location at the top to highlight its people; the button under a card collapses or expands its reports. Admins maintain titles, reporting lines and work locations in Organization & permissions.'),
     quality: h('产品质量追踪（测试）',
       'AI 每天把客服工单和论坛里的质量问题收集进来、合并重复、严格分类；工厂填写原因、方案和执行时间，我们批准、验证后关闭。',
       '先看顶部的严重问题和“方案待批准”；点图表里的分类或产品线可以筛选下面的问题清单；点一行打开详情处理。',
@@ -89,10 +89,10 @@
 
     settings: h('个人设置',
       '上传头像、填写联系方式，方便同事找到你；查看自己的权限。',
-      '点“上传头像”选一张照片，系统会自动裁剪压缩；填写电话、邮箱、微信、所在地和时区后点保存。',
+      '点“上传头像”选一张照片，系统会自动裁剪压缩；填写电话、邮箱、微信和时区后点保存；工作地点由管理员设置。',
       'Personal settings',
       'Upload a photo and contact details so colleagues can reach you; see your access.',
-      'Click Upload photo (it is cropped and compressed automatically), fill in phone, email, WeChat, location and time zone, then Save.'),
+      'Click Upload photo (it is cropped and compressed automatically), fill in phone, email, WeChat and time zone, then Save; your work location is set by an administrator.'),
     org: h('组织与权限',
       '管理员设置每个人的直属上级、职位、角色和功能权限。',
       '在表格里直接修改，改完立即保存。直属上级决定“任务分析”的可见范围；“产品管理区”和“成本明细”只给需要的人开通。切到“汇报线图”检查组织结构是否正确。',
@@ -150,7 +150,122 @@
   };
 
   /* Button hints. First matching rule wins, so put specific selectors first. */
+  /* Column headers: tables marked data-help-table="key"; one hint per column, left to right. */
+  const HEADERS = {
+    'pj-analysis':[h('项目','项目名称，点开看详情。','','Project','Project name; open it for details.',''),h('状态','项目当前阶段（进行中 / 有风险 / 已完成等）。','','Status','Current project stage.',''),h('工作进度 vs 时间进度','条形 = 已完成工作量；竖线 = 按时间应完成到哪里。','条形落在竖线左边越多，越落后。','Work vs time','Bar = work done; marker = where it should be by now.','The further the bar is left of the marker, the further behind.'),h('偏差','工作进度减去时间进度。负数代表落后几个百分点。','','Gap','Work progress minus time elapsed; negative means behind.',''),h('逾期 / 卡住','已过截止日期或标记为卡住的任务数。','数字越大越需要关注。','Overdue / stuck','Tasks past due or marked stuck.',''),h('下一个里程碑','最近要到期的里程碑和日期。','','Next milestone','The nearest upcoming milestone.',''),h('延期可能性','综合偏差、逾期和剩余时间估算的延期风险。','高风险的项目优先开会协调。','Delay risk','Estimated from gap, overdue work and time left.','Meet on high-risk projects first.')],
+    'pd-ladder':[h('价格档','不同场景下的售价：官网原价、三档折扣、表格最低价、经销商价、清货价。','','Price point','Prices for each scenario: MSRP, three discounts, sheet low, dealer, clearance.',''),h('售价','这一档对客户的标价（美元）。','','Price','Customer price for this tier (USD).',''),h('实收（含运费）','售价加上客户支付的运费，即公司实际收到的钱。','','Revenue','Price plus the shipping fee the customer pays.',''),h('最低成本','产品成本 + 最便宜的头程运费，送到美国仓的硬成本。','在下方“成本设置”里调整工厂价、汇率、运费。','Lowest cost','Product + cheapest freight to the US warehouse.','Adjust factory price, FX and freight in Cost settings below.'),h('运营 / 费用','按售价比例计算的运营成本：广告、KOL、交易手续费、仓储、售后、团队、管理。','比例在“成本设置”的运营费用里修改。','Opex / fees','Operating costs as a share of price: ads, KOL, fees, warehouse, RMA, team, admin.','Change the percentages in Cost settings.'),h('净利润','实收 − 最低成本 − 运营费用。','','Net profit','Revenue − lowest cost − opex.',''),h('利润率','净利润 ÷ 售价。绿色健康，黄色偏低，红色亏损。','','Margin','Net profit ÷ price. Green healthy, amber thin, red loss.',''),h('构成','灰 = 成本，橙 = 运营费用，绿 = 利润。','','Mix','Grey = cost, orange = opex, green = profit.','')],
+    'pd-catalog':[h('产品','产品名称和 SKU。','点击打开产品详情，补齐属性。','Product','Name and SKU.','Click to open and complete attributes.'),h('供应链状态','开发中 / 上新中 / 在售 / 清库存 / 计划停售 / 停售。','','Status','Development, launching, on sale, clearance, phasing out, discontinued.',''),h('产品线','所属产品系列。','','Product line','Product family.',''),h('海外仓','美国仓可售库存，后面灰字是在途数量。','','Warehouse','Sellable US stock; grey number is in transit.',''),h('资料完整度','产品属性填写了多少。','低于 100% 的请产品经理补齐。','Completeness','How much of the product record is filled in.','PMs should complete anything below 100%.'),h('最优发货方式','按体积重和费率算出最便宜的头程方式。','','Best shipping','Cheapest freight method by volume weight and rates.',''),h('零售价 MSRP','官网标价。产品目录只显示这一个价格。','','MSRP','List price; the catalog shows only this price.','')],
+    'pd-supply':[h('SKU','产品编号。','','SKU','Product code.',''),h('工厂','生产和发货的工厂。','','Factory','Producing factory.',''),h('工厂仓','还在工厂仓库、可以随时调货发美国的数量。','补货时优先从这里调。','Factory stock','Units at the factory, ready to ship to the US.','Transfer from here before a new PO.'),h('在途','已发出、在海上或路上的数量。','','In transit','Shipped and on the way.',''),h('美国仓','美国仓可售库存。','','US stock','Sellable US warehouse stock.',''),h('近90天出库','最近 90 天卖出 / 发出的数量，用来算销售速度。','','Out 90d','Units shipped in the last 90 days (sales speed).',''),h('可售天数','美国仓库存按近期速度还能卖多少天。','低于安全天数就该补货。','Cover (days)','Days the US stock lasts at recent speed.','Reorder when below safety days.'),h('最老库龄','美国仓里最老一批货放了多少天。','超过库龄上限算超期，考虑清库存。','Oldest (days)','Age of the oldest US batch.','Past the age limit means aged stock: consider clearance.'),h('美国仓货值','美国仓库存按出厂价折算的金额。','','US value','US stock valued at factory cost.',''),h('状态','颜色代表健康度：缺货 / 需补货 / 超期 / 积压 / 滞销 / 正常。','先处理红色和紫色。','Status','Health colour: stock-out, reorder, aged, overstock, idle, ok.','Handle red and purple first.')],
+    'qa-issues':[h('编号','问题编号。','点击打开详情、方案和审批。','ID','Issue ID.','Open it for details, plan and approval.'),h('问题','问题描述（同类反馈已合并）。','','Issue','Description; duplicate reports are merged.',''),h('分类码','两级分类：大类-小类，例如 OPT-02。','','Code','Two-level category, e.g. OPT-02.',''),h('严重度','S1 安全 / 停机，S2 功能受影响，S3 轻微。','','Severity','S1 safety / down, S2 function affected, S3 minor.',''),h('反馈','收到的反馈次数（客服工单 + 论坛）。','','Reports','Number of reports (tickets + forum).',''),h('来源','反馈来自哪里。','','Sources','Where reports came from.',''),h('责任工厂','负责出方案和执行的工厂。','','Factory','Factory responsible for the fix.',''),h('状态','新问题 → 工厂出方案 → 我们审批 → 执行 → 验证 → 关闭。','','Status','New → plan → review → doing → verify → closed.',''),h('执行时间','工厂承诺的完成日期。','','Due','Date the factory committed to.',''),h('已持续','问题从发现到现在的天数。','','Age','Days since first reported.','')],
+    'qa-factory':[h('工厂','责任工厂。','','Factory','Responsible factory.',''),h('未关闭','该工厂还没关闭的问题数。','','Open','Issues not yet closed.',''),h('执行逾期','超过承诺执行时间还没完成的问题数。','','Overdue','Past the committed date and not done.',''),h('平均出方案天数','从分派到工厂提交方案的平均天数。','越短越好。','Avg days to plan','Average days from assignment to plan.','Lower is better.')],
+    'pp-org':[h('成员','姓名、登录邮箱和登录方式（钉钉 / 邮箱）。','','Member','Name, sign-in email and method (DingTalk / email).',''),h('职位','显示在组织架构里的岗位名称。','直接修改，离开输入框自动保存。','Title','Role shown on the org chart.','Edit in place; saves when you leave the field.'),h('工作地点','员工常驻的城市或办公室，组织架构按这里显示国旗。','只有管理员能改；员工在个人设置里只能查看。','Work location','City or office; the org chart shows a flag for it.','Only admins can change it.'),h('直属上级','这个人向谁汇报。决定谁能看到谁的任务和数据。','上级能看下级，下级看不到上级。','Manager','Who this person reports to; controls who sees whose tasks.','Managers see reports; reports never see managers.'),h('角色','主管可以给本部门派任务、管理目标；员工只能给自己建任务。','','Role','Managers assign department tasks and manage goals; employees create their own tasks.',''),h('管理员','管理员可以进入“组织与权限”，邀请、停用成员和分配权限。','只给少数人开通。','Admin','Admins open this page, invite / disable members and grant access.','Grant sparingly.'),h('产品管理区','能否进入产品管理、成本核算和智能供应链。','','Product hub','Access to catalog, cost calculator and supply chain.',''),h('成本明细','能否看到成本构成、经销商价和利润。没开通只看到 SKU 和零售价。','需要先开通产品管理区。','Cost detail','See cost build-up, dealer price and profit. Without it: SKU and MSRP only.','Requires Product hub.'),h('状态','在职 / 停用。关掉开关会先确认未完成任务转给谁，然后立即停用。','停用的人无法登录，并从组织架构中移除；可随时恢复。','Status','Active / disabled. Turning it off asks who takes over open tasks, then disables.','Disabled people cannot sign in and leave the org chart; restore any time.')],
+  };
+  const headerHint = node => {
+    if (node.tagName !== 'TH') return null;
+    const key = node.closest('[data-help-table]')?.dataset.helpTable, list = key && HEADERS[key];
+    const i = Number.isInteger(node.cellIndex) ? node.cellIndex : [...node.parentElement.children].indexOf(node);
+    return list ? list[i] || null : null;
+  };
+
   const RULES = [
+    ['#okr-new-kr button[type="submit"]', h('添加关键结果','保存这条 KR。','之后在 KR 进度里登记实际值，系统自动算进度。','Add key result','Saves this KR.','Then record actual values to track progress.')],
+    ['[data-okr="edit-o-desc"]', h('编辑描述','补充目标的背景、为什么重要、怎样算做好。','写清楚能让同事和主管理解这个目标。','Edit description','Add context: why it matters and what good looks like.','')],
+    ['#okr-update [name="confidence"]', h('KR 状态','发进展时顺便更新 KR 能否按时达成：正常 / 有风险 / 已延期。','有风险要尽早标出来，方便主管协调资源。','KR status','Update whether the KR is on track, at risk or behind.','Flag risk early.')],
+    ['#okr-update button[type="submit"]', h('发布进展','保存这条进展，所有能看到这个目标的人都会看到。','','Post update','Saves the update for everyone who can see this goal.','')],
+    ['[data-pd="back"]', h('返回','回到产品目录。','','Back','Back to the catalog.','')],
+    ['[data-pd="save-product"]', h('保存产品','保存这个产品的属性修改。','','Save product','Saves attribute changes.','')],
+    ['.pd-field input', h('产品属性','补齐这一项产品资料，完整度会随之提高。','改完点右上角“保存”。','Product attribute','Fill in this attribute to raise completeness.','Click Save at the top.')],
+    ['.pd-media-add', h('上传图片 / 视频','为产品添加主图、细节图和视频。','','Upload media','Add product images and video.','')],
+    ['.pd-select', h('供应链状态','产品生命周期阶段：开发中 → 上新中 → 在售 → 清库存 → 计划停售 → 停售。','状态会影响补货建议和清库存提示。','Supply status','Lifecycle stage.','It drives replenishment and clearance hints.')],
+    ['.pd-check input', h('销售渠道','这个产品在哪些渠道上架销售。','','Sales channels','Where this product is listed.','')],
+    // ---- Sidebar section headers ----
+    ['[data-nav-toggle]', h('菜单分组','点击收起或展开这一组菜单。','常用的分组保持展开，不常用的收起，下次打开会记住。','Menu group','Collapse or expand this group.','Your choice is remembered.')],
+    // ---- OKR: new objective / key result forms (why each field matters) ----
+    ['#okr-new-o [name="title"]', h('目标（O）','写你这个周期想达成的结果，一句话、可以鼓舞人。','好的目标说“要什么”，不说“做什么”，例如“西部经销商渠道销售额增长 20%”。','Objective','The outcome you want this cycle, in one inspiring sentence.','Say what you want, not what you will do.')],
+    ['#okr-new-o [name="weight"]', h('目标权重 %','这个目标占你本周期总分的比例。','你所有目标的权重加起来应等于 100%；越重要权重越高。','Objective weight %','Share of your total score for this cycle.','All your objectives should add up to 100%.')],
+    ['#okr-new-o [name="ownerId"]', h('负责人','谁对这个目标的结果负责。','主管可以给下属建目标；员工只能给自己建。','Owner','Who is accountable for the outcome.','Managers can create goals for reports.')],
+    ['#okr-new-o [name="level"]', h('层级','个人目标只算你自己；部门目标是整个团队共同的目标。','部门目标由主管创建，个人目标对齐到部门或公司目标。','Level','Personal goals are yours; department goals are shared by the team.','Align personal goals to department or company goals.')],
+    ['#okr-new-o [name="parentObjectiveId"]', h('对齐到','这个目标支撑哪一个上级或公司目标。','对齐后会出现在“对齐视图”的树里，大家能看到每个人的目标怎么支撑公司目标。','Align to','Which higher-level goal this supports.','Aligned goals appear in the alignment tree.')],
+    ['#okr-new-o button[type="submit"]', h('创建目标','保存这个目标。','创建后在下面点“添加关键结果”，写 2–4 条可量化的 KR。','Create objective','Saves the objective.','Then add 2–4 measurable key results.')],
+    ['[data-okr="cancel-add"]', h('取消','放弃这次填写。','','Cancel','Discard this entry.','')],
+    ['#okr-new-kr [name="title"]', h('关键结果（KR）','用一个数字说明目标怎样算达成。','必须能量化，例如“新增 30 家经销商”，而不是“多开发经销商”。','Key result','A number that proves the objective is met.','Make it measurable.')],
+    ['#okr-new-kr [name="target"]', h('目标值','周期结束时要达到的数字。','','Target','The number to reach by the end of the cycle.','')],
+    ['#okr-new-kr [name="unit"]', h('单位','数字的单位，例如 家、%、万元、小时。','','Unit','Unit of the number, e.g. dealers, %, hours.','')],
+    ['#okr-new-kr [name="weight"]', h('KR 权重 %','这条 KR 在目标里占多少分量。','同一目标下 KR 权重合计应等于目标权重。','KR weight %','How much this KR counts within the objective.','KR weights should add up to the objective weight.')],
+    ['#okr-new-kr [name="baseline"]', h('基准值','开始时的数字，用来算进度。','进度 =（实际值 − 基准值）÷（目标值 − 基准值）。','Baseline','Starting number used to calculate progress.','')],
+    ['#okr-new-kr [name="direction"]', h('方向','数字越大越好（如销售额）还是越小越好（如响应时间）。','','Direction','Whether higher or lower is better.','')],
+    ['#okr-update textarea[name="body"]', h('写进展','记录这段时间做了什么、有什么风险、需要谁帮忙。','每周至少写一次；主管和同事都能看到。','Progress update','What moved, risks and help needed.','Post at least weekly.')],
+    // ---- Task board ----
+    ['th.mb-col-owner', h('负责人','谁来完成这项任务。','','Owner','Who does the task.','')],
+    ['th.mb-col-priority', h('优先级','紧急 / 高 / 中 / 低。','点列标题可以排序。','Priority','Urgent / high / medium / low.','Click a header to sort.')],
+    ['th.mb-col-status', h('状态','未开始 / 进行中 / 暂缓 / 待检查 / 完成。','选“完成”必须写完成结果和自评，AI 会打分。','Status','Not started, working, on hold, review, done.','Done requires a result and self-review; AI scores it.')],
+    ['th.mb-col-category', h('自定义分类','按团队习惯给任务分类，例如 市场 / 运营 / 人事。','在看板设置里可以增改分类。','Custom category','Your own task categories.','Edit them in board settings.')],
+    ['th.mb-col-due', h('截止日期','7 天内变粉，3 天内变红，逾期会闪烁提醒。','','Due date','Pink within 7 days, red within 3, flashing when overdue.','')],
+    ['th.mb-col-updated', h('更新日期','最后一次更新的日期：越新越绿，7 天没更新变黑。','黑色说明这项任务很久没人跟进。','Updated','Last update: greener is fresher; black after 7 days.','Black means nobody has followed up.')],
+    ['th.mb-task-head', h('任务','任务名称。','点名称打开详情，写更新、传附件。','Task','Task name.','Open it to post updates and attach files.')],
+    ['th.mb-addcol', h('显示列','选择表格里显示哪些列。','','Columns','Choose which columns to show.','')],
+    ['[data-mb-select], [data-mb-select-group]', h('选择','勾选任务后可以批量修改或移动。','','Select','Select tasks for bulk changes.','')],
+    ['#live-new-task [name="title"]', h('任务名称','一句话说清楚要做什么。','以动词开头，例如“整理 11 月竞品价格表”。','Task name','One line saying what to do.','Start with a verb.')],
+    ['#live-new-task [name="ownerId"]', h('负责人','谁来完成。','主管可以派给本部门同事；员工只能给自己建任务。','Owner','Who does it.','Managers can assign to their department.')],
+    ['#live-new-task [name="reviewerId"]', h('验收人','完成后由谁检查结果。','必须是负责人以外的主管，或负责人的直属上级。','Reviewer','Who checks the result.','A manager other than the owner, or the owner’s manager.')],
+    ['#live-new-task [name="dueAt"]', h('截止时间','必须完成的时间（你所在时区）。','','Due','Deadline in your time zone.','')],
+    ['#live-new-task [name="description"]', h('期望成果','完成后应该交出什么、达到什么效果。','写得越具体，验收和 AI 评分越准确。','Expected outcome','What should be delivered.','The clearer it is, the fairer the review and AI score.')],
+    ['#live-new-task [name="criteria"]', h('验收标准','一行一条，验收人逐条检查。','例如：覆盖 3 个品牌；每条附来源链接。','Acceptance criteria','One per line; the reviewer checks each.','')],
+    // ---- Projects ----
+    ['[data-pj="new-project"]', h('新建项目','创建一个项目，可以从模板开始（新品开发 / 营销活动 / 展会）。','','New project','Create a project, optionally from a template.','')],
+    ['[data-pj="go-home"]', h('全部项目','回到项目列表。','','All projects','Back to the project list.','')],
+    ['[data-pj="go-my"]', h('我的任务','只看项目里分给你的任务。','','My tasks','Only project tasks assigned to you.','')],
+    ['[data-pj="filter"]', h('筛选','切换只看我参与的项目或全部项目。','','Filter','Projects I am in, or all.','')],
+    // ---- Products ----
+    ['[data-pd-search]', h('搜索产品','按 SKU、名称或产品线查找。','','Search products','Find by SKU, name or line.','')],
+    ['[data-pd-fxlock]', h('锁定汇率','打开后使用你填写的汇率，不再跟随实时汇率。','做报价方案时锁定，避免数字随汇率变化。','Lock FX','Use your own rate instead of the live rate.','Lock it while preparing a quote.')],
+    ['[data-pd-ov="fields.factoryRmb"]', h('出厂价（人民币）','工厂给我们的含税价格。','','Factory price (RMB)','Factory price to us.','')],
+    ['[data-pd-ov="assume.exportMarkup"]', h('出口加价 %','出口环节的加价比例。','','Export markup %','Markup at export.','')],
+    ['[data-pd-ov="fields.extraRmb"]', h('其他成本（人民币）','配件、包装等额外成本。','','Extra cost (RMB)','Accessories, packaging, etc.','')],
+    ['[data-pd-ov="fields.gross"]', h('毛重 kg','含包装重量，用来算运费。','','Gross weight kg','Packed weight for freight.','')],
+    ['[data-pd-ov="fields.ddpRate"], [data-pd-ov="assume.ddpFixedRmb"]', h('DDP 运费','双清包税的单价和固定费用。','','DDP freight','Delivered-duty-paid rate and fixed fee.','')],
+    ['[data-pd-ov="assume.oceanRmbPerKg"], [data-pd-ov="assume.hybridFixedRmb"]', h('Hybrid 运费','海运单价和固定费用（自行清关）。','','Hybrid freight','Ocean rate and fixed fee (own customs).','')],
+    ['[data-pd-ov="fields.lastMileRmb"]', h('尾程费（人民币）','美国仓到客户的派送费用。','','Last mile (RMB)','Warehouse-to-customer delivery.','')],
+    ['[data-pd-ov="assume.freightBuffer"]', h('运费缓冲 %','给运费上浮留的余量。','','Freight buffer %','Headroom for freight increases.','')],
+    ['[data-pd-ov="fields.msrp"], [data-pd-ov="fields.low"], [data-pd-ov="fields.shipFee"]', h('售价设置','官网原价、表格最低价和向客户收的运费。','','Prices','MSRP, sheet low price and the shipping fee charged.','')],
+    ['[data-pd-ov="assume.disc1"], [data-pd-ov="assume.disc2"], [data-pd-ov="assume.disc3"]', h('折扣力度 %','三档促销折扣，分别对应日常、节日、黑五。','改完看价格阶梯里每档的利润率。','Discount %','Three promo tiers: everyday, holiday, Black Friday.','Check each tier’s margin in the ladder.')],
+    ['[data-pd-ov="assume.dealerDiscount"], [data-pd-ov="assume.dealerSupportPct"]', h('经销商价','经销商折扣和给经销商的支持费用比例。','','Dealer price','Dealer discount and support cost.','')],
+    ['[data-pd-ov="assume.clearanceOpsPct"]', h('清货运营费 %','清库存时的运营费用比例，用来算清货最低价。','','Clearance opex %','Opex used to compute the clearance floor.','')],
+    ['[data-pd-ov^="opex."]', h('运营费用 %','按售价比例计算的各项费用。','合计会显示在下方；默认合计 38%。','Opex %','Each cost as a share of price.','Default total is 38%.')],
+    ['[data-pd-ov="assume.shipMode"]', h('发货方式','自动选更便宜的，或固定 DDP / Hybrid。','','Shipping mode','Auto-pick the cheaper, or force DDP / Hybrid.','')],
+    ['[data-pd="ov-save"]', h('保存成本设置','保存这个 SKU 的调整，下次打开仍然生效。','','Save cost settings','Keeps your changes for this SKU.','')],
+    ['[data-pd="ov-reset"]', h('恢复默认','丢弃调整，回到成本表里的默认数字。','','Reset','Back to the sheet defaults.','')],
+    ['#pd-replen [name="safety"]', h('安全天数','美国仓库存低于这么多天的销量就提醒补货。','','Safety days','Reorder when US stock covers fewer days.','')],
+    ['#pd-replen [name="cover"]', h('补货覆盖天数','每次补货要够卖多少天。','','Cover days','How many days each reorder should cover.','')],
+    ['#pd-replen [name="ageLimit"]', h('库龄上限','库存放超过这么多天算超期，建议清库存。','','Age limit','Stock older than this counts as aged.','')],
+    // ---- Quality ----
+    ['[data-qa="open"]', h('打开问题','查看问题详情、工厂方案和审批记录。','','Open issue','Details, factory plan and approvals.','')],
+    ['[data-qa-q]', h('搜索问题','按编号、描述或分类码查找。','','Search issues','Find by ID, text or code.','')],
+    ['[data-qa-sel]', h('筛选','按严重度、状态或工厂筛选。','','Filter','Filter by severity, status or factory.','')],
+    // ---- Personal settings ----
+    ['#pp-profile [name="title"]', h('职位','显示在组织架构里的岗位。','','Title','Shown on the org chart.','')],
+    ['#pp-profile [name="phone"], #pp-profile [name="email"], #pp-profile [name="wechat"]', h('联系方式','同事找你时看到的电话、邮箱和微信。','只有同部门同事和管理员能看到。','Contact details','How colleagues reach you.','Visible to your department and admins.')],
+    ['#pp-profile [name="timezone"]', h('时区','用于显示截止时间和提醒。','跨中美团队协作时请务必填写。','Time zone','Used for due times and reminders.','')],
+    ['.pp-locked-field', h('工作地点','由管理员在“组织与权限”中设置。','如有变化请联系管理员修改。','Work location','Set by an administrator.','Ask an admin to change it.')],
+    // ---- Organization & permissions ----
+    ['[data-pp-field="title"]', h('职位','修改这个人的岗位名称。','离开输入框自动保存。','Title','Edit this person’s title.','Saves when you leave the field.')],
+    ['[data-pp-field="location"]', h('工作地点','这个人常驻的城市或办公室。','只有管理员能改；组织架构会按这里显示国旗。','Work location','City or office.','Only admins can edit it.')],
+    ['[data-pp-status]', h('在职 / 停用','关掉即停用：会先问未完成任务转给谁。','停用后立即下线、无法登录，并从组织架构移除；可在下方“已停用成员”恢复。','Active / disabled','Turn off to disable; you choose who takes over open tasks.','Restore from Disabled members.')],
+    ['[data-pp="invite-open"]', h('邀请成员','邀请不在钉钉里的人（外部伙伴、顾问等）加入。','填好信息后生成一次性链接，7 天有效。','Invite member','Invite people outside DingTalk.','Creates a one-time link valid for 7 days.')],
+    ['[data-pp="invite-close"]', h('关闭','收起邀请面板。','','Close','Close the invite panel.','')],
+    ['#pp-invite [name="displayName"]', h('姓名','对方的姓名，会显示在组织架构里。','','Name','Shown on the org chart.','')],
+    ['#pp-invite [name="email"]', h('登录邮箱','对方以后用这个邮箱登录。','','Sign-in email','They sign in with this email.','')],
+    ['#pp-invite [name="title"]', h('岗位','对方的职位。','','Title','Their role.','')],
+    ['#pp-invite [name="location"]', h('工作地点','对方常驻的城市；之后只有管理员能改。','','Work location','Their city; only admins can change it later.','')],
+    ['#pp-invite [name="managerId"]', h('直属上级','对方向谁汇报，决定谁能看到他的任务。','','Manager','Who they report to.','')],
+    ['#pp-invite [name="role"]', h('角色','员工只能给自己建任务；主管可以派任务。','','Role','Employees create own tasks; managers assign.','')],
+    ['#pp-invite [name="products"], #pp-invite [name="product_cost_detail"]', h('权限','是否开通产品管理区和成本明细。','外部人员一般不开通。','Access','Product hub and cost detail.','Usually off for external people.')],
+    ['#pp-invite button[type="submit"]', h('生成邀请链接','生成一次性链接，复制发给对方。','链接只显示一次；对方设置密码后即加入。','Create invite link','Creates a one-time link to send.','Shown once; they join after setting a password.')],
+    ['[data-pp="invite-copy"]', h('复制链接','复制邀请链接，用微信或邮件发给对方。','','Copy link','Copy and send by WeChat or email.','')],
+    ['[data-pp="invite-revoke"]', h('撤销邀请','让这条邀请链接立即失效。','','Revoke','Invalidate this invite link now.','')],
+    ['[data-pp="enable"]', h('恢复','让这个人重新可以登录，并回到组织架构。','','Restore','Let them sign in again.','')],
+    ['[data-pp="disable-cancel"]', h('取消','不停用，保持在职。','','Cancel','Keep the member active.','')],
+    ['#pp-disable [name="reassignTo"]', h('任务转交','他的未完成任务转给谁；等他验收的任务改由其上级验收。','','Hand over to','Who takes their open tasks.','')],
     // Navigation (left sidebar)
     ['[data-live-page="executive"].nav-item', h('老板看板','全公司只读总览，适合管理层每天快速了解进度。','点击进入，查看 OKR 进度、部门交付和待协调事项。','Executive overview','Company-wide read-only view for leadership.','Open it to see OKR progress, delivery and items that need coordination.')],
     ['[data-live-page="overview"].nav-item', h('个人工作台','个人表现和需要你注意的任务、项目。','每天上班先点这里。','My workbench','Your performance and what needs your attention.','Start each day here.')],
@@ -175,8 +290,8 @@
     ['[data-wiki-assistant-open]', h('AI 产品助手','基于已核对的知识库回答产品问题。','输入机型和问题，例如“Hydra 如何对焦”。回答仅供参考，以 Wiki 原文为准。','AI product assistant','Answers product questions from reviewed knowledge.','Type the model and question, e.g. “How do I focus the Hydra?”. Check the Wiki article for the final word.')],
 
     // Top bar
-    ['[data-live-lang="zh"]', h('切换到中文','把界面文字切换成中文。','只改变界面语言；你录入的内容不会被翻译。','Switch to Chinese','Shows the interface in Chinese.','Only the interface changes; content you entered is not translated.')],
-    ['[data-live-lang="en"]', h('Switch to English','把界面文字切换成英文，方便美国同事使用。','只改变界面语言；你录入的内容不会被翻译。','Switch to English','Shows the interface in English.','Only the interface changes; content you entered is not translated.')],
+    ['[data-live-lang="zh"]', h('切换到中文','把界面文字切换成中文。','界面文字随之切换；OKR 里大家写的内容会自动翻译成这个语言，标“译”的点一下可看原文。','Switch to Chinese','Shows the interface in Chinese.','OKR text people wrote is auto-translated too; click the Tr badge for the original.')],
+    ['[data-live-lang="en"]', h('Switch to English','把界面文字切换成英文，方便美国同事使用。','界面文字随之切换；OKR 里大家写的内容会自动翻译成这个语言，标“译”的点一下可看原文。','Switch to English','Shows the interface in English.','OKR text people wrote is auto-translated too; click the Tr badge for the original.')],
     ['[data-live-action="theme"]', h('日间 / 夜间主题','切换浅色或深色界面，保护眼睛。','点击切换，选择会保存在当前浏览器。','Light / dark theme','Switches between light and dark mode.','Click to toggle; your choice is saved in this browser.')],
     ['[data-live-action="refresh"]', h('刷新数据','从服务器重新读取最新数据。','同事刚更新了内容、而你这里没变化时点击。','Refresh data','Reloads the latest data from the server.','Click when a colleague has updated something you don’t see yet.')],
 
@@ -378,6 +493,7 @@
       if (!node.matches) continue;
       if (node.matches('.help-page-icon')) return null;
       for (const r of RULES) if (node.matches(r.sel)) return { target:node, data:r.data };
+      const hh = headerHint(node); if (hh) return { target:node, data:hh };
     }
     return null;
   };

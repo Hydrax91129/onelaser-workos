@@ -80,7 +80,8 @@ test('settings show contact fields; org page escapes names and offers grant togg
   const actor = { id:'u1', display_name:'KC', title:'President', phone:'+1', isAdmin:true, grants:['products'] };
   const { window } = load(['people.js'], baseState(actor));
   const st = window.WorkOSPeople.settings();
-  for (const n of ['title', 'phone', 'email', 'wechat', 'location', 'timezone']) assert.match(st, new RegExp(`name="${n}"`));
+  for (const n of ['title', 'phone', 'email', 'wechat', 'timezone']) assert.match(st, new RegExp(`name="${n}"`));
+  assert.doesNotMatch(st, /name="location"/, 'work location is not self-editable'); assert.match(st, /由管理员设置/);
   window.WorkOSPeople._ui.org = { items:[{ id:'x', display_name:'<b>evil</b>', role:'employee', grants:[], active:true }, { ...actor, role:'manager', active:true, admin:true, adminSource:'deployment' }] };
   const org = window.WorkOSPeople.org();
   assert.doesNotMatch(org, /<b>evil<\/b>/);

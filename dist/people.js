@@ -142,7 +142,7 @@
             ${field('phone', tr('电话', 'Phone'), a.phone, 'tel', 'maxlength="40" placeholder="+1 949 555 0100"')}
             ${field('email', tr('邮箱', 'Email'), a.email, 'email', 'maxlength="200"')}
             ${field('wechat', tr('微信', 'WeChat'), a.wechat, 'text', 'maxlength="60"')}
-            ${field('location', tr('所在地', 'Location'), a.location, 'text', 'maxlength="80" placeholder="' + tr('例如：Irvine, CA / 武汉', 'e.g. Irvine, CA') + '"')}
+            <label class="field"><span>${tr('工作地点', 'Work location')}</span><div class="pp-locked-field" title="${tr('由管理员在“组织与权限”中设置', 'Set by an administrator in Organization & permissions')}">${icon('lock-simple')} ${esc(a.location || tr('未设置', 'Not set'))}<small>${tr('由管理员设置，如需修改请联系管理员', 'Set by an administrator; ask them to change it')}</small></div></label>
             <label class="field"><span>${tr('时区', 'Time zone')}</span><select name="timezone"><option value="">${tr('未设置', 'Not set')}</option>${zones.map(z => `<option value="${esc(z)}" ${z === a.timezone ? 'selected' : ''}>${esc(z)}</option>`).join('')}</select></label>
             <div class="pp-form-actions full"><span class="pp-hint" role="status">${esc(ui.profileMsg)}</span><button class="btn primary" type="submit" ${caps() ? '' : 'disabled'}>${tr('保存', 'Save')}</button></div>
           </form>
@@ -192,6 +192,7 @@
         <label>${tr('姓名', 'Name')}<input name="displayName" required maxlength="80"></label>
         <label>${tr('邮箱（登录账号）', 'Email (sign-in)')}<input name="email" type="email" required maxlength="200"></label>
         <label>${tr('岗位', 'Title')}<input name="title" maxlength="80"></label>
+        <label>${tr('工作地点', 'Work location')}<input name="location" maxlength="80" placeholder="${tr('如 Irvine, CA / 武汉', 'e.g. Irvine, CA')}" list="pp-locations"></label>
         <label>${tr('直属上级', 'Manager')}<select name="managerId">${opt('', tr('无（最高层）', 'None (top)'))}${active.map(u => opt(u.id, u.display_name)).join('')}</select></label>
         <label>${tr('角色', 'Role')}<select name="role">${opt('employee', tr('员工', 'Employee'))}${opt('manager', tr('主管', 'Manager'))}</select></label>
         <div class="pp-invite-grants"><label class="pp-check"><input type="checkbox" name="products"> ${tr('产品管理区', 'Product hub')}</label><label class="pp-check"><input type="checkbox" name="product_cost_detail"> ${tr('成本明细', 'Cost detail')}</label>${ui.invites?.emailDelivery ? `<label class="pp-check"><input type="checkbox" name="sendEmail" checked> ${tr('同时发送邀请邮件', 'Also send an email')}</label>` : ''}</div>
@@ -209,7 +210,7 @@
     const sameDept = active.filter(x => x.id !== u.id && x.department_id === u.department_id);
     const defaultHeir = sameDept.find(x => x.id === u.manager_id)?.id || sameDept.find(x => x.role === 'manager')?.id || sameDept[0]?.id || '';
     const c = d.counts;
-    return `<tr class="pp-disable-row"><td colspan="8"><form id="pp-disable" data-id="${esc(u.id)}" class="pp-disable-form">
+    return `<tr class="pp-disable-row"><td colspan="9"><form id="pp-disable" data-id="${esc(u.id)}" class="pp-disable-form">
       <div><strong>${icon('warning')} ${tr(`停用 ${esc(u.display_name)}？`, `Disable ${esc(u.display_name)}?`)}</strong>
       <p class="pp-hint">${tr('停用后立即下线，钉钉登录和邮箱登录都进不来，并从组织架构、负责人列表中移除。历史任务保留，显示为“已停用”。可以随时恢复。', 'Signed out at once; DingTalk and email sign-in are blocked; removed from the org chart and assignee lists. History stays, marked disabled. Can be restored any time.')}</p>
       <p class="pp-hint">${c ? tr(`未完成任务 ${c.owned} 项 · 待其验收 ${c.reviewing} 项 · 直属下属 ${c.reports} 人（下属会自动改为向其上级汇报）`, `${c.owned} open tasks · ${c.reviewing} awaiting their review · ${c.reports} direct reports (they move up to this person's manager)`) : tr('正在统计未完成任务…', 'Counting open tasks…')}</p></div>
@@ -232,15 +233,16 @@
     const opt = (v, label, cur) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(label)}</option>`;
     const check = (u, grant, disabled = false) => `<label class="pp-switch"><input type="checkbox" data-pp-grant="${grant}" data-id="${esc(u.id)}" ${(u.grants || []).includes(grant) ? 'checked' : ''} ${disabled ? 'disabled' : ''}><span></span></label>`;
     return `<div class="pp">${head}${canInvite() && !ui.inviteOpen ? `<div class="pp-org-actions"><button class="btn primary" data-pp="invite-open">${icon('user-plus')} ${tr('邀请成员', 'Invite member')}</button><span class="pp-hint">${tr('邀请不在钉钉里的人加入；关闭“状态”开关即可停用某人。', 'Invite people outside DingTalk; turn off Status to disable someone.')}</span></div>` : ''}${invitePanel(items)}
-      <section class="pp-panel pp-table-panel"><table class="pp-table pp-org"><thead><tr><th>${tr('成员', 'Member')}</th><th>${tr('职位', 'Title')}</th><th>${tr('直属上级', 'Manager')}</th><th>${tr('角色', 'Role')}</th><th>${tr('管理员', 'Admin')}</th><th>${tr('产品管理区', 'Product hub')}</th><th>${tr('成本明细', 'Cost detail')}</th><th>${tr('状态', 'Status')}</th></tr></thead><tbody>
+      <section class="pp-panel pp-table-panel"><table class="pp-table pp-org" data-help-table="pp-org"><thead><tr><th>${tr('成员', 'Member')}</th><th>${tr('职位', 'Title')}</th><th>${tr('工作地点', 'Work location')}</th><th>${tr('直属上级', 'Manager')}</th><th>${tr('角色', 'Role')}</th><th>${tr('管理员', 'Admin')}</th><th>${tr('产品管理区', 'Product hub')}</th><th>${tr('成本明细', 'Cost detail')}</th><th>${tr('状态', 'Status')}</th></tr></thead><tbody>
       ${items.map(u => `<tr><td><div class="pp-person">${avatar(u, 30)}<div><strong>${esc(u.display_name)}</strong><span>${esc(u.login_email || u.email || u.phone || '')} ${loginBadge(u)}</span></div></div></td>
         <td><input class="pp-inline" data-pp-field="title" data-id="${esc(u.id)}" value="${esc(u.title || '')}" maxlength="80" placeholder="${tr('职位', 'Title')}"></td>
+        <td><input class="pp-inline" data-pp-field="location" data-id="${esc(u.id)}" value="${esc(u.location || '')}" maxlength="80" placeholder="${tr('如 Irvine, CA / 武汉', 'e.g. Irvine, CA')}" list="pp-locations"></td>
         <td><select class="pp-inline" data-pp-field="managerId" data-id="${esc(u.id)}">${opt('', tr('无（最高层）', 'None (top)'), u.manager_id || '')}${items.filter(x => x.id !== u.id).map(x => opt(x.id, x.display_name, u.manager_id)).join('')}</select></td>
         <td><select class="pp-inline" data-pp-field="role" data-id="${esc(u.id)}">${opt('employee', tr('员工', 'Employee'), u.role)}${opt('manager', tr('主管', 'Manager'), u.role)}</select></td>
         <td>${u.adminSource === 'deployment' ? `<span class="pp-lock" title="${tr('由部署配置指定，不能在这里取消', 'Set in deployment config')}">${icon('lock-simple')} ${tr('系统', 'System')}</span>` : `<label class="pp-switch"><input type="checkbox" data-pp-admin data-id="${esc(u.id)}" ${u.admin ? 'checked' : ''}><span></span></label>`}</td>
         <td>${check(u, 'products')}</td><td>${check(u, 'product_cost_detail', !(u.grants || []).includes('products'))}</td>
         <td class="pp-status">${statusCell(u)}</td></tr>${disablePanel(u, items)}`).join('')}
-      </tbody></table></section>${invitesList()}
+      </tbody></table><datalist id="pp-locations">${[...new Set(ui.org.items.map(u => (u.location || '').trim()).filter(Boolean))].map(l => `<option value="${esc(l)}">`).join('')}</datalist></section>${invitesList()}
       ${disabled.length ? `<section class="pp-panel pp-disabled"><h3 class="pp-sub-h">${icon('user-minus')} ${tr('已停用成员', 'Disabled members')} <b>${disabled.length}</b></h3><table class="pp-table"><tbody>${disabled.map(u => `<tr><td><div class="pp-person dim">${avatar(u, 26)}<div><strong>${esc(u.display_name)}</strong><span>${esc(u.title || '')} ${loginBadge(u)}</span></div></div></td><td class="pp-muted">${u.disabled_at ? tr(`${fmtDay(u.disabled_at)} 停用`, `Disabled ${fmtDay(u.disabled_at)}`) : tr('已离开钉钉', 'Left DingTalk')}</td><td class="pp-right">${canDisable() ? `<button class="pp-btn small" data-pp="enable" data-id="${esc(u.id)}">${icon('arrow-counter-clockwise')} ${tr('恢复', 'Restore')}</button>` : ''}</td></tr>`).join('')}</tbody></table></section>` : ''}
       <div class="pp-notes"><p>${icon('info')} ${tr('修改后立即保存并记录审计日志。“角色”设为主管后，可以管理本部门的任务和目标；钉钉重新登录不会覆盖这里的设置。', 'Changes save immediately and are audited. Managers can manage department tasks and goals; DingTalk re-login keeps these settings.')}</p>
       <p>${icon('lock-simple')} ${tr('“产品管理区”只给需要的人开通；“成本明细”可以看到价格的计算过程，开通前请确认。客服工作台目前由部署配置管理。', 'Grant Product hub only to those who need it; Cost detail reveals how prices are calculated. Support access is currently managed in deployment config.')}</p></div>
@@ -280,13 +282,13 @@
     if (!ui.chart && !ui.chartLoading && !ui.chartError) loadChart();
     if (ui.chartError) return `<div class="pp">${head}<div class="pp-alert">${esc(ui.chartError)}</div></div>`;
     if (!ui.chart) return `<div class="pp">${head}<p class="pp-hint">${tr('正在读取…', 'Loading…')}</p></div>`;
-    return `<div class="pp">${head}${orgChart(ui.chart.items)}${me()?.isAdmin ? `<p class="pp-hint">${icon('pencil-simple')} ${tr('要修改汇报线、岗位或所在地：管理员在“组织与权限”里修改汇报线和岗位，每个人在“个人设置”里填写所在地。', 'To change reporting lines or titles, admins use Organization & permissions; everyone sets their own location in Personal settings.')}</p>` : ''}</div>`;
+    return `<div class="pp">${head}${orgChart(ui.chart.items)}${me()?.isAdmin ? `<p class="pp-hint">${icon('pencil-simple')} ${tr('要修改汇报线、岗位或工作地点：管理员在“组织与权限”里直接修改。', 'Admins change reporting lines, titles and work locations in Organization & permissions.')}</p>` : ''}</div>`;
   }
   async function patchMember(id, body) {
     try {
       const row = await ctx.api.request('/org/members/' + encodeURIComponent(id), { method:'PATCH', body });
       ui.org.items = ui.org.items.map(u => u.id === id ? { ...u, ...row } : u);
-      const dirUser = S().directory.find(u => u.id === id); if (dirUser) Object.assign(dirUser, { title:row.title, manager_id:row.manager_id, role:row.role });
+      const dirUser = S().directory.find(u => u.id === id); if (dirUser) Object.assign(dirUser, { title:row.title, location:row.location, manager_id:row.manager_id, role:row.role });
       if (id === me().id) await ctx.refreshMe();
       if ('managerId' in body && ctx.reloadDirectory) { try { await ctx.reloadDirectory(); } catch {} }
       ui.team = null; ui.chart = null; ctx.toast(tr('已保存', 'Saved'));
@@ -355,7 +357,7 @@
     if (ctx && f.id === 'pp-invite') {
       e.preventDefault(); const fd = new FormData(f), grants = [];
       if (fd.get('products')) grants.push('products'); if (fd.get('products') && fd.get('product_cost_detail')) grants.push('product_cost_detail');
-      const body = { displayName:String(fd.get('displayName') || '').trim(), email:String(fd.get('email') || '').trim(), title:String(fd.get('title') || '').trim(), managerId:fd.get('managerId') ? String(fd.get('managerId')) : null, role:String(fd.get('role') || 'employee'), grants };
+      const body = { displayName:String(fd.get('displayName') || '').trim(), email:String(fd.get('email') || '').trim(), title:String(fd.get('title') || '').trim(), location:String(fd.get('location') || '').trim(), managerId:fd.get('managerId') ? String(fd.get('managerId')) : null, role:String(fd.get('role') || 'employee'), grants };
       if (ui.invites?.emailDelivery) body.sendEmail = !!fd.get('sendEmail');
       ui.inviteBusy = true; ui.inviteError = ''; ctx.rerender();
       try { const r = await ctx.api.request('/org/invites', { method:'POST', body }); ui.inviteResult = r; ui.invites = ui.invites || { items:[] }; ui.invites.items = [r, ...ui.invites.items]; }

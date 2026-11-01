@@ -145,6 +145,7 @@
     if(state.actor)window.WorkOSProducts?.configure({api,state:()=>state,lang:()=>i18n.lang,rerender:render,toast,overlay,closeOverlay,modal});
     if(state.actor)window.WorkOSProjects?.configure({state:()=>state,lang:()=>i18n.lang,rerender:render,toast,overlay,closeOverlay,modal});
     if(state.actor)window.WorkOSQuality?.configure({state:()=>state,lang:()=>i18n.lang,rerender:render,toast,overlay,closeOverlay,modal});
+    if(state.actor)window.WorkOSTranslate?.configure({api,lang:()=>i18n.lang,capabilities:()=>state.capabilities,rerender:render});
     if(state.actor)window.WorkOSOkrBoard?.configure({api,state:()=>state,lang:()=>i18n.lang,rerender:render,refreshOkr,toast,explainError,overlay,closeOverlay,modal,openAppraisal,measurement,openObjectiveSource});
     if(state.actor)window.CompanySupport?.configure({api,actor:state.actor,language:i18n.lang,changed:render,showModal:modal,active:state.page==='knowledge',view:state.page});
     window.WikiAssistant?.configure({language:i18n.lang,active:wikiActive,apiBase:window.WORKOS_CONFIG.apiBase||'/api'});
