@@ -281,3 +281,19 @@ html[data-theme=dark] .okb-pts{background:#24324f;border-color:#34507f;color:#9d
 .okb-kr-simple{grid-template-columns:44px minmax(0,1fr) 120px 300px 56px!important}
 .okb-kr-simple .okb-kr-weight{justify-self:end}.okb-kr-simple .okb-kr-score{justify-self:end}
 html[data-theme=dark] .okb-cycle{background:#232327;color:#a9a9b0}html[data-theme=dark] .okb-cycle strong,html[data-theme=dark] .okb-step b{color:#ebebeb}html[data-theme=dark] .okb-step{background:#2a2a2f;border-color:#3a3a40}html[data-theme=dark] .okb-step.now{background:#24324f;border-color:#3370ff}
+
+.okb-people-group{display:flex;align-items:center;justify-content:space-between;margin:10px 6px 2px;padding-top:8px;border-top:1px solid var(--border,#e6e8ef);font-size:11.5px;font-weight:700;letter-spacing:.02em;color:var(--muted,#7a8096);text-transform:uppercase}
+.okb-people-group b{font-weight:600;background:var(--blue-wash,#eef2ff);color:var(--blue,#3c64f4);border-radius:999px;padding:0 7px;font-size:11px}
+.okb-score-form textarea{width:100%;min-height:64px;resize:vertical;font:inherit;padding:8px 10px;border:1px solid var(--border,#d7dbe7);border-radius:8px;background:transparent;color:inherit}
+.okb-file input{font-size:12.5px}
+.okb-evidence-rule{display:flex;gap:6px;align-items:center;color:#8a6100}
+.okb-evidence{list-style:none;margin:4px 0 8px;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.okb-evidence a{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;background:var(--blue-wash,#eef2ff);color:var(--blue,#3c64f4);font-size:12px;text-decoration:none}
+.okb-form-error{color:#d33;font-size:12.5px;margin:4px 0;min-height:0}
+.okb-final{white-space:nowrap}
+html[data-theme=dark] .okb-evidence-rule{color:#f3cf72}
+.okb-score-form .okb-mini.okb-wide{flex-basis:100%;font-size:12px}
+.okb-score-form .okb-mini.okb-wide input:not([type=file]){width:100%}
+.okb-score-form .okb-file input{width:auto;border:0;padding:0;background:transparent}
+.okb-score-form .okb-form-error:empty{display:none}
+.okb-score-form .okb-form-error{flex-basis:100%}

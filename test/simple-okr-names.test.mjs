@@ -52,3 +52,18 @@ test('user guide opens from the top bar, follows the page and covers every rule'
   for (const id of ['start','tasks','assign','okr','projects','names','hints']) assert.match(guide, new RegExp(`\\['${id}'`));
   for (const t of ['15 天','被暂停','0 分自评','10 月 25 日起','完成且卓越','领导评分 × 50%','不能修改']) assert.ok(guide.includes(t), t);
 });
+
+test('self score needs a written explanation or a file; team OKR groups reports, peers and managers', () => {
+  const okr = read('okr-board.js');
+  assert.match(okr, /SELF_SCORE|至少 10 个字/); assert.match(okr, /uploadEvidence\(k\.task_id, f\)/); assert.match(okr, /body\.attachmentIds = ids/);
+  for (const t of ['我的下属', '平级同事', '我的上级', '其他同事']) assert.ok(okr.includes(t), t);
+  assert.match(okr, /function relationOf\(id\)/);
+});
+
+test('task sources name the project and O/KR; updates button has a label; work center lists are translated', () => {
+  const board = read('task-board.js'), rep = read('reports.js'), pj = read('projects.js');
+  assert.match(board, /t\.project_name/); assert.match(board, /'O'\+r\.o/); assert.match(board, /<span>\$\{tr\('更新','Updates'\)\}<\/span>/);
+  assert.match(board, /setTimeout\(\(\)=>ok\(null\),3000\)/, 'group save never waits long for translation');
+  assert.match(rep, /tx\(t\.title\)/); assert.match(rep, /tx\(n\.message\)/);
+  assert.match(pj, /function portfolioSummary/); assert.match(pj, /function projectCard/); assert.match(pj, /\$\{isLive\(\) \? '' : `<div class="pj-sample">/);
+});

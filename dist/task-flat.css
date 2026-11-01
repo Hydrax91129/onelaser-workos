@@ -52,7 +52,7 @@ td.mb-color-cell[style]>button{background:var(--cell-bg)}
 .mb-result-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
 
 .mb-table td.mb-color-cell>button{height:auto;min-height:36px;white-space:normal}
-.mb-src{display:inline-flex;align-items:center;gap:3px;margin-left:6px;font-size:11px;line-height:1;padding:3px 6px;border-radius:999px;white-space:nowrap;vertical-align:1px;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.mb-src{display:inline-flex;align-items:center;gap:3px;margin-left:6px;font-size:11px;line-height:1;padding:3px 6px;border-radius:999px;white-space:nowrap;vertical-align:1px;max-width:340px;overflow:hidden;text-overflow:ellipsis}
 .mb-src-direct{background:#e8f0ff;color:#245bdb}.mb-src-okr{background:#f1e8ff;color:#7a3fd1}.mb-src-project{background:#e6f7f1;color:#0f8a5f}
 html[data-theme=dark] .mb-src-direct{background:#24324f;color:#9dbbff}html[data-theme=dark] .mb-src-okr{background:#33264a;color:#c9a6ff}
 .mb-assign{background:#fff;border:1px solid #3370ff;color:#3370ff}
@@ -69,3 +69,13 @@ tr.mb-row[draggable="true"]:active{cursor:grabbing}
 .mb-menu-label{margin:2px 10px 6px;font-size:11.5px;color:#8f959e;font-weight:500}
 .mb-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
 .mb-menu-sep{border:0;border-top:1px solid rgba(127,127,127,.25);margin:6px 0}
+
+/* Task updates button: visible pill with a label and count */
+.mb-table .mb-comment,.mb-card .mb-comment{gap:4px;padding:3px 9px 3px 7px;border:1px solid #c9d7ff;border-radius:999px;background:#eef3ff;color:#245bdb;font-size:12px;font-weight:600;line-height:1;cursor:pointer;flex:none;white-space:nowrap}
+.mb-table .mb-comment:hover,.mb-card .mb-comment:hover{background:#245bdb;border-color:#245bdb;color:#fff}
+.mb-table .mb-comment svg,.mb-table .mb-comment i{width:14px;height:14px;font-size:14px}
+.mb-table .mb-comment small{min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#245bdb;color:#fff;font-size:10.5px;display:inline-grid;place-items:center}
+.mb-table .mb-comment:hover small{background:#fff;color:#245bdb}
+html[data-theme=dark] .mb-table .mb-comment{background:#1f2c4d;border-color:#35508f;color:#a9c2ff}
+html[data-theme=dark] .mb-table .mb-comment:hover{background:#3c64f4;color:#fff}
+.mb-col-status button,.mb-col-priority button{font-size:12.5px}

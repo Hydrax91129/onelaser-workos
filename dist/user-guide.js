@@ -45,12 +45,12 @@
         <tr><th>${chip('st-not', '未开始', 'Not started')}</th><td>${tr('每个任务的默认状态。', 'The default for every new task.')}</td></tr>
         <tr><th>${chip('st-working', '进行中', 'Working')}</th><td>${tr('只要更新一次进度，系统自动变为进行中。', 'Posting any progress update switches the task to Working automatically.')}</td></tr>
         <tr><th>${chip('st-hold', '被暂停', 'Paused')}</th><td>${tr('因外部原因暂停。暂停期间即使过了截止日期，也不会自动变为延期。', 'Paused for an outside reason. A paused task never turns Overdue, even past its due date.')}</td></tr>
-        <tr><th>${chip('st-review', '待审批', 'Awaiting approval')}</th><td>${tr('已经做完，等待审核人确认。', 'Work is finished and waiting for the reviewer.')}</td></tr>
+        <tr><th>${chip('st-review', '待审批', 'In review')}</th><td>${tr('已经做完，等待审核人确认。', 'Work is finished and waiting for the reviewer.')}</td></tr>
         <tr><th>${chip('st-done', '完成', 'Done')}</th><td>${tr('选择完成时，必须写清楚完成结果和自我评价，AI 会根据结果自动打分。', 'To mark Done you write the result and a self-evaluation; AI scores it automatically.')}</td></tr>
         <tr><th>${chip('st-overdue', '延期', 'Overdue')}</th><td>${tr('过了截止日期还没完成，系统立即自动变为延期。', 'Past the due date and not finished: the system switches it to Overdue at once.')}</td></tr>
         <tr><th>${chip('st-abandoned', '放弃', 'Abandoned')}</th><td>${tr('任务太难做不到，可以主动选择放弃；连续 15 天没有任何更新，系统也会视为放弃。', 'Choose this when a task cannot be done; a task with no update for 15 days is also treated as Abandoned.')}</td></tr>
       </tbody></table>
-      <p>${tr('员工可以选择的状态：进行中、被暂停、待审批、完成、延期、放弃。“未开始”由系统设置，不能手动选回。', 'Statuses you can choose: Working, Paused, Awaiting approval, Done, Overdue, Abandoned. “Not started” is set by the system and cannot be chosen again.')}</p>
+      <p>${tr('员工可以选择的状态：进行中、被暂停、待审批、完成、延期、放弃。“未开始”由系统设置，不能手动选回。', 'Statuses you can choose: Working, Paused, In review, Done, Overdue, Abandoned. “Not started” is set by the system and cannot be chosen again.')}</p>
       <h3>${tr('常用操作', 'Everyday actions')}</h3>
       ${list([
         tr('点击任务右侧的对话图标，写进度更新。', 'Click the speech-bubble icon on a task to post a progress update.'),
@@ -87,6 +87,7 @@
       </div>
       <h3>${tr('分数怎么算', 'How the score is calculated')}</h3>
       ${list([
+        tr('自评时必须写清楚完成情况（至少 10 个字），或上传证明文件（截图、报表、PDF 等），否则不算完成自评。', 'A self score counts only with a written explanation (at least 10 characters) or an uploaded proof file (screenshot, report, PDF…).'),
         tr('每条 KR：<b>最终评分 = 自评 × 50% + 领导评分 × 50%</b>。自评和领导评分并排显示。', 'Each KR: <b>final = self score × 50% + leader score × 50%</b>. Both scores are shown side by side.'),
         tr('KR 得分 = 目标分值 × KR 权重 × 最终评分 ÷ 100。', 'KR points = objective points × KR weight × final score ÷ 100.'),
         tr('评 125 分的 KR 会超出分值，可以把 OKR 总分提高到 100 分以上。', 'A KR scored 125 earns more than its share and can lift the OKR total above 100.'),
@@ -99,6 +100,7 @@
         <tr><th>${tr('11 月 25 日 – 30 日', 'Nov 25 – 30')}</th><td>${tr('员工自评。30 日前没有自评的 KR，系统自动按 0 分自评。', 'Self scoring. Any KR without a self score by the 30th is scored 0 automatically.')}</td></tr>
         <tr><th>${tr('11 月 30 日 – 12 月 3 日', 'Nov 30 – Dec 3')}</th><td>${tr('领导评分，系统每天催办，直到评分完成。', 'Leader scoring, with daily reminders until it is done.')}</td></tr>
       </tbody></table>
+      <p>${tr('“团队 OKR”左侧按“我的下属、平级同事、我的上级、其他同事”分组，方便领导查看和评分。', 'In Team OKRs the list is grouped into my reports, peers, my managers and others, so leaders can review and score quickly.')}</p>
       ${note('OKR 页面顶部的时间条会显示当前处在哪个阶段。', 'The timeline at the top of the OKR page shows which phase you are in.')}`],
 
     ['projects', 'ph-squares-four', '项目管理', 'Projects', () => `

@@ -22,7 +22,7 @@
     'u-zhang':{ name:'张伟', role:{ zh:'东莞研发', en:'R&D, Dongguan' } },
     'u-li':{ name:'李娜', role:{ zh:'武汉网站', en:'Web, Wuhan' } },
   };
-  const STATUS = { done:['完成','Done','#00c875'], working:['进行中','Working on it','#fdab3d'], stuck:['被暂停','Paused','#df7689'], review:['待审批','Awaiting approval','#a25ddc'], overdue:['延期','Overdue','#e2445c'], abandoned:['放弃','Abandoned','#4b4f5c'], todo:['未开始','Not started','#c4c4c4'] };
+  const STATUS = { done:['完成','Done','#00c875'], working:['进行中','Working','#fdab3d'], stuck:['被暂停','Paused','#df7689'], review:['待审批','In review','#a25ddc'], overdue:['延期','Overdue','#e2445c'], abandoned:['放弃','Abandoned','#4b4f5c'], todo:['未开始','Not started','#c4c4c4'] };
   const PRIORITY = { urgent:['紧急','Urgent','#333333'], high:['高','High','#401694'], medium:['中','Medium','#5559df'], low:['低','Low','#579bfc'] };
   const HEALTH = { on_track:['正常','On track','#00b37e'], at_risk:['有风险','At risk','#f5a623'], off_track:['延期','Off track','#e5484d'] };
   const d = s => s; // ISO dates
@@ -119,21 +119,50 @@
   const healthDot = key => `<span class="pj-health" style="--c:${HEALTH[key][2]}"><i></i>${esc(tr(HEALTH[key][0], HEALTH[key][1]))}</span>`;
 
   /* ---------- home (portfolio) ---------- */
+  const daysTo = iso => Math.round((new Date(iso + 'T00:00:00') - new Date(TODAY + 'T00:00:00')) / 864e5);
+  function portfolioSummary(list) {
+    const ts = list.flatMap(tasksOf), open = ts.filter(t => t.status !== 'done' && t.status !== 'abandoned');
+    const cells = [
+      [tr('项目', 'Projects'), list.length, ''],
+      [tr('进行中的任务', 'Open tasks'), open.length, ''],
+      [tr('延期 / 逾期', 'Overdue'), ts.filter(t => t.status === 'overdue' || overdue(t)).length, 'bad'],
+      [tr('待审批', 'In review'), ts.filter(t => t.status === 'review').length, 'warn'],
+      [tr('有风险 / 延期项目', 'At risk / off track'), list.filter(p => p.health !== 'on_track').length, 'warn'],
+      [tr('我负责的未完成任务', 'My open tasks'), open.filter(t => t.owner === me()).length, 'me']
+    ];
+    return `<div class="pj-summary">${cells.map(([label, n, cls]) => `<div class="pj-sum-cell ${n && cls ? cls : ''}"><b>${n}</b><span>${label}</span></div>`).join('')}</div>`;
+  }
+  function projectCard(p) {
+    const ts = tasksOf(p), od = ts.filter(t => t.status === 'overdue' || overdue(t)).length, v = pct(p), left = daysTo(p.end);
+    const counts = Object.keys(STATUS).map(k => [k, ts.filter(t => t.status === k).length]).filter(([, n]) => n);
+    const next = ts.filter(t => t.status !== 'done' && t.status !== 'abandoned').sort((a, b) => a.due.localeCompare(b.due))[0];
+    const ms = (p.milestones || []).filter(m => !m.done).sort((a, b) => a.date.localeCompare(b.date))[0];
+    const upd = (p.updates || [])[0], mine = ts.filter(t => t.owner === me() && t.status !== 'done').length;
+    return `<button class="pj-card" data-pj="open-project" data-id="${p.id}" style="--pc:${p.color}">
+        <div class="pj-card-top"><span class="pj-picon">${icon(p.emoji)}</span><div class="pj-card-name"><strong>${esc(L(p.name))}</strong><span>${esc(person(p.owner).name)} · ${fmt(p.start)} – ${fmt(p.end)} · <em class="${left < 0 ? 'late' : left <= 7 ? 'soon' : ''}">${left < 0 ? tr(`已超期 ${-left} 天`, `${-left}d past end`) : tr(`剩 ${left} 天`, `${left}d left`)}</em></span></div>${healthDot(p.health)}</div>
+        <div class="pj-card-prog"><div class="pj-bar"><span style="width:${v}%"></span></div><b>${v}%</b></div>
+        <div class="pj-stack small pj-card-stack">${counts.map(([k, n]) => `<span style="--c:${STATUS[k][2]};flex:${n}" title="${esc(tr(STATUS[k][0], STATUS[k][1]))} ${n}"></span>`).join('')}</div>
+        <div class="pj-card-counts">${counts.map(([k, n]) => `<span style="--c:${STATUS[k][2]}"><i></i>${esc(tr(STATUS[k][0], STATUS[k][1]))} ${n}</span>`).join('') || `<span class="pj-muted">${tr('还没有任务', 'No tasks yet')}</span>`}</div>
+        <dl class="pj-card-facts">
+          <dt>${icon('calendar-blank')} ${tr('最近截止', 'Next due')}</dt><dd>${next ? `${av(next.owner, 18)} ${esc(L(next.title))} <em class="${overdue(next) ? 'late' : ''}">${fmt(next.due)}</em>` : '—'}</dd>
+          ${ms ? `<dt>${icon('diamond')} ${tr('下个里程碑', 'Next milestone')}</dt><dd>${esc(L(ms.name))} <em>${fmt(ms.date)}</em></dd>` : ''}
+          <dt>${icon('megaphone-simple')} ${tr('最新状态', 'Latest update')}</dt><dd class="pj-card-upd">${upd ? `${esc(L(upd.text))} <em>${fmt(upd.at)}</em>` : `<span class="pj-muted">${tr('负责人还没有发布项目状态', 'No status posted yet')}</span>`}</dd>
+        </dl>
+        <div class="pj-card-foot">${avs(p.members)}<span>${ts.filter(t => t.status === 'done').length}/${ts.length} ${tr('任务完成', 'done')}</span>${mine ? `<span class="pj-mine">${tr(`我有 ${mine} 项`, `${mine} mine`)}</span>` : ''}${od ? `<span class="pj-od">${icon('warning-circle')} ${od} ${tr('逾期', 'overdue')}</span>` : ''}</div>
+      </button>`;
+  }
   function home() {
     const mine = projects.filter(p => p.members.includes(me()));
     const list = ui.filter === 'mine' ? mine : projects;
     const myOpen = tasks.filter(t => t.owner === me() && t.status !== 'done');
     return `<div class="pj">
-      <div class="page-heading"><div><div class="eyebrow">WORK OS · PROJECTS</div><h1>${tr('项目管理', 'Projects')}</h1><p>${tr('项目里分派的任务，会自动出现在负责人的“我的任务”里。', 'Tasks assigned in a project automatically appear in the assignee’s My tasks.')}</p><div class="pj-sample">${icon('flask')} ${tr('测试版 · 示例数据：项目管理的后台还在开发，这里的项目和任务是示例，修改不会保存。', 'Test build · sample data: the projects backend is in development; projects and tasks here are examples and changes are not saved.')}</div></div><div class="heading-actions"><button class="pj-btn primary" data-pj="new-project">${icon('plus')} ${tr('新建项目', 'New project')}</button></div></div>
+      <div class="page-heading"><div><div class="eyebrow">WORK OS · PROJECTS</div><h1>${tr('项目管理', 'Projects')}</h1><p>${tr('项目里分派的任务，会自动出现在负责人的“我的任务”里。', 'Tasks assigned in a project automatically appear in the assignee’s My tasks.')}</p>${isLive() ? '' : `<div class="pj-sample">${icon('flask')} ${tr('测试版 · 示例数据：项目管理的后台还在开发，这里的项目和任务是示例，修改不会保存。', 'Test build · sample data: the projects backend is in development; projects and tasks here are examples and changes are not saved.')}</div>`}</div><div class="heading-actions"><button class="pj-btn primary" data-pj="new-project">${icon('plus')} ${tr('新建项目', 'New project')}</button></div></div>
       ${isLive() ? '' : `<div class="pj-proto">${icon('flask')} ${tr('界面原型 · 模拟数据，操作不会保存', 'UI prototype · sample data, nothing is saved')}</div>`}
       <div class="pj-home-tabs"><button class="${ui.view === 'home' ? 'active' : ''}" data-pj="go-home">${icon('squares-four')} ${tr('全部项目', 'Projects')}</button><button class="${ui.view === 'my' ? 'active' : ''}" data-pj="go-my">${icon('check-square')} ${tr('我的任务', 'My tasks')} <b>${myOpen.length}</b></button></div>
       ${ui.view === 'my' ? myTasks() : `
       <div class="pj-toolbar"><div class="pj-seg"><button class="${ui.filter === 'mine' ? 'active' : ''}" data-pj="filter" data-v="mine">${tr('我参与的', 'Mine')} ${mine.length}</button><button class="${ui.filter === 'all' ? 'active' : ''}" data-pj="filter" data-v="all">${tr('全部', 'All')} ${projects.length}</button></div></div>
-      <div class="pj-cards">${list.map(p => { const ts = tasksOf(p), od = ts.filter(overdue).length, v = pct(p); return `<button class="pj-card" data-pj="open-project" data-id="${p.id}" style="--pc:${p.color}">
-        <div class="pj-card-top"><span class="pj-picon">${icon(p.emoji)}</span><div class="pj-card-name"><strong>${esc(L(p.name))}</strong><span>${esc(person(p.owner).name)} · ${fmt(p.start)} – ${fmt(p.end)}</span></div>${healthDot(p.health)}</div>
-        <div class="pj-card-prog"><div class="pj-bar"><span style="width:${v}%"></span></div><b>${v}%</b></div>
-        <div class="pj-card-foot">${avs(p.members)}<span>${ts.filter(t => t.status === 'done').length}/${ts.length} ${tr('任务完成', 'done')}</span>${od ? `<span class="pj-od">${icon('warning-circle')} ${od} ${tr('逾期', 'overdue')}</span>` : ''}</div>
-      </button>`; }).join('')}
+      ${portfolioSummary(list)}
+      <div class="pj-cards">${list.map(projectCard).join('')}
       <button class="pj-card pj-card-new" data-pj="new-project">${icon('plus-circle')}<strong>${tr('新建项目', 'New project')}</strong><span>${tr('从模板开始：新品开发 / 营销活动 / 展会', 'Start from a template: product launch / campaign / trade show')}</span></button></div>`}
     </div>`;
   }

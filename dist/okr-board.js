@@ -28,7 +28,7 @@
   const collab = () => S().capabilities?.okrCollaboration === true;
   const me = () => S().actor;
   const isManager = () => me()?.role === 'manager';
-  const nameOf = id => id ? (S().directory.find(u => u.id === id)?.display_name || (me()?.id === id ? me().display_name : id)) : tr('公司','Company');
+  const nameOf = id => id ? (S().directory.find(u => u.id === id)?.display_name || (orgChart || []).find(u => u.id === id)?.display_name || (me()?.id === id ? me().display_name : id)) : tr('公司','Company');
   const initials = id => { const n = nameOf(id).trim(); return /^[\x00-\x7f]+$/.test(n) ? n.split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase() : n.slice(-2); };
   const hue = id => { let h = 0; for (const c of String(id || 'company')) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
   const avatar = (id, size = 28) => `<span class="okb-avatar" style="--okb-h:${hue(id)};width:${size}px;height:${size}px;font-size:${Math.round(size * .38)}px" aria-hidden="true">${esc(initials(id))}</span>`;
@@ -74,8 +74,32 @@
     return Math.round(items.reduce((s, x) => s + x.p * (weighted ? x.w : 1), 0) / total);
   }
   const objectivesOf = ownerId => order(S().objectives.filter(o => inCycle(o) && (ownerId === '__company' ? o.level === 'company' : o.owner_id === ownerId && o.level !== 'company')));
+  /* Team list sections: my direct and indirect reports, peers who share my manager, my managers, everyone else. */
+  let orgChart = null, chartLoading = false;
+  function chartPeople() {
+    if (!orgChart && !chartLoading && ctx?.api) { chartLoading = true; ctx.api.get('/org/chart').then(r => { orgChart = r.items || []; window.WorkOSNames?.apply(orgChart); rerender(); }).catch(() => { orgChart = []; }).finally(() => { chartLoading = false; }); }
+    return orgChart || [];
+  }
+  function relationOf(id) {
+    if (id === '__company' || id === me()?.id) return 'top';
+    const byId = new Map([...chartPeople(), ...S().directory].map(u => [u.id, u]));
+    let cur = byId.get(id), guard = 0;
+    while (cur && cur.manager_id && guard++ < 20) { if (cur.manager_id === me()?.id) return 'reports'; cur = byId.get(cur.manager_id); }
+    const mine = byId.get(me()?.id)?.manager_id ?? me()?.manager_id, other = byId.get(id), myDept = me()?.department_id;
+    // Without a manager line on the org chart, a department manager leads the department's members.
+    if (other && !other.manager_id && isManager() && other.department_id === myDept && other.role !== 'manager') return 'reports';
+    if (mine && other?.manager_id === mine) return 'peers';
+    if (!mine && other && !other.manager_id && other.department_id === myDept && other.role === me()?.role) return 'peers';
+    let up = mine, g2 = 0; while (up && g2++ < 20) { if (up === id) return 'managers'; up = byId.get(up)?.manager_id; }
+    return 'others';
+  }
+  function peopleSections() {
+    const list = people(), groups = { top:[], reports:[], peers:[], managers:[], others:[] };
+    list.forEach(id => groups[relationOf(id)].push(id));
+    return [['', groups.top], [tr('我的下属', 'My reports'), groups.reports], [tr('平级同事', 'Peers'), groups.peers], [tr('我的上级', 'My managers'), groups.managers], [tr('其他同事', 'Others'), groups.others]].filter(([, ids]) => ids.length);
+  }
   function people() {
-    const ids = new Set(S().directory.map(u => u.id));
+    const ids = new Set([...S().directory, ...chartPeople()].map(u => u.id));
     S().objectives.filter(inCycle).forEach(o => { if (o.level !== 'company' && o.owner_id) ids.add(o.owner_id); });
     if (me()) ids.add(me().id);
     let list = [...ids].sort((a, b) => a === me()?.id ? -1 : b === me()?.id ? 1 : nameOf(a).localeCompare(nameOf(b)));
@@ -240,7 +264,7 @@
     const mine = o.owner_id === me()?.id, lead = o.canLeadScore, sc = item.scores || {};
     const btn = (k, label, can) => can ? `<button type="button" class="okb-sc-btn" data-okr="score" data-kind="${k}" data-target="${kind}" data-id="${esc(item.id)}">${scoreChip(sc[k === 'self' ? 'self' : 'manager'], label)}</button>` : scoreChip(sc[k === 'self' ? 'self' : 'manager'], label);
     const f = finalOf(item);
-    return `<div class="okb-scores">${btn('self', tr('自评', 'Self'), mine)}${btn('manager', tr('领导', 'Leader'), lead)}<span class="okb-final ${f === null ? 'pending' : level(f)[3]}" title="${tr('最终分 = 自评 50% + 领导 50%', 'Final = 50% self + 50% leader')}">${f === null ? tr('待评', 'Pending') : num(f)}</span></div>`;
+    return `<div class="okb-scores">${btn('self', tr('自评', 'Self'), mine)}${btn('manager', tr('领导评分', 'Leader'), lead)}<span class="okb-final ${f === null ? 'pending' : level(f)[3]}" title="${tr('最终评分 = 自评 50% + 领导评分 50%', 'Final = 50% self + 50% leader')}">${tr('最终', 'Final')} ${f === null ? tr('待评', 'pending') : num(f)}</span></div>`;
   }
   function pointsChip(o, editable) {
     const label = `${num(oPoints(o))} ${tr('分', 'pts')}`;
@@ -277,15 +301,28 @@
       <li>${tr('<b>得分</b> = 目标分值 × KR 权重 × 最终分；所有 KR 相加就是 OKR 总分。评到 125 的部分会让总分超过 100，这是允许的。', '<b>Points</b> = objective points × KR % × final score; the sum is the OKR score. 125-level scores can push the total above 100.')}</li></ol>
       <p class="okb-hint">${tr('例：O1 40 分，KR1 权重 25%，自评 100、领导 75 → 最终 87.5 → 得 40 × 25% × 87.5% = 8.75 分。', 'Example: O1 = 40, KR1 = 25%, self 100, leader 75 → final 87.5 → 40 × 25% × 87.5% = 8.75 points.')}</p></div>`;
   }
+  const apiBase = () => (window.WORKOS_CONFIG && window.WORKOS_CONFIG.apiBase) || '/api';
+  function evidenceList(sc) {
+    const files = sc?.evidence || [];
+    return files.length ? `<ul class="okb-evidence">${files.map(f => `<li><a href="${esc(apiBase() + '/tasks/' + encodeURIComponent(f.taskId) + '/attachments/' + encodeURIComponent(f.id))}" target="_blank" rel="noopener">${icon('paperclip')} ${esc(f.name)}</a></li>`).join('')}</ul>` : '';
+  }
+  async function uploadEvidence(taskId, file) {
+    if (file.size > 8 * 1024 * 1024) throw new Error(tr(`${file.name} 超过 8 MB`, `${file.name} is larger than 8 MB`));
+    const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] || ''); r.onerror = () => rej(new Error(tr('文件读取失败', 'Could not read the file'))); r.readAsDataURL(file); });
+    return ctx.api.post('/tasks/' + encodeURIComponent(taskId) + '/attachments', { name:file.name, mime:file.type || 'application/octet-stream', dataBase64:b64 });
+  }
   function scoreForm(target, item, o) {
     const kind = ui.scoring.who, cur = item.scores?.[kind], self = item.scores?.self;
     return `<form class="okb-score-form" id="okr-score" data-id="${esc(item.id)}" data-kind="${kind}" data-target="${target}">
       <h4>${kind === 'self' ? tr('自评', 'Self score') : tr('领导评分', 'Leader score')} · ${tx(item.title)}</h4>
-      ${kind === 'manager' && self ? `<p class="okb-hint">${tr('员工自评', 'Self score')}：${scoreChip(self, '')}${self.comment ? ' ' + tx(self.comment) : ''}</p>` : ''}
+      ${kind === 'manager' && self ? `<p class="okb-hint">${tr('员工自评', 'Self score')}：${scoreChip(self, '')}${self.comment ? ' ' + tx(self.comment) : ''}</p>${evidenceList(self)}` : ''}
       <div class="okb-levels">${LEVELS.map(([v, zh, en, cls]) => `<label class="okb-level ${cls}"><input type="radio" name="score" value="${v}" ${cur && !cur.veto && cur.score === v ? 'checked' : ''} required><b>${v}</b><span>${tr(zh, en)}</span>${v === 125 ? `<i class="okb-star">${icon('crown-simple')}</i>` : ''}</label>`).join('')}</div>
-      <label class="okb-mini okb-wide"><span>${kind === 'self' ? tr('一句话说明（可选）', 'One-line note (optional)') : tr('评语（可选）', 'Comment (optional)')}</span><input name="comment" maxlength="2000" value="${esc(cur?.comment || '')}"></label>
+      ${kind === 'self' ? `<label class="okb-mini okb-wide"><span>${tr('完成情况说明', 'What you achieved')}</span><textarea name="comment" maxlength="2000" rows="3" placeholder="${tr('写清楚做了什么、结果数字是多少（至少 10 个字）', 'Describe what you did and the result, with numbers (at least 10 characters)')}">${esc(cur?.comment || '')}</textarea></label>
+      ${target === 'kr' && item.task_id ? `<label class="okb-mini okb-wide okb-file"><span>${tr('上传证明文件（截图、报表、PDF 等）', 'Upload proof (screenshot, report, PDF…)')}</span><input type="file" name="files" multiple accept="image/*,application/pdf,.csv,.txt,.xlsx,.xls,.docx,.doc,.pptx"></label>` : ''}
+      <p class="okb-hint okb-evidence-rule">${icon('info')} ${target === 'kr' && item.task_id ? tr('文字说明和证明文件至少提交一项，自评才算完成。', 'A self score counts only with a written explanation or an uploaded file.') : tr('需要写清楚完成情况，自评才算完成。', 'A self score counts only with a written explanation.')}</p>${evidenceList(cur)}` : `<label class="okb-mini okb-wide"><span>${tr('评语（可选）', 'Comment (optional)')}</span><input name="comment" maxlength="2000" value="${esc(cur?.comment || '')}"></label>`}
       ${kind === 'manager' ? `<label class="okb-veto"><input type="checkbox" name="veto" ${cur?.veto ? 'checked' : ''}> ${tr('自评不实：这条直接判 0 分', 'Self score is untrue: set this to 0')}</label>` : ''}
-      <div class="okb-form-actions"><button class="okb-btn primary small" type="submit">${tr('保存评分', 'Save score')}</button><button class="okb-btn small" type="button" data-okr="score-cancel">${tr('取消', 'Cancel')}</button></div>
+      <p class="okb-form-error" role="alert"></p>
+      <div class="okb-form-actions"><button class="okb-btn primary small" type="submit">${kind === 'self' ? tr('提交自评', 'Submit self score') : tr('保存评分', 'Save score')}</button><button class="okb-btn small" type="button" data-okr="score-cancel">${tr('取消', 'Cancel')}</button></div>
     </form>`;
   }
 
@@ -342,7 +379,7 @@
       ${cycleBanner()}
       <nav class="okb-tabs" role="tablist">${tabs.map(([id, label, ic]) => `<button type="button" role="tab" aria-selected="${ui.tab === id}" class="${ui.tab === id ? 'active' : ''}" data-okr="tab" data-value="${id}">${icon(ic)} ${label}</button>`).join('')}<span class="okb-tabs-spacer"></span><button type="button" class="okb-btn small" data-okr="rubric">${icon('info')} ${tr('评分标准', 'Scoring guide')}</button></nav>
       ${ui.tab === 'align' ? alignView() : `<div class="okb-layout ${ui.tab === 'mine' ? 'okb-solo' : ''}">
-        ${ui.tab === 'team' ? `<aside class="okb-people"><label class="okb-search">${icon('magnifying-glass')}<input data-okr-search placeholder="${tr('搜索成员', 'Search people')}" value="${esc(ui.search)}"></label><ul>${people().map(id => { const objs = objectivesOf(id), pct = averagePct(objs); return `<li><button type="button" class="${ui.person === id ? 'active' : ''}" data-okr="person" data-id="${esc(id)}">${id === '__company' ? `<span class="okb-avatar okb-company">${icon('buildings')}</span>` : avatar(id)}<span class="okb-people-name">${esc(id === '__company' ? tr('公司目标', 'Company objectives') : nameOf(id))}${id === me()?.id ? ` <em>${tr('我', 'Me')}</em>` : ''}</span><span class="okb-people-pct">${objs.length ? (pct === null ? objs.length + tr(' 个', '') : pct + '%') : '—'}</span></button></li>`; }).join('') || `<li class="okb-hint">${tr('没有匹配的成员', 'No matching people')}</li>`}</ul></aside>` : ''}
+        ${ui.tab === 'team' ? `<aside class="okb-people"><label class="okb-search">${icon('magnifying-glass')}<input data-okr-search placeholder="${tr('搜索成员', 'Search people')}" value="${esc(ui.search)}"></label><ul>${peopleSections().map(([label, ids]) => (label ? `<li class="okb-people-group"><span>${label}</span><b>${ids.length}</b></li>` : '') + ids.map(id => { const objs = objectivesOf(id), pct = averagePct(objs); return `<li><button type="button" class="${ui.person === id ? 'active' : ''}" data-okr="person" data-id="${esc(id)}">${id === '__company' ? `<span class="okb-avatar okb-company">${icon('buildings')}</span>` : avatar(id)}<span class="okb-people-name">${esc(id === '__company' ? tr('公司目标', 'Company objectives') : nameOf(id))}${id === me()?.id ? ` <em>${tr('我', 'Me')}</em>` : ''}</span><span class="okb-people-pct">${objs.length ? (pct === null ? objs.length + tr(' 个', '') : pct + '%') : '—'}</span></button></li>`; }).join('')).join('') || `<li class="okb-hint">${tr('没有匹配的成员', 'No matching people')}</li>`}</ul></aside>` : ''}
         <div class="okb-main">${ui.person ? personView(ui.person) : ''}</div>
       </div>`}
     </div>`;
@@ -504,6 +541,17 @@
     }
     if (form.id === 'okr-score') {
       const body = { kind:form.dataset.kind, score:Number(v.score), ...(String(v.comment || '').trim() ? { comment:String(v.comment).trim() } : {}), ...(v.veto ? { veto:true } : {}) };
+      const errEl = form.querySelector('.okb-form-error'), files = [...(form.querySelector('input[type=file]')?.files || [])];
+      if (body.kind === 'self') {
+        const prior = (form.dataset.target === 'kr' ? findKr(form.dataset.id) : null)?.scores?.self?.evidence || [];
+        if ((body.comment || '').length < 10 && !files.length && !prior.length) { if (errEl) errEl.textContent = tr('请写清楚完成情况（至少 10 个字），或上传证明文件。', 'Write at least 10 characters about what you achieved, or upload a proof file.'); return; }
+        if (files.length) {
+          const k = findKr(form.dataset.id);
+          try { ui.busy = true; const ids = []; for (const f of files) ids.push((await uploadEvidence(k.task_id, f)).id); body.attachmentIds = ids; }
+          catch (e) { ui.busy = false; if (errEl) errEl.textContent = e.message || tr('文件上传失败', 'Upload failed'); return; }
+          ui.busy = false;
+        } else if (prior.length && (body.comment || '').length < 10) body.attachmentIds = prior.map(f => f.id);
+      }
       const path = (form.dataset.target === 'kr' ? '/key-results/' : '/objectives/') + encodeURIComponent(form.dataset.id) + '/scores';
       if (await mutate(() => ctx.api.post(path, body), body.veto ? tr('已判定自评不实，该项记 0 分', 'Marked untrue; scored 0') : body.kind === 'self' ? tr('自评已保存，等待领导评分', 'Self score saved; waiting for your leader') : tr('领导评分已保存', 'Leader score saved'))) ui.scoring = null;
       rerender(); return;
@@ -557,7 +605,7 @@
       `<button class="btn" data-live-action="close">${tr('知道了', 'Got it')}</button>`);
   }
 
-  function reset() { ui.tab = 'mine'; ui.person = null; ui.cycle = null; ui.search = ''; ui.editing = null; ui.adding = null; ui.menu = null; ui.confirm = null; ui.drawer = null; ui.updates.clear(); ui.collapsed.clear(); }
+  function reset() { orgChart = null; ui.tab = 'mine'; ui.person = null; ui.cycle = null; ui.search = ''; ui.editing = null; ui.adding = null; ui.menu = null; ui.confirm = null; ui.drawer = null; ui.updates.clear(); ui.collapsed.clear(); }
   /* Called by live-app after data refresh so an open drawer reflects new data. */
   function refreshed() { if (ui.drawer && document.querySelector('#overlay-root .okb-drawer')) paintDrawer(); }
 
