@@ -157,8 +157,8 @@
           <div class="okb-o-meta"><span class="okb-kind okb-kind-${o.level}">${kinds[o.level] || ''}</span>${o.planning?.type === 'bonus' ? `<span class="okb-kind">${tr('奖励目标', 'Bonus')}</span>` : ''}${parent ? `<button type="button" class="okb-align-chip" data-okr="open-o" data-id="${esc(parent.id)}" title="${esc(txt(parent.title))}">${icon('arrow-bend-left-up')} ${tr('对齐：', 'Aligned to: ')}${tx(parent.title)}</button>` : ''}${children.length ? `<span class="okb-meta-text">${icon('tree-structure')} ${tr(children.length + ' 个目标对齐到此', children.length + ' aligned below')}</span>` : ''}</div>
         </div>
         <div class="okb-o-side">
-          ${simple() ? scoreBlock(o) : weight}
-          ${simple() && !krs.length ? '' : `<div class="okb-o-progress">${bar(pct)}<span class="okb-pct">${pct === null ? '—' : pct + '%'}</span></div>`}
+          ${simple() ? `${pointsChip(o, editableO)}${krs.length ? earnedChip(o) : scoreBlock('o', o, o)}` : weight}
+          ${simple() ? '' : `<div class="okb-o-progress">${bar(pct)}<span class="okb-pct">${pct === null ? '—' : pct + '%'}</span></div>`}
           <button type="button" class="okb-btn small" data-okr="open-o" data-id="${esc(o.id)}">${icon('chat-circle-text')} ${tr('进展', 'Updates')}${updates?.items?.length ? ` ${updates.items.length}` : ''}</button>
           <div class="okb-o-more"><button type="button" class="okb-icon-btn" data-okr="menu" data-kind="o" data-id="${esc(o.id)}" aria-label="${tr('更多操作', 'More actions')}">${icon('dots-three')}</button>${menuOpen ? popover([
             ['open-o', tr('查看详情与进展', 'Details & updates'), o.id],
@@ -169,14 +169,25 @@
           ]) : ''}${confirm ? `<div class="okb-popover okb-confirm"><p>${tr('删除后目标及其 KR 不再显示，历史记录保留；对齐到它的目标会解除对齐。确定删除？', 'The objective and its KRs will be hidden; history is kept and aligned objectives are detached. Delete it?')}</p><div><button type="button" class="okb-btn small" data-okr="cancel-confirm">${tr('取消', 'Cancel')}</button><button type="button" class="okb-btn danger small" data-okr="archive-o" data-id="${esc(o.id)}">${tr('删除', 'Delete')}</button></div></div>` : ''}</div>
         </div>
       </header>
-      ${ui.scoring && ui.scoring.id === o.id ? scoreForm(o) : ''}
+      ${ui.scoring && ui.scoring.kind === 'o' && ui.scoring.id === o.id ? scoreForm('o', o, o) : ''}
       ${simple() && o.planning?.description && !collapsed ? `<div class="okb-o-done">${icon('flag-checkered')} ${tx(o.planning.description)}</div>` : ''}
-      ${collapsed || (simple() && !krs.length) ? (simple() && !krs.length && edit && !collapsed ? (ui.adding && ui.adding.kind === 'kr' && ui.adding.id === o.id ? `<div class="okb-krs">${newKrForm(o)}</div>` : `<button type="button" class="okb-add-row okb-add-kr-optional" data-okr="add-kr" data-id="${esc(o.id)}">${icon('plus')} ${tr('添加关键结果（可选，用数字衡量进度）', 'Add a key result (optional, track progress with a number)')}</button>`) : '') : `<div class="okb-krs">${krs.map((k, i) => krRow(o, k, i)).join('') || `<div class="okb-empty-row">${tr('还没有关键结果。KR 应是可衡量的结果，例如“新增 30 家经销商”。', 'No key results yet. A KR is a measurable result, e.g. “Sign 30 new dealers”.')}</div>`}
+      ${simple() ? (collapsed ? '' : simpleKrs(o, krs, edit)) : `${collapsed ? '' : `<div class="okb-krs">${krs.map((k, i) => krRow(o, k, i)).join('') || `<div class="okb-empty-row">${tr('还没有关键结果。KR 应是可衡量的结果，例如“新增 30 家经销商”。', 'No key results yet. A KR is a measurable result, e.g. “Sign 30 new dealers”.')}</div>`}
         ${weightWarn && !simple() ? `<div class="okb-warn">${icon('warning')} ${tr(`KR 权重合计 ${krWeights}%，应等于目标权重 ${o.planning.weight}%`, `KR weights total ${krWeights}%; they should equal the objective weight ${o.planning.weight}%`)}</div>` : ''}
-        ${edit ? (ui.adding && ui.adding.kind === 'kr' && ui.adding.id === o.id ? newKrForm(o) : `<button type="button" class="okb-add-row" data-okr="add-kr" data-id="${esc(o.id)}">${icon('plus')} ${tr('添加关键结果', 'Add key result')}</button>`) : ''}</div>`}
+        ${edit ? (ui.adding && ui.adding.kind === 'kr' && ui.adding.id === o.id ? newKrForm(o) : `<button type="button" class="okb-add-row" data-okr="add-kr" data-id="${esc(o.id)}">${icon('plus')} ${tr('添加关键结果', 'Add key result')}</button>`) : ''}</div>`}`}
     </article>`;
   }
   function newKrForm(o) {
+    if (simple()) {
+      const used = krsOf(o).reduce((n, k) => n + (Number.isFinite(k.planning?.weight) ? k.planning.weight : 0), 0), left = Math.max(0, Math.round((100 - used) * 100) / 100);
+      return `<form class="okb-new-kr okb-new-kr-simple" id="okr-new-kr" data-objective-id="${esc(o.id)}">
+        <span class="okb-kr-tag">KR${krsOf(o).length + 1}</span>
+        <input name="title" placeholder="${tr('关键结果：怎样证明目标达成，例如：新增 30 家经销商', 'Key result, e.g. Sign 30 new dealers')}" required minlength="2" maxlength="300" data-okr-autofocus>
+        <label class="okb-mini okb-target"><span>${tr('目标值', 'Target')}</span><input name="targetText" required maxlength="120" placeholder="${tr('填“完成”，或明确数字：30 家 / 3%', '“Done”, or a number: 30 dealers / 3%')}"></label>
+        <label class="okb-mini"><span>${tr('权重 %（占本目标）', 'Weight % of objective')}</span><input name="weight" type="number" min="0.01" max="100" step="0.01" value="${left || ''}"></label>
+        <div class="okb-form-actions"><span class="okb-form-tip">${tr(`= ${num(oPoints(o))} 分 × 权重；本目标 KR 合计 100%，还剩 ${left}%`, `= ${num(oPoints(o))} pts × weight · ${left}% left`)}</span><button class="okb-btn primary small" type="submit">${tr('添加', 'Add')}</button><button class="okb-btn small" type="button" data-okr="cancel-add">${tr('取消', 'Cancel')}</button></div>
+        <p class="okb-form-error" role="alert"></p>
+      </form>`;
+    }
     const remaining = Number.isFinite(o.planning?.weight) ? Math.max(0, Math.round((o.planning.weight - krsOf(o).reduce((s, k) => s + (k.planning?.weight || 0), 0)) * 100) / 100) : '';
     return `<form class="okb-new-kr" id="okr-new-kr" data-objective-id="${esc(o.id)}">
       <span class="okb-kr-tag">KR${krsOf(o).length + 1}</span>
@@ -199,8 +210,9 @@
       <span class="okb-o-tag">O</span>
       <input name="title" placeholder="${tr('输入目标，例如：Q4 销售额增长 20%', 'Objective, e.g. Grow Q4 sales 20%')}" required minlength="3" maxlength="300" data-okr-autofocus>
       ${simple() ? `<input name="description" class="okb-o-desc-input" maxlength="4000" placeholder="${tr('怎样算完成？（可选）例如：转化率从 2% 提升到 3%', 'What does done look like? (optional)')}">` : ''}
+      ${simple() ? (() => { const used = S().objectives.filter(x => x.owner_id === ownerId && x.planning?.period === (ui.cycle || nowPeriod()) && x.level !== 'company').reduce((n, x) => n + (Number(x.planning?.weight) || 0), 0), left = Math.max(0, Math.round((100 - used) * 100) / 100); return `<label class="okb-mini"><span>${tr('分值（分）', 'Points')}</span><input name="weight" type="number" min="0.01" max="100" step="0.01" required value="${left || ''}" title="${tr(`所有目标合计 100 分，还剩 ${left} 分`, `All objectives add up to 100; ${left} left`)}"></label><span class="okb-form-tip">${tr(`所有目标合计 100 分，还剩 ${left} 分`, `All objectives add up to 100 · ${left} left`)}</span>`; })() : ''}
       ${simple() ? `<details class="okb-more-fields"><summary>${tr('更多设置（可不填）', 'More settings (optional)')}</summary>` : ''}
-      <label class="okb-mini"><span>${tr('权重 %', 'Weight %')}</span><input name="weight" type="number" min="0.01" max="100" step="0.01" ${simple() ? `placeholder="${tr('自动', 'Auto')}"` : 'required'}></label>
+      ${simple() ? '' : `<label class="okb-mini"><span>${tr('权重 %', 'Weight %')}</span><input name="weight" type="number" min="0.01" max="100" step="0.01" required></label>`}
       ${isManager() ? `<label class="okb-mini"><span>${tr('负责人', 'Owner')}</span><select name="ownerId">${owners.map(u => `<option value="${esc(u.id)}" ${u.id === ownerId ? 'selected' : ''}>${esc(u.display_name)}</option>`).join('')}</select></label>
       <label class="okb-mini"><span>${tr('层级', 'Level')}</span><select name="level"><option value="personal">${tr('个人目标', 'Personal')}</option><option value="department">${tr('部门目标', 'Department')}</option></select></label>` : `<input type="hidden" name="ownerId" value="${esc(me().id)}"><input type="hidden" name="level" value="personal">`}
       ${collab() && parents.length ? `<label class="okb-mini okb-wide"><span>${tr('对齐到', 'Align to')}</span><select name="parentObjectiveId"><option value="">${tr('不对齐', 'No alignment')}</option>${parents.map(p => `<option value="${esc(p.id)}">${esc(nameOf(p.level === 'company' ? null : p.owner_id))} · ${esc(txt(p.title))}</option>`).join('')}</select></label>` : ''}
@@ -210,32 +222,83 @@
     </form>`;
   }
 
-  /* ---------- simple scoring: self score + leader score = final ---------- */
-  const finalOf = o => o.scores?.manager?.score ?? null;
+  /* ---------- simple scoring ----------
+   * Objective weight = points (e.g. O1 = 40). Key result weight = % of its objective.
+   * Each KR (or an objective without KRs) is scored on six levels by the owner and the leader:
+   * final = 50% self + 50% leader; a leader who finds the self score untrue can set it to 0.
+   * KR points earned = objective points × KR % × final ÷ 100; scores above 100 add to the total. */
+  const LEVELS = [[0, '未开展', 'Not started', 'l0'], [25, '严重滞后', 'Badly behind', 'l25'], [50, '部分完成', 'Partly done', 'l50'], [75, '接近完成', 'Nearly done', 'l75'], [100, '完成', 'Done', 'l100'], [125, '完成且卓越', 'Done & excellent', 'l125']];
+  const level = v => LEVELS.find(l => l[0] === v) || LEVELS.reduce((a, b) => Math.abs(b[0] - v) < Math.abs(a[0] - v) ? b : a);
+  const num = v => Math.round(v * 10) / 10;
+  const oPoints = o => Number(o.planning?.weight) || 0;
+  const krShare = (o, k) => { const ks = krsOf(o), set = ks.filter(x => Number.isFinite(x.planning?.weight)); return Number.isFinite(k.planning?.weight) ? k.planning.weight : ks.length ? Math.max(0, (100 - set.reduce((n, x) => n + x.planning.weight, 0)) / Math.max(1, ks.length - set.length)) : 0; };
+  const krPoints = (o, k) => oPoints(o) * krShare(o, k) / 100;
+  const finalOf = x => x?.scores?.final ?? null;
+  const earnedOf = o => { const ks = krsOf(o); if (!ks.length) { const f = finalOf(o); return { earned:f === null ? null : oPoints(o) * f / 100, pending:f === null ? 1 : 0 }; } let e = 0, pending = 0; for (const k of ks) { const f = finalOf(k); if (f === null) pending++; else e += krPoints(o, k) * f / 100; } return { earned:pending === ks.length ? null : e, pending }; };
+  const scoreChip = (sc, label) => { if (!sc) return `<span class="okb-lv lv-none"><em>${label}</em> —</span>`; const l = level(sc.score); return `<span class="okb-lv ${sc.veto ? 'lv-veto' : l[3]}" title="${esc(tr(l[1], l[2]))}${sc.comment ? ' · ' + esc(sc.comment) : ''}"><em>${label}</em> ${sc.veto ? tr('0 不实', '0 untrue') : sc.score}${sc.score === 125 && !sc.veto ? ` <i class="okb-star">${icon('crown-simple')}${tr('卓越', 'Excellent')}</i>` : ''}</span>`; };
+  function scoreBlock(kind, item, o) {
+    const mine = o.owner_id === me()?.id, lead = o.canLeadScore, sc = item.scores || {};
+    const btn = (k, label, can) => can ? `<button type="button" class="okb-sc-btn" data-okr="score" data-kind="${k}" data-target="${kind}" data-id="${esc(item.id)}">${scoreChip(sc[k === 'self' ? 'self' : 'manager'], label)}</button>` : scoreChip(sc[k === 'self' ? 'self' : 'manager'], label);
+    const f = finalOf(item);
+    return `<div class="okb-scores">${btn('self', tr('自评', 'Self'), mine)}${btn('manager', tr('领导', 'Leader'), lead)}<span class="okb-final ${f === null ? 'pending' : level(f)[3]}" title="${tr('最终分 = 自评 50% + 领导 50%', 'Final = 50% self + 50% leader')}">${f === null ? tr('待评', 'Pending') : num(f)}</span></div>`;
+  }
+  function pointsChip(o, editable) {
+    const label = `${num(oPoints(o))} ${tr('分', 'pts')}`;
+    return editable ? editableChip('o-weight', o, label) : `<span class="okb-pts">${label}</span>`;
+  }
+  function editableChip(kind, o, label) { return ui.editing && ui.editing.kind === kind && ui.editing.id === o.id ? editable(kind, o.id, o.planning?.weight, '', 'number') : `<button type="button" class="okb-pts" data-okr="edit" data-kind="${kind}" data-id="${esc(o.id)}" title="${tr('目标分值：所有目标合计 100 分', 'Objective points: all objectives add up to 100')}">${label}</button>`; }
+  function earnedChip(o) { const e = earnedOf(o); return `<span class="okb-earned" title="${tr('= Σ（目标分值 × KR 权重 × KR 最终分）', '= Σ (points × KR % × KR final score)')}">${tr('得', 'Earned')} <b>${e.earned === null ? '—' : num(e.earned)}</b> / ${num(oPoints(o))}${e.pending ? `<i>${tr(`${e.pending} 条待评`, `${e.pending} pending`)}</i>` : ''}</span>`; }
+  function simpleKrs(o, krs, edit) {
+    const sumW = krs.reduce((n, k) => n + (Number.isFinite(k.planning?.weight) ? k.planning.weight : 0), 0), allSet = krs.length && krs.every(k => Number.isFinite(k.planning?.weight));
+    return `<div class="okb-krs okb-krs-simple">${krs.map((k, i) => { const share = krShare(o, k), pts = krPoints(o, k), f = finalOf(k); const target = k.planning?.targetText || (Number.isFinite(k.target) && k.unit !== '完成' ? `${k.target} ${k.unit || ''}` : tr('完成', 'Done'));
+      return `<div class="okb-kr okb-kr-simple" data-kr="${esc(k.id)}"><span class="okb-kr-tag">KR${i + 1}</span>
+        <div class="okb-kr-main"><div class="okb-kr-title">${edit && collab() ? `<button type="button" class="okb-title-btn" data-okr="edit" data-kind="kr-title" data-id="${esc(k.id)}">${tx(k.title)}</button>` : `<span>${tx(k.title)}</span>`}</div><div class="okb-kr-target">${icon('flag')} ${tr('目标值', 'Target')}：${tx(target)}</div></div>
+        <div class="okb-kr-weight">${edit && collab() ? (ui.editing && ui.editing.kind === 'kr-weight' && ui.editing.id === k.id ? editable('kr-weight', k.id, k.planning?.weight, '', 'number') : `<button type="button" class="okb-chip" data-okr="edit" data-kind="kr-weight" data-id="${esc(k.id)}" title="${tr('KR 权重 = 占所属目标分值的百分比', 'KR weight = share of the objective’s points')}">${num(share)}% · ${num(pts)} ${tr('分', 'pts')}</button>`) : `<span class="okb-chip">${num(share)}% · ${num(pts)} ${tr('分', 'pts')}</span>`}</div>
+        <div class="okb-kr-score">${scoreBlock('kr', k, o)}</div>
+        <div class="okb-kr-got" title="${esc(tr(`${num(oPoints(o))} 分 × ${num(share)}% × ${f === null ? '待评' : num(f) + '%'}`, `${num(oPoints(o))} × ${num(share)}% × ${f === null ? 'pending' : num(f) + '%'}`))}">${f === null ? '—' : num(pts * f / 100)}</div>
+      </div>${ui.scoring && ui.scoring.kind === 'kr' && ui.scoring.id === k.id ? scoreForm('kr', k, o) : ''}`; }).join('') || `<div class="okb-empty-row">${tr('还没有关键结果。没有 KR 时直接给整个目标打分；也可以添加 KR，按权重拆分分值。', 'No key results. Score the objective directly, or add KRs to split its points by weight.')}</div>`}
+      ${krs.length && (!allSet || Math.abs(sumW - 100) > 0.01) && krs.some(k => Number.isFinite(k.planning?.weight)) ? `<div class="okb-warn">${icon('warning')} ${tr(`KR 权重合计 ${num(sumW)}%，应为 100%（未填权重的 KR 平分剩余部分）`, `KR weights total ${num(sumW)}%; they should add up to 100% (KRs without a weight share the rest)`)}</div>` : ''}
+      ${edit ? (ui.adding && ui.adding.kind === 'kr' && ui.adding.id === o.id ? newKrForm(o) : `<button type="button" class="okb-add-row" data-okr="add-kr" data-id="${esc(o.id)}">${icon('plus')} ${tr('添加关键结果', 'Add key result')}</button>`) : ''}</div>`;
+  }
   function totalScore(objs) {
-    const scored = objs.filter(o => finalOf(o) !== null), w = o => Number(o.planning?.weight) || 1;
     if (!objs.length) return '';
-    if (!scored.length) return `<div class="okb-total pending"><strong>—</strong><span>${tr('待评分', 'Not scored')}</span></div>`;
-    const sum = scored.reduce((n, o) => n + w(o), 0), val = Math.round(scored.reduce((n, o) => n + finalOf(o) * w(o), 0) / sum);
-    return `<div class="okb-total ${val >= 80 ? 'good' : val >= 60 ? 'mid' : 'low'}" title="${tr('按目标权重加权的领导评分', 'Leader scores weighted by objective weight')}"><strong>${val}</strong><span>${tr('OKR 得分', 'OKR score')}${scored.length < objs.length ? ` · ${scored.length}/${objs.length}` : ''}</span></div>`;
+    const pts = objs.reduce((n, o) => n + oPoints(o), 0), list = objs.map(earnedOf), got = list.reduce((n, e) => n + (e.earned || 0), 0), pending = list.reduce((n, e) => n + e.pending, 0), any = list.some(e => e.earned !== null);
+    const cls = !any ? 'pending' : got >= 100 ? 'good' : got >= 75 ? 'ok' : got >= 50 ? 'mid' : 'low';
+    return `<div class="okb-total ${cls}"><strong>${any ? num(got) : '—'}</strong><span>${tr('OKR 总分', 'OKR score')} / ${num(pts)}${pending ? ` · ${tr(`${pending} 项待评`, `${pending} pending`)}` : ''}</span><button type="button" class="okb-link okb-howto" data-okr="score-help">${icon('info')} ${tr('计算方式', 'How it’s calculated')}</button></div>`;
   }
-  function scoreBlock(o) {
-    const self = o.scores?.self, lead = o.scores?.manager, mine = o.owner_id === me()?.id;
-    const selfBtn = mine ? `<button type="button" class="okb-sc ${self ? 'done' : 'todo'}" data-okr="score" data-kind="self" data-id="${esc(o.id)}">${tr('自评', 'Self')} <b>${self ? self.score : '—'}</b></button>` : `<span class="okb-sc ${self ? 'done' : ''}">${tr('自评', 'Self')} <b>${self ? self.score : '—'}</b></span>`;
-    const leadBtn = o.canLeadScore ? `<button type="button" class="okb-sc final ${lead ? 'done' : 'todo'}" data-okr="score" data-kind="manager" data-id="${esc(o.id)}">${tr('领导', 'Leader')} <b>${lead ? lead.score : '—'}</b></button>` : `<span class="okb-sc final ${lead ? 'done' : ''}">${tr('领导', 'Leader')} <b>${lead ? lead.score : '—'}</b></span>`;
-    return `<div class="okb-scores">${selfBtn}${leadBtn}</div>`;
+  function scoreHelp(objs) {
+    if (!ui.scoreHelp) return '';
+    const pts = objs.reduce((n, o) => n + oPoints(o), 0);
+    return `<div class="okb-howto-panel"><h4>${icon('calculator')} ${tr('OKR 分数怎么算', 'How OKR scores work')}</h4>
+      <ol><li>${tr('<b>目标按分值算</b>：每个目标填一个分值，所有目标合计 100 分（例如 O1 = 40 分）。', '<b>Objectives carry points</b>: all objectives add up to 100 (e.g. O1 = 40).')}${Math.abs(pts - 100) > 0.01 ? ` <span class="okb-warn-inline">${tr(`当前合计 ${num(pts)} 分`, `currently ${num(pts)}`)}</span>` : ''}</li>
+      <li>${tr('<b>KR 按百分比算</b>：KR 权重是占所属目标分值的百分比，同一目标下合计 100%（例如 KR 25% = 40 分 × 25% = 10 分）。', '<b>Key results are percentages</b> of their objective, adding up to 100% (KR 25% of 40 = 10 points).')}</li>
+      <li>${tr('<b>六档评分</b>：0 未开展 · 25 严重滞后 · 50 部分完成 · 75 接近完成 · 100 完成 · 125 完成且卓越。', '<b>Six levels</b>: 0 not started · 25 badly behind · 50 partly · 75 nearly · 100 done · 125 done & excellent.')}</li>
+      <li>${tr('<b>最终分 = 自评 50% + 领导评分 50%</b>；领导发现自评不实，可以直接把这条 KR 判为 0 分。', '<b>Final = 50% self + 50% leader</b>; a leader who finds a self score untrue can set that KR to 0.')}</li>
+      <li>${tr('<b>得分</b> = 目标分值 × KR 权重 × 最终分；所有 KR 相加就是 OKR 总分。评到 125 的部分会让总分超过 100，这是允许的。', '<b>Points</b> = objective points × KR % × final score; the sum is the OKR score. 125-level scores can push the total above 100.')}</li></ol>
+      <p class="okb-hint">${tr('例：O1 40 分，KR1 权重 25%，自评 100、领导 75 → 最终 87.5 → 得 40 × 25% × 87.5% = 8.75 分。', 'Example: O1 = 40, KR1 = 25%, self 100, leader 75 → final 87.5 → 40 × 25% × 87.5% = 8.75 points.')}</p></div>`;
   }
-  function scoreForm(o) {
-    const kind = ui.scoring.kind, cur = o.scores?.[kind], self = o.scores?.self;
-    const presets = [[100, tr('超出预期', 'Exceeded')], [80, tr('完成', 'Achieved')], [60, tr('部分完成', 'Partly')], [30, tr('未完成', 'Missed')]];
-    return `<form class="okb-score-form" id="okr-score" data-id="${esc(o.id)}" data-kind="${kind}">
-      <h4>${kind === 'self' ? tr('给这个目标自评', 'Self-score this objective') : tr('领导评分（最终分）', 'Leader score (final)')}</h4>
-      ${kind === 'manager' && self ? `<p class="okb-hint">${tr('员工自评', 'Self score')}：<b>${self.score}</b>${self.comment ? ' · ' + tx(self.comment) : ''}</p>` : ''}
-      <div class="okb-presets">${presets.map(([v, l]) => `<button type="button" class="okb-preset" data-okr="score-preset" data-value="${v}"><b>${v}</b><span>${l}</span></button>`).join('')}</div>
-      <label class="okb-mini"><span>${tr('分数 0–100', 'Score 0–100')}</span><input name="score" type="number" min="0" max="100" step="1" required value="${cur ? cur.score : ''}"></label>
-      <label class="okb-mini okb-wide"><span>${kind === 'self' ? tr('一句话说明（可选）', 'One-line note (optional)') : tr('评语（可选）', 'Comment (optional)')}</span><input name="comment" maxlength="2000" value="${esc(cur?.comment || '')}" placeholder="${kind === 'self' ? tr('例如：转化率做到 3.2%', 'e.g. reached 3.2%') : tr('例如：达成，移动端还要优化', 'e.g. achieved; mobile needs work')}"></label>
-      <div class="okb-form-actions"><button class="okb-btn primary small" type="submit">${tr('保存分数', 'Save score')}</button><button class="okb-btn small" type="button" data-okr="score-cancel">${tr('取消', 'Cancel')}</button></div>
+  function scoreForm(target, item, o) {
+    const kind = ui.scoring.who, cur = item.scores?.[kind], self = item.scores?.self;
+    return `<form class="okb-score-form" id="okr-score" data-id="${esc(item.id)}" data-kind="${kind}" data-target="${target}">
+      <h4>${kind === 'self' ? tr('自评', 'Self score') : tr('领导评分', 'Leader score')} · ${tx(item.title)}</h4>
+      ${kind === 'manager' && self ? `<p class="okb-hint">${tr('员工自评', 'Self score')}：${scoreChip(self, '')}${self.comment ? ' ' + tx(self.comment) : ''}</p>` : ''}
+      <div class="okb-levels">${LEVELS.map(([v, zh, en, cls]) => `<label class="okb-level ${cls}"><input type="radio" name="score" value="${v}" ${cur && !cur.veto && cur.score === v ? 'checked' : ''} required><b>${v}</b><span>${tr(zh, en)}</span>${v === 125 ? `<i class="okb-star">${icon('crown-simple')}</i>` : ''}</label>`).join('')}</div>
+      <label class="okb-mini okb-wide"><span>${kind === 'self' ? tr('一句话说明（可选）', 'One-line note (optional)') : tr('评语（可选）', 'Comment (optional)')}</span><input name="comment" maxlength="2000" value="${esc(cur?.comment || '')}"></label>
+      ${kind === 'manager' ? `<label class="okb-veto"><input type="checkbox" name="veto" ${cur?.veto ? 'checked' : ''}> ${tr('自评不实：这条直接判 0 分', 'Self score is untrue: set this to 0')}</label>` : ''}
+      <div class="okb-form-actions"><button class="okb-btn primary small" type="submit">${tr('保存评分', 'Save score')}</button><button class="okb-btn small" type="button" data-okr="score-cancel">${tr('取消', 'Cancel')}</button></div>
     </form>`;
+  }
+
+  /* ---------- monthly rhythm banner ---------- */
+  const okrCycles = new Map();
+  function cycleBanner() {
+    if (!S().capabilities?.okrCycle) return '';
+    const p = ui.cycle || nowPeriod();
+    if (!okrCycles.has(p)) { okrCycles.set(p, null); ctx.api.get('/okr/cycle?period=' + p).then(c => { okrCycles.set(p, c); rerender(); }).catch(() => {}); }
+    const c = okrCycles.get(p); if (!c) return '';
+    const md = d => { const [, m, dd] = d.split('-').map(Number); return lang() === 'en' ? `${m}/${dd}` : `${m}月${dd}日`; };
+    const steps = [['setup', tr('设置 OKR', 'Set OKR'), `${md(c.setupFrom)} – ${md(c.setupUntil)}`, tr('每天提醒，直到目标合计 100 分', 'Daily reminders until objectives total 100')], ['self', tr('员工自评', 'Self score'), `${md(c.selfFrom)} – ${md(c.selfUntil)}`, tr('逾期未自评按 0 分', 'Missing self scores count as 0')], ['lead', tr('领导评分', 'Leader score'), `${md(c.leadFrom)} – ${md(c.leadUntil)}`, tr('每天催办', 'Daily reminders')]];
+    return `<div class="okb-cycle">${icon('calendar-check')}<strong>${esc(periodLabel(p))} OKR</strong>${steps.map(([id, label, range, note]) => `<span class="okb-step ${c.phase === id ? 'now' : ''}" title="${esc(note)}"><b>${label}</b>${range}${c.phase === id ? `<em>${tr('进行中', 'Now')}</em>` : ''}</span>`).join(`<i class="okb-step-sep">${icon('caret-right')}</i>`)}</div>`;
   }
 
   /* ---------- person view ---------- */
@@ -244,7 +307,7 @@
     const total = objs.reduce((s, o) => s + (Number.isFinite(o.planning?.weight) ? o.planning.weight : 0), 0);
     const addable = !company && canCreateFor(id);
     return `<section class="okb-person">
-      <header class="okb-person-head">${company ? `<span class="okb-avatar okb-company">${icon('buildings')}</span>` : avatar(id, 44)}<div><h2>${esc(company ? tr('公司目标', 'Company objectives') : nameOf(id))}${id === me()?.id ? ` <span class="okb-me">${tr('我', 'Me')}</span>` : ''}</h2><p>${esc(periodLabel(ui.cycle))} · ${objs.length} ${tr('个目标', objs.length === 1 ? 'objective' : 'objectives')}${objs.length && !simple() ? ` · ${tr('目标权重合计', 'Objective weights')} ${total}%` : ''}</p></div>${simple() ? totalScore(objs) : ring(pct, 52)}</header>
+      <header class="okb-person-head">${company ? `<span class="okb-avatar okb-company">${icon('buildings')}</span>` : avatar(id, 44)}<div><h2>${esc(company ? tr('公司目标', 'Company objectives') : nameOf(id))}${id === me()?.id ? ` <span class="okb-me">${tr('我', 'Me')}</span>` : ''}</h2><p>${esc(periodLabel(ui.cycle))} · ${objs.length} ${tr('个目标', objs.length === 1 ? 'objective' : 'objectives')}${objs.length ? (simple() ? ` · ${tr('目标分值合计', 'Objective points')} ${total} ${tr('分', 'pts')}${Math.abs(total - 100) > 0.01 ? ` <span class="okb-warn-inline">${tr('应为 100 分', 'should be 100')}</span>` : ''}` : ` · ${tr('目标权重合计', 'Objective weights')} ${total}%`) : ''}</p></div>${simple() ? totalScore(objs) : ring(pct, 52)}</header>${simple() ? scoreHelp(objs) : ''}
       ${objs.map(objectiveCard).join('') || `<div class="okb-empty"><div class="okb-empty-icon">${icon('target')}</div><h3>${tr('这个周期还没有目标', 'No objectives in this cycle')}</h3><p>${addable ? tr('目标（O）写“想达成什么”，关键结果（KR）写“怎样算达成”。先创建一个目标吧。', 'An objective (O) says what you want to achieve; key results (KR) say how you’ll know. Start with one objective.') : tr('负责人还没有为这个周期设置目标。', 'No objectives have been set for this cycle yet.')}</p></div>`}
       ${addable ? (ui.adding && ui.adding.kind === 'o' ? newObjectiveForm(id) : `<button type="button" class="okb-add-row okb-add-o" data-okr="add-o">${icon('plus')} ${tr('添加目标', 'Add objective')}</button>`) : ''}
     </section>`;
@@ -276,6 +339,7 @@
     return `<div class="okb">
       <div class="page-heading okb-heading"><div><div class="eyebrow">WORK OS · OKR</div><h1>${tr('OKR 目标', 'OKRs')}</h1><p>${tr('目标（O）说明想达成什么，关键结果（KR）说明怎样算达成。评分沿用员工自评 + 主管确认。', 'Objectives say what to achieve; key results say how you’ll know. Scoring keeps self evaluation + manager confirmation.')}</p></div>
         <div class="okb-cycle" role="group" aria-label="${tr('周期', 'Cycle')}"><button type="button" class="okb-icon-btn" data-okr="cycle-prev" aria-label="${tr('上一个周期', 'Previous cycle')}">${icon('caret-left')}</button><select data-okr-cycle aria-label="${tr('选择周期', 'Choose cycle')}">${list.map(p => `<option value="${esc(p)}" ${p === ui.cycle ? 'selected' : ''}>${esc(periodLabel(p))}</option>`).join('')}</select><button type="button" class="okb-icon-btn" data-okr="cycle-next" aria-label="${tr('下一个周期', 'Next cycle')}">${icon('caret-right')}</button></div></div>
+      ${cycleBanner()}
       <nav class="okb-tabs" role="tablist">${tabs.map(([id, label, ic]) => `<button type="button" role="tab" aria-selected="${ui.tab === id}" class="${ui.tab === id ? 'active' : ''}" data-okr="tab" data-value="${id}">${icon(ic)} ${label}</button>`).join('')}<span class="okb-tabs-spacer"></span><button type="button" class="okb-btn small" data-okr="rubric">${icon('info')} ${tr('评分标准', 'Scoring guide')}</button></nav>
       ${ui.tab === 'align' ? alignView() : `<div class="okb-layout ${ui.tab === 'mine' ? 'okb-solo' : ''}">
         ${ui.tab === 'team' ? `<aside class="okb-people"><label class="okb-search">${icon('magnifying-glass')}<input data-okr-search placeholder="${tr('搜索成员', 'Search people')}" value="${esc(ui.search)}"></label><ul>${people().map(id => { const objs = objectivesOf(id), pct = averagePct(objs); return `<li><button type="button" class="${ui.person === id ? 'active' : ''}" data-okr="person" data-id="${esc(id)}">${id === '__company' ? `<span class="okb-avatar okb-company">${icon('buildings')}</span>` : avatar(id)}<span class="okb-people-name">${esc(id === '__company' ? tr('公司目标', 'Company objectives') : nameOf(id))}${id === me()?.id ? ` <em>${tr('我', 'Me')}</em>` : ''}</span><span class="okb-people-pct">${objs.length ? (pct === null ? objs.length + tr(' 个', '') : pct + '%') : '—'}</span></button></li>`; }).join('') || `<li class="okb-hint">${tr('没有匹配的成员', 'No matching people')}</li>`}</ul></aside>` : ''}
@@ -371,7 +435,8 @@
       case 'add-kr': ui.adding = { kind:'kr', id }; ui.editing = null; return rerender();
       case 'add-o': ui.adding = { kind:'o' }; ui.editing = null; return rerender();
       case 'cancel-add': ui.adding = null; return rerender();
-      case 'score': ui.scoring = { id, kind:t.dataset.kind }; return rerender();
+      case 'score': ui.scoring = { id, kind:t.dataset.target || 'o', who:t.dataset.kind }; return rerender();
+      case 'score-help': ui.scoreHelp = !ui.scoreHelp; return rerender();
       case 'score-cancel': ui.scoring = null; return rerender();
       case 'score-preset': { const f = t.closest('form'); const inp = f?.querySelector('[name="score"]'); if (inp) inp.value = t.dataset.value; f?.querySelectorAll('.okb-preset').forEach(b => b.classList.toggle('on', b === t)); return; }
       case 'ask-archive-kr': ui.menu = null; ui.confirm = { kind:'kr', id }; return rerender();
@@ -419,6 +484,16 @@
       if (ok) ui.editing = null;
       return rerender();
     }
+    if (form.id === 'okr-new-kr' && simple()) {
+      const o = objectiveById(form.dataset.objectiveId), text = String(v.targetText || '').trim(), m = /^([0-9]+(?:\.[0-9]+)?)\s*(.*)$/.exec(text);
+      const planning = { weight:v.weight ? Number(v.weight) : undefined, description:'', targetText:text };
+      if (!planning.weight) delete planning.weight;
+      const body = m && Number(m[1]) > 0 ? { title:v.title.trim(), baseline:0, target:Number(m[1]), direction:'increase', unit:(m[2] || '').trim().slice(0, 30) || tr('项', 'units'), planning } : { title:v.title.trim(), baseline:0, target:1, direction:'increase', unit:'完成', planning };
+      if (!planning.weight) { const share = Math.max(1, Math.round((100 - krsOf(o).reduce((n, k) => n + (k.planning?.weight || 0), 0)) * 100) / 100); body.planning.weight = Math.min(100, share); }
+      const ok = await mutate(() => ctx.api.post('/objectives/' + encodeURIComponent(o.id) + '/key-results', body), tr('关键结果已添加', 'Key result added'));
+      if (ok) ui.adding = { kind:'kr', id:o.id };
+      rerender(); return;
+    }
     if (form.id === 'okr-new-kr') {
       const o = objectiveById(form.dataset.objectiveId), weight = Number(v.weight);
       const body = { title:v.title.trim(), baseline:Number(v.baseline ?? 0), target:Number(v.target), direction:v.direction || 'increase', unit:v.unit.trim(), ...(v.weight ? { planning:{ weight, description:'' } } : {}) };
@@ -428,8 +503,9 @@
       rerender(); return;
     }
     if (form.id === 'okr-score') {
-      const body = { kind:form.dataset.kind, score:Math.max(0, Math.min(100, Math.round(Number(v.score)))), ...(String(v.comment || '').trim() ? { comment:String(v.comment).trim() } : {}) };
-      if (await mutate(() => ctx.api.post('/objectives/' + encodeURIComponent(form.dataset.id) + '/scores', body), body.kind === 'self' ? tr('自评已保存，等待领导评分', 'Self score saved; waiting for your leader') : tr('最终分已保存', 'Final score saved'))) ui.scoring = null;
+      const body = { kind:form.dataset.kind, score:Number(v.score), ...(String(v.comment || '').trim() ? { comment:String(v.comment).trim() } : {}), ...(v.veto ? { veto:true } : {}) };
+      const path = (form.dataset.target === 'kr' ? '/key-results/' : '/objectives/') + encodeURIComponent(form.dataset.id) + '/scores';
+      if (await mutate(() => ctx.api.post(path, body), body.veto ? tr('已判定自评不实，该项记 0 分', 'Marked untrue; scored 0') : body.kind === 'self' ? tr('自评已保存，等待领导评分', 'Self score saved; waiting for your leader') : tr('领导评分已保存', 'Leader score saved'))) ui.scoring = null;
       rerender(); return;
     }
     if (form.id === 'okr-new-o') {
@@ -437,8 +513,8 @@
       const owner = v.ownerId || me().id, used = S().objectives.filter(x => x.owner_id === owner && x.planning?.period === period && x.level !== 'company').reduce((n, x) => n + (Number(x.planning?.weight) || 0), 0), autoWeight = Math.max(1, Math.round((100 - used) * 100) / 100 || 1);
       const body = { title:v.title.trim(), level:v.level || 'personal', ownerId:owner, planning:{ period, weight:v.weight ? Number(v.weight) : Math.min(100, autoWeight), location:'', description:String(v.description || '').trim(), type:'mandatory', bonusIncluded:false, scoringDueDate:dueDateFor(period) }, ...(collab() && v.parentObjectiveId ? { parentObjectiveId:v.parentObjectiveId } : {}) };
       let createdId = null;
-      const ok = await mutate(async () => { const r = await ctx.api.post('/objectives', body); createdId = r?.id; }, simple() ? tr('目标已创建。周期结束时点“自评”打分，领导评分后就出最终分。', 'Objective created. Self-score it at the end of the cycle; your leader’s score is final.') : tr('目标已创建，接着添加关键结果吧', 'Objective created — now add its key results'));
-      if (ok) { ui.adding = createdId && !simple() ? { kind:'kr', id:createdId } : null; if (ui.tab === 'team') ui.person = body.ownerId; ui.cycle = period; }
+      const ok = await mutate(async () => { const r = await ctx.api.post('/objectives', body); createdId = r?.id; }, simple() ? tr('目标已创建，接着添加关键结果（目标值可以写“完成”或明确数字）', 'Objective created — add key results (target: “done” or a number)') : tr('目标已创建，接着添加关键结果吧', 'Objective created — now add its key results'));
+      if (ok) { ui.adding = createdId ? { kind:'kr', id:createdId } : null; if (ui.tab === 'team') ui.person = body.ownerId; ui.cycle = period; }
       rerender(); return;
     }
     if (form.id === 'okr-align') {

@@ -190,6 +190,16 @@
     ['.mb-src-project', h('任务来源：项目','这项任务来自项目管理。','','Source: project','Comes from a project.','')],
     ['.ri-assign .ri-row', h('打开任务','查看任务详情、写进展或提交成果。','','Open task','View details, post progress or submit the result.','')],
     ['.ri-nudge', h('AI 跟进提醒','AI 根据截止日期和更新情况自动发出的提醒。','点击打开对应任务处理。','AI follow-up','Automatic reminder based on due date and activity.','Click to open the task.')],
+    ['button.okb-pts, span.okb-pts, [data-okr="edit"][data-kind="o-weight"]', h('目标分值','这个目标值多少分；所有目标合计 100 分（例如 O1 = 40 分）。','点击修改。','Objective points','Points this objective is worth; all objectives add up to 100.','Click to change.')],
+    ['.okb-kr-simple [data-okr="edit"][data-kind="kr-weight"], .okb-kr-simple .okb-chip', h('KR 权重','占所属目标分值的百分比；同一目标下 KR 合计 100%。','例：目标 40 分、KR 25% → 这条 KR 值 10 分。','KR weight','Share of the objective’s points; KRs add up to 100%.','e.g. 40 points × 25% = 10 points.')],
+    ['.okb-sc-btn, .okb-lv', h('自评 / 领导评分','六档：0 未开展 · 25 严重滞后 · 50 部分完成 · 75 接近完成 · 100 完成 · 125 完成且卓越。','自评由负责人打，领导评分由其上级打；点击打分。','Self / leader score','Six levels from 0 to 125.','Owner gives the self score, their leader the leader score; click to score.')],
+    ['.okb-final', h('最终分','= 自评 50% + 领导评分 50%；领导判定自评不实时为 0。','','Final score','= 50% self + 50% leader; 0 if the leader marks the self score untrue.','')],
+    ['.okb-kr-got, .okb-earned', h('得分','= 目标分值 × KR 权重 × 最终分。','评到 125 的部分会让总分超过 100。','Points earned','= objective points × KR % × final score.','125-level scores can push the total above 100.')],
+    ['.okb-level', h('评分档位','选择一个档位：0 未开展、25 严重滞后、50 部分完成、75 接近完成、100 完成、125 完成且卓越。','','Score level','Pick one of the six levels.','')],
+    ['.okb-veto', h('自评不实','领导发现自评与事实不符时勾选，这条直接记 0 分。','','Untrue self score','Tick when the self score is not truthful; the item scores 0.','')],
+    ['#okr-new-kr [name="targetText"]', h('目标值','写“完成”，或一个明确的数字（例如 30 家、3%、$400K）。','写数字时系统会用它衡量进度。','Target','“Done”, or a clear number (30 dealers, 3%, $400K).','')],
+    ['.okb-step', h('OKR 节奏','每月：25 日起设置下月 OKR；25–30 日自评（逾期按 0 分）；30 日至下月 3 日领导评分。','系统每天提醒和催办。','OKR rhythm','Monthly: set next month’s OKR from the 25th; self-score 25th–30th (missing = 0); leader scores 30th–3rd.','Daily reminders.')],
+    ['.okb-howto', h('计算方式','查看 OKR 总分的完整计算规则和例子。','','How it’s calculated','See the full scoring rules with an example.','')],
     // ---- Sidebar section headers ----
     ['[data-nav-toggle]', h('菜单分组','点击收起或展开这一组菜单。','常用的分组保持展开，不常用的收起，下次打开会记住。','Menu group','Collapse or expand this group.','Your choice is remembered.')],
     // ---- OKR: new objective / key result forms (why each field matters) ----
@@ -305,6 +315,7 @@
     ['[data-live-lang="zh"]', h('切换到中文','把界面文字切换成中文。','界面文字、同事姓名随之切换；OKR 里大家写的内容会自动翻译，标“译”的点一下可看原文。','Switch to Chinese','Shows the interface in Chinese.','Names switch too, and OKR text is auto-translated; click the Tr badge for the original.')],
     ['[data-live-lang="en"]', h('Switch to English','把界面文字切换成英文，方便美国同事使用。','界面文字、同事姓名随之切换；OKR 里大家写的内容会自动翻译，标“译”的点一下可看原文。','Switch to English','Shows the interface in English.','Names switch too, and OKR text is auto-translated; click the Tr badge for the original.')],
     ['[data-live-action="theme"]', h('日间 / 夜间主题','切换浅色或深色界面，保护眼睛。','点击切换，选择会保存在当前浏览器。','Light / dark theme','Switches between light and dark mode.','Click to toggle; your choice is saved in this browser.')],
+    ['[data-guide-open]', h('使用说明','打开系统使用说明：任务状态、Assign Task、OKR 评分与每月节奏、项目、名字与翻译。','会自动打开与当前页面相关的章节，左侧可切换其他章节。','User guide','Opens the user guide: task status, Assign Task, OKR scoring and monthly rhythm, projects, names and translation.','It opens at the section for the page you are on; switch sections on the left.')],
     ['[data-live-action="refresh"]', h('刷新数据','从服务器重新读取最新数据。','同事刚更新了内容、而你这里没变化时点击。','Refresh data','Reloads the latest data from the server.','Click when a colleague has updated something you don’t see yet.')],
 
     // Overview / shared

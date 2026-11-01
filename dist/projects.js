@@ -22,7 +22,7 @@
     'u-zhang':{ name:'张伟', role:{ zh:'东莞研发', en:'R&D, Dongguan' } },
     'u-li':{ name:'李娜', role:{ zh:'武汉网站', en:'Web, Wuhan' } },
   };
-  const STATUS = { done:['完成','Done','#00c875'], working:['进行中','Working on it','#fdab3d'], stuck:['卡住','Stuck','#e2445c'], review:['待检查','Review','#a25ddc'], todo:['未开始','Not started','#c4c4c4'] };
+  const STATUS = { done:['完成','Done','#00c875'], working:['进行中','Working on it','#fdab3d'], stuck:['被暂停','Paused','#df7689'], review:['待审批','Awaiting approval','#a25ddc'], overdue:['延期','Overdue','#e2445c'], abandoned:['放弃','Abandoned','#4b4f5c'], todo:['未开始','Not started','#c4c4c4'] };
   const PRIORITY = { urgent:['紧急','Urgent','#333333'], high:['高','High','#401694'], medium:['中','Medium','#5559df'], low:['低','Low','#579bfc'] };
   const HEALTH = { on_track:['正常','On track','#00b37e'], at_risk:['有风险','At risk','#f5a623'], off_track:['延期','Off track','#e5484d'] };
   const d = s => s; // ISO dates
@@ -72,8 +72,36 @@
     T('p4','g1',{ zh:'首页文案与图片', en:'Home page copy & images' },'u-cara','done','medium','2026-09-15','2026-10-10'),
   ];
 
+  /* ---------- live data (server) ---------- */
+  const isLive = () => ctx?.state?.().capabilities?.projectsLive === true && !!ctx?.api;
+  let liveState = { loaded:false, loading:false, error:'' };
+  const FROM_BOARD = { not_started:'todo', working:'working', hold:'stuck', review:'review', done:'done', overdue:'overdue', abandoned:'abandoned' };
+  const day = v => String(v || '').slice(0, 10);
+  const T2 = v => ({ zh:v, en:v });
+  async function loadLive() {
+    if (liveState.loading) return; liveState.loading = true;
+    try {
+      const [pr, chart] = await Promise.all([ctx.api.get('/projects'), ctx.api.get('/org/chart').catch(() => ({ items:ctx.state().directory || [] }))]);
+      window.WorkOSNames?.apply(chart.items);
+      for (const k of Object.keys(PEOPLE)) delete PEOPLE[k];
+      for (const u of chart.items || []) PEOPLE[u.id] = { name:u.display_name, role:T2(u.title || '') };
+      projects.length = 0; tasks.length = 0;
+      for (const p of pr.items || []) {
+        projects.push({ id:p.id, name:T2(p.name), color:p.color, emoji:p.icon, owner:p.owner_id, members:p.members || [], start:day(p.start_date), end:day(p.end_date), health:p.health, canEdit:p.canEdit, desc:T2(p.description || ''),
+          groups:(p.groups || []).map(g => ({ id:g.id, name:T2(g.name), color:g.color })), milestones:(p.milestones || []).map(m => ({ name:T2(m.name), date:m.date, done:m.done })),
+          updates:(p.updates || []).map(u => ({ by:u.author_id, at:day(u.created_at), health:u.health, text:T2(u.body) })) });
+        for (const t of p.tasks || []) tasks.push({ id:t.id, project:p.id, group:t.project_group_id, title:T2(t.title), owner:t.owner_id, status:FROM_BOARD[t.board_status] || 'todo', priority:t.board_priority || 'medium', start:day(t.created_at), due:day(t.due_at), subtasks:[], comments:[], desc:t.description || '', version:t.version, score:t.completion?.ai_score ?? null, live:true });
+      }
+      liveState = { loaded:true, loading:false, error:'' };
+    } catch (e) { liveState = { loaded:true, loading:false, error:e.message || 'error' }; }
+    ctx.rerender();
+  }
+  const reloadLive = async () => { liveState.loading = false; await loadLive(); repaintPanel(); };
+  const failed = e => ctx.toast(e?.code === 'COMPLETION_RESULT_REQUIRED' || /COMPLETION_RESULT_REQUIRED/.test(e?.message || '') ? tr('完成任务需要写完成结果和自评：请在任务中心把它标为“完成”，AI 会打分。', 'To complete it, mark it Done in the Task hub with a result and self-review; AI will score it.') : (e?.message || tr('保存失败', 'Save failed')));
+  async function liveTaskPatch(t, body) { try { await ctx.api.request('/projects/' + encodeURIComponent(t.project) + '/tasks/' + encodeURIComponent(t.id), { method:'PATCH', body:{ expectedVersion:t.version, ...body } }); } catch (e) { failed(e); } await reloadLive(); }
   const ui = { view:'home', project:null, tab:'list', task:null, filter:'mine', cell:null, adding:null, myGroup:'due', newProject:false };
-  const TODAY = '2026-10-31';
+  const TODAY_SAMPLE = '2026-10-31';
+  let TODAY = TODAY_SAMPLE;
   const L = o => o && typeof o === 'object' ? (o[lang()] ?? o.zh) : o;
   const me = () => ctx?.state?.().actor?.id || null;
   const person = id => PEOPLE[id] || { name:id, role:{ zh:'', en:'' } };
@@ -97,7 +125,7 @@
     const myOpen = tasks.filter(t => t.owner === me() && t.status !== 'done');
     return `<div class="pj">
       <div class="page-heading"><div><div class="eyebrow">WORK OS · PROJECTS</div><h1>${tr('项目管理', 'Projects')}</h1><p>${tr('项目里分派的任务，会自动出现在负责人的“我的任务”里。', 'Tasks assigned in a project automatically appear in the assignee’s My tasks.')}</p><div class="pj-sample">${icon('flask')} ${tr('测试版 · 示例数据：项目管理的后台还在开发，这里的项目和任务是示例，修改不会保存。', 'Test build · sample data: the projects backend is in development; projects and tasks here are examples and changes are not saved.')}</div></div><div class="heading-actions"><button class="pj-btn primary" data-pj="new-project">${icon('plus')} ${tr('新建项目', 'New project')}</button></div></div>
-      <div class="pj-proto">${icon('flask')} ${tr('界面原型 · 模拟数据，操作不会保存', 'UI prototype · sample data, nothing is saved')}</div>
+      ${isLive() ? '' : `<div class="pj-proto">${icon('flask')} ${tr('界面原型 · 模拟数据，操作不会保存', 'UI prototype · sample data, nothing is saved')}</div>`}
       <div class="pj-home-tabs"><button class="${ui.view === 'home' ? 'active' : ''}" data-pj="go-home">${icon('squares-four')} ${tr('全部项目', 'Projects')}</button><button class="${ui.view === 'my' ? 'active' : ''}" data-pj="go-my">${icon('check-square')} ${tr('我的任务', 'My tasks')} <b>${myOpen.length}</b></button></div>
       ${ui.view === 'my' ? myTasks() : `
       <div class="pj-toolbar"><div class="pj-seg"><button class="${ui.filter === 'mine' ? 'active' : ''}" data-pj="filter" data-v="mine">${tr('我参与的', 'Mine')} ${mine.length}</button><button class="${ui.filter === 'all' ? 'active' : ''}" data-pj="filter" data-v="all">${tr('全部', 'All')} ${projects.length}</button></div></div>
@@ -130,7 +158,7 @@
     return `<div class="pj">
       <div class="pj-crumb"><button data-pj="go-home">${icon('caret-left')} ${tr('全部项目', 'All projects')}</button></div>
       <header class="pj-phead" style="--pc:${p.color}"><span class="pj-picon big">${icon(p.emoji)}</span><div class="pj-phead-main"><h1>${esc(L(p.name))}</h1><div class="pj-phead-meta">${healthDot(p.health)}<span>${icon('user')} ${esc(person(p.owner).name)}</span><span>${icon('calendar-blank')} ${fmt(p.start)} – ${fmt(p.end)}</span><span>${pct(p)}% ${tr('完成', 'complete')}</span></div></div>${avs(p.members, 30, 5)}<button class="pj-btn">${icon('user-plus')} ${tr('邀请成员', 'Invite')}</button></header>
-      <div class="pj-proto">${icon('flask')} ${tr('界面原型 · 模拟数据，操作不会保存', 'UI prototype · sample data, nothing is saved')}</div>
+      ${isLive() ? '' : `<div class="pj-proto">${icon('flask')} ${tr('界面原型 · 模拟数据，操作不会保存', 'UI prototype · sample data, nothing is saved')}</div>`}
       <nav class="pj-tabs">${tabs.map(([id, label, ic]) => `<button class="${ui.tab === id ? 'active' : ''}" data-pj="tab" data-v="${id}">${icon(ic)} ${label}</button>`).join('')}</nav>
       ${ui.tab === 'overview' ? overview(p) : ui.tab === 'board' ? board(p) : ui.tab === 'timeline' ? timeline(p) : ui.tab === 'calendar' ? calendar(p) : ui.tab === 'activity' ? activity(p) : table(p)}
     </div>`;
@@ -157,11 +185,11 @@
 
   function cellMenu(t, field) {
     const map = field === 'status' ? STATUS : PRIORITY;
-    return `<div class="pj-menu">${Object.keys(map).map(k => `<button data-pj="set-cell" data-id="${t.id}" data-f="${field}" data-v="${k}" style="--c:${map[k][2]}">${esc(tr(map[k][0], map[k][1]))}</button>`).join('')}</div>`;
+    return `<div class="pj-menu">${Object.keys(map).filter(k => field !== 'status' || k !== 'todo').map(k => `<button data-pj="set-cell" data-id="${t.id}" data-f="${field}" data-v="${k}" style="--c:${map[k][2]}">${esc(tr(map[k][0], map[k][1]))}</button>`).join('')}</div>`;
   }
   function ownerMenu(t) {
     const p = proj(t.project);
-    return `<div class="pj-menu pj-menu-people">${p.members.map(id => `<button class="plain" data-pj="set-cell" data-id="${t.id}" data-f="owner" data-v="${id}">${av(id, 22)} ${esc(person(id).name)}</button>`).join('')}</div>`;
+    return `<div class="pj-menu pj-menu-people">${(isLive() ? [...new Set([...p.members, ...Object.keys(PEOPLE)])] : p.members).map(id => `<button class="plain" data-pj="set-cell" data-id="${t.id}" data-f="owner" data-v="${id}">${av(id, 22)} ${esc(person(id).name)}</button>`).join('')}</div>`;
   }
   function table(p) {
     const lo = p.start, span = Math.max(1, days(p.start, p.end));
@@ -177,7 +205,7 @@
           <span class="pj-due ${overdue(t) ? 'late' : ''}">${overdue(t) ? icon('warning-circle') + ' ' : ''}${fmt(t.due)}</span>
           <span class="pj-mini-tl"><i style="left:${left}%;width:${w}%;--c:${g.color}"></i></span>
         </div>`; }).join('')}
-        ${ui.adding === g.id ? `<form class="pj-tr pj-addrow" id="pj-add" data-group="${g.id}"><input name="title" required placeholder="${tr('任务名称，回车保存', 'Task name, press Enter')}" data-pj-focus><select name="owner">${p.members.map(id => `<option value="${id}" ${id === me() ? 'selected' : ''}>${esc(person(id).name)}</option>`).join('')}</select><input name="due" type="date" value="2026-11-20" required><button class="pj-btn small primary">${tr('添加', 'Add')}</button><button type="button" class="pj-btn small" data-pj="cancel">${tr('取消', 'Cancel')}</button></form>` : `<button class="pj-addline" data-pj="add-task" data-group="${g.id}">${icon('plus')} ${tr('添加任务', 'Add task')}</button>`}
+        ${ui.adding === g.id ? `<form class="pj-tr pj-addrow" id="pj-add" data-group="${g.id}"><input name="title" required placeholder="${tr('任务名称，回车保存', 'Task name, press Enter')}" data-pj-focus><select name="owner">${(isLive() ? [...new Set([...p.members, ...Object.keys(PEOPLE)])] : p.members).map(id => `<option value="${id}" ${id === me() ? 'selected' : ''}>${esc(person(id).name)}</option>`).join('')}</select><input name="due" type="date" value="${isLive() ? new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10) : '2026-11-20'}" required><button class="pj-btn small primary">${tr('添加', 'Add')}</button><button type="button" class="pj-btn small" data-pj="cancel">${tr('取消', 'Cancel')}</button></form>` : `<button class="pj-addline" data-pj="add-task" data-group="${g.id}">${icon('plus')} ${tr('添加任务', 'Add task')}</button>`}
         <div class="pj-tr pj-sum"><span></span><span></span><span class="pj-stack small">${Object.keys(STATUS).map(s => { const n = items.filter(t => t.status === s).length; return n ? `<span style="--c:${STATUS[s][2]};flex:${n}"></span>` : ''; }).join('')}</span><span></span><span></span><span></span></div>
       </div></section>`; }).join('')}
       <button class="pj-btn pj-addgroup">${icon('plus')} ${tr('添加阶段', 'Add stage')}</button></div>`;
@@ -231,9 +259,9 @@
           <dt>${tr('优先级', 'Priority')}</dt><dd>${pill(PRIORITY, t.priority)}</dd>
           <dt>${tr('所属项目', 'Project')}</dt><dd><span class="pj-tag" style="--c:${p.color}">${esc(L(p.name))}</span> · ${esc(L(g.name))}</dd>
         </dl>
-        <div class="pj-sync">${icon('arrows-clockwise')} ${tr(`示例演示：分派给 ${person(t.owner).name} 的「我的任务」和任务中心；示例不会发送提醒或写入任务中心。`, `Sample preview for ${person(t.owner).name}’s My tasks and Task hub automatically; samples do not send reminders or create live tasks.`)}</div>
+        ${isLive() ? `<div class="pj-sync">${icon('arrows-clockwise')} ${tr(`这是一条真实任务：已在 ${esc(person(t.owner).name)} 的任务中心里，状态和评论两边同步；标记完成需要在任务中心写完成结果。`, `A live task: it is in ${esc(person(t.owner).name)}’s Task hub and stays in sync; completing it requires a result in the Task hub.`)}</div>` : `<div class="pj-sync">${icon('arrows-clockwise')} ${tr(`示例演示：分派给 ${person(t.owner).name} 的「我的任务」和任务中心；示例不会发送提醒或写入任务中心。`, `Sample preview for ${person(t.owner).name}’s My tasks and Task hub automatically; samples do not send reminders or create live tasks.`)}</div>`}
         <section><h3>${tr('描述', 'Description')}</h3><p class="pj-text pj-muted">${esc(t.desc || tr('添加更详细的说明、验收标准或参考链接……', 'Add details, acceptance criteria or links…'))}</p></section>
-        <section><h3>${tr('子任务', 'Subtasks')} ${t.subtasks.length ? `<span>${t.subtasks.filter(s => s.done).length}/${t.subtasks.length}</span>` : ''}</h3><ul class="pj-subs">${t.subtasks.map((s, i) => `<li><button class="pj-check ${s.done ? 'on' : ''}" data-pj="toggle-sub" data-id="${t.id}" data-i="${i}" role="checkbox" aria-checked="${s.done}">${icon('check')}</button><span class="${s.done ? 'pj-strike' : ''}">${esc(L(s.t))}</span></li>`).join('')}</ul><button class="pj-addline">${icon('plus')} ${tr('添加子任务', 'Add subtask')}</button></section>
+        ${t.live ? '' : `<section><h3>${tr('子任务', 'Subtasks')} ${t.subtasks.length ? `<span>${t.subtasks.filter(s => s.done).length}/${t.subtasks.length}</span>` : ''}</h3><ul class="pj-subs">${t.subtasks.map((s, i) => `<li><button class="pj-check ${s.done ? 'on' : ''}" data-pj="toggle-sub" data-id="${t.id}" data-i="${i}" role="checkbox" aria-checked="${s.done}">${icon('check')}</button><span class="${s.done ? 'pj-strike' : ''}">${esc(L(s.t))}</span></li>`).join('')}</ul><button class="pj-addline">${icon('plus')} ${tr('添加子任务', 'Add subtask')}</button></section>`}
         <section><h3>${tr('评论', 'Comments')}</h3>${t.comments.map(c => `<div class="pj-comment">${av(c.by, 26)}<div><div><strong>${esc(person(c.by).name)}</strong> <span>${fmt(c.at)}</span></div><p>${esc(L(c.text))}</p></div></div>`).join('')}<form class="pj-comment-form" id="pj-comment" data-id="${t.id}">${av(me(), 26)}<input name="text" required placeholder="${tr('写评论，@提及同事……', 'Comment, @mention someone…')}"><button class="pj-btn small primary">${tr('发送', 'Send')}</button></form></section>
       </div>`;
   }
@@ -241,6 +269,7 @@
     const t = tasks.find(x => x.id === id); if (!t) return;
     ui.task = id;
     ctx.overlay(taskPanel(t), true);
+    if (t.live) loadComments(id);
     document.querySelector('#overlay-root .drawer')?.classList.add('pj-drawer');
   }
   const repaintPanel = () => { const t = tasks.find(x => x.id === ui.task), el = document.querySelector('#overlay-root .pj-drawer'); if (t && el) el.innerHTML = taskPanel(t); };
@@ -248,12 +277,13 @@
   /* ---------- new project (templates) ---------- */
   function newProjectDialog() {
     const tpl = [['blank', 'file', tr('空白项目', 'Blank'), tr('从零开始', 'Start from scratch')], ['launch', 'cpu', tr('新品开发', 'Product launch'), tr('设计 → 打样测试 → 上市准备', 'Design → prototype → launch')], ['campaign', 'megaphone', tr('营销活动', 'Marketing campaign'), tr('策划 → 素材 → 执行 → 复盘', 'Plan → creative → run → review')], ['show', 'storefront', tr('展会', 'Trade show'), tr('展位 → 物流 → 邀约 → 跟进', 'Booth → shipping → invites → follow-up')]];
-    ctx.modal(tr('新建项目', 'New project'), `<form id="pj-new"><label class="field full"><span>${tr('项目名称', 'Project name')}</span><input name="name" required placeholder="${tr('例如：Cobra 2.0 新品开发', 'e.g. Cobra 2.0 launch')}"></label><p class="fine">${tr('选择模板', 'Choose a template')}</p><div class="pj-tpls">${tpl.map(([id, ic, n, s], i) => `<label class="pj-tpl"><input type="radio" name="tpl" value="${id}" ${i === 1 ? 'checked' : ''}><span>${icon(ic)}<strong>${n}</strong><em>${s}</em></span></label>`).join('')}</div><div class="form-grid"><label class="field"><span>${tr('开始日期', 'Start')}</span><input name="start" type="date" value="2026-11-02"></label><label class="field"><span>${tr('结束日期', 'End')}</span><input name="end" type="date" value="2026-12-31"></label></div><p class="fine">${tr('成员可以来自不同部门；项目成员能看到整个项目，看不到项目以外的内容。', 'Members can come from any department; they see the whole project and nothing outside it.')}</p></form>`, `<button class="btn primary" type="submit" form="pj-new">${tr('创建项目', 'Create project')}</button>`);
+    ctx.modal(tr('新建项目', 'New project'), `<form id="pj-new"><label class="field full"><span>${tr('项目名称', 'Project name')}</span><input name="name" required placeholder="${tr('例如：Cobra 2.0 新品开发', 'e.g. Cobra 2.0 launch')}"></label><p class="fine">${tr('选择模板', 'Choose a template')}</p><div class="pj-tpls">${tpl.map(([id, ic, n, s], i) => `<label class="pj-tpl"><input type="radio" name="tpl" value="${id}" ${i === 1 ? 'checked' : ''}><span>${icon(ic)}<strong>${n}</strong><em>${s}</em></span></label>`).join('')}</div><div class="form-grid"><label class="field"><span>${tr('开始日期', 'Start')}</span><input name="start" type="date" value="${isLive() ? new Date().toISOString().slice(0, 10) : '2026-11-02'}"></label><label class="field"><span>${tr('结束日期', 'End')}</span><input name="end" type="date" value="${isLive() ? new Date(Date.now() + 60 * 864e5).toISOString().slice(0, 10) : '2026-12-31'}"></label></div><p class="fine">${tr('成员可以来自不同部门；项目成员能看到整个项目，看不到项目以外的内容。', 'Members can come from any department; they see the whole project and nothing outside it.')}</p></form>`, `<button class="btn primary" type="submit" form="pj-new">${tr('创建项目', 'Create project')}</button>`);
   }
 
 
   /* ---------- project analysis (reports area) ---------- */
   function analysis() {
+    { const g = liveGate(); if (g) return g; }
     const rows = projects.map(p => {
       const ts = tasksOf(p), done = ts.filter(t => t.status === 'done').length, total = ts.length || 1;
       const elapsed = Math.max(0, Math.min(1, days(p.start, TODAY) / Math.max(1, days(p.start, p.end))));
@@ -270,7 +300,7 @@
     return `<div class="pj">
       <div class="page-heading"><div><div class="eyebrow">WORK OS · REPORTS</div><h1>${tr('项目分析', 'Project analysis')}</h1><p>${tr('每个项目的进展、是否按时，以及延期的可能性。', 'Progress, timeliness and delay risk for every project.')}</p><div class="pj-sample">${icon('flask')} ${tr('测试版 · 示例数据：项目管理的后台还在开发，这里的项目和任务是示例，修改不会保存。', 'Test build · sample data: the projects backend is in development; projects and tasks here are examples and changes are not saved.')}</div></div></div>
       ${window.WorkOSInsights?.slot('project') || ''}
-      <div class="pj-proto">${icon('flask')} ${tr('使用项目管理原型数据；项目管理接入后台后自动换成真实数据', 'Uses project prototype data; switches to real data once projects are connected')}</div>
+      ${isLive() ? '' : `<div class="pj-proto">${icon('flask')} ${tr('使用项目管理原型数据；项目管理接入后台后自动换成真实数据', 'Uses project prototype data; switches to real data once projects are connected')}</div>`}
       <div class="pj-an-stats">
         <div><span>${tr('进行中的项目', 'Active projects')}</span><strong>${rows.length}</strong></div>
         <div><span>${tr('任务完成', 'Tasks done')}</span><strong>${totalDone}/${totalTasks}</strong></div>
@@ -292,7 +322,8 @@
   }
 
   /* ---------- render & events ---------- */
-  function render() { if (!ctx) return ''; const p = ui.project && proj(ui.project); return p ? projectPage(p) : home(); }
+  function liveGate() { if (!isLive()) return null; TODAY = new Date().toISOString().slice(0, 10); if (!liveState.loaded) { loadLive(); return `<div class="pj"><p class="pj-hint">${tr('正在读取项目…', 'Loading projects…')}</p></div>`; } if (liveState.error) return `<div class="pj"><div class="pj-proto">${esc(liveState.error)}</div></div>`; return null; }
+  function render() { if (!ctx) return ''; const g = liveGate(); if (g) return g; const p = ui.project && proj(ui.project); return p ? projectPage(p) : home(); }
   const rerender = () => { ctx.rerender(); requestAnimationFrame(() => document.querySelector('[data-pj-focus]')?.focus()); };
   document.addEventListener('click', e => {
     if (!ctx) return;
@@ -311,8 +342,8 @@
       case 'tab': ui.tab = t.dataset.v; ui.adding = null; return rerender();
       case 'open-task': return openTask(id);
       case 'cell': ui.cell = ui.cell && ui.cell.id === id && ui.cell.f === t.dataset.f ? null : { id, f:t.dataset.f }; return rerender();
-      case 'set-cell': task[t.dataset.f] = t.dataset.v; ui.cell = null; ctx.toast(t.dataset.f === 'owner' ? tr(`已分派给 ${person(t.dataset.v).name}；仅为示例，不会写入真实任务`, `Assigned to ${person(t.dataset.v).name}; sample only, no live task created`) : tr('已更新', 'Updated')); return rerender();
-      case 'toggle-done': task.status = task.status === 'done' ? 'working' : 'done'; rerender(); return repaintPanel();
+      case 'set-cell': if (isLive()) { ui.cell = null; const f = t.dataset.f, v = t.dataset.v; return liveTaskPatch(task, f === 'owner' ? { ownerId:v } : f === 'status' ? { status:v } : f === 'priority' ? { priority:v } : {}); } task[t.dataset.f] = t.dataset.v; ui.cell = null; ctx.toast(t.dataset.f === 'owner' ? tr(`已分派给 ${person(t.dataset.v).name}；仅为示例，不会写入真实任务`, `Assigned to ${person(t.dataset.v).name}; sample only, no live task created`) : tr('已更新', 'Updated')); return rerender();
+      case 'toggle-done': if (isLive()) { if (task.status === 'done') return liveTaskPatch(task, { status:'working' }); return failed({ code:'COMPLETION_RESULT_REQUIRED' }); } task.status = task.status === 'done' ? 'working' : 'done'; rerender(); return repaintPanel();
       case 'toggle-sub': task.subtasks[+t.dataset.i].done = !task.subtasks[+t.dataset.i].done; rerender(); return repaintPanel();
       case 'add-task': ui.adding = t.dataset.group; return rerender();
       case 'post-status': ui.adding = 'status'; return rerender();
@@ -324,6 +355,7 @@
     const f = e.target; if (!ctx || !f.id?.startsWith('pj-')) return;
     e.preventDefault();
     const v = Object.fromEntries(new FormData(f));
+    if (isLive() && ['pj-add', 'pj-status', 'pj-comment', 'pj-new'].includes(f.id)) { liveSubmit(f, v); return; }
     if (f.id === 'pj-add') { const p = proj(ui.project); tasks.push(T(p.id, f.dataset.group, { zh:v.title, en:v.title }, v.owner, 'todo', 'medium', TODAY, v.due)); ctx.toast(tr(`示例任务已添加，仅在原型中展示给 ${person(v.owner).name} 的「我的任务」`, `Sample task added in the prototype for ${person(v.owner).name}’s My tasks`)); return rerender(); }
     if (f.id === 'pj-status') { const p = proj(ui.project); p.health = v.health; p.updates.unshift({ by:me(), at:TODAY, health:v.health, text:{ zh:v.text, en:v.text } }); ui.adding = null; ctx.toast(tr('示例状态已更新；不会通知真实成员', 'Sample status updated; no notifications sent')); return rerender(); }
     if (f.id === 'pj-comment') { const t = tasks.find(x => x.id === f.dataset.id); t.comments.push({ by:me(), at:TODAY, text:{ zh:v.text, en:v.text } }); repaintPanel(); return rerender(); }
@@ -331,6 +363,19 @@
       projects.unshift({ id, name:{ zh:v.name, en:v.name }, color:'#ff7575', emoji:'rocket-launch', owner:me(), members:[me()], start:v.start, end:v.end, health:'on_track', desc:{ zh:'', en:'' }, groups:tplGroups.map((g, i) => ({ id:'g' + i, name:{ zh:g[0], en:g[1] }, color:g[2] })), milestones:[], updates:[] });
       ctx.closeOverlay(); ui.project = id; ui.tab = 'list'; ctx.toast(tr('项目已创建，按阶段添加任务吧', 'Project created — add tasks by stage')); return rerender(); }
   });
+
+  async function liveSubmit(f, v) {
+    try {
+      if (f.id === 'pj-add') { await ctx.api.post('/projects/' + encodeURIComponent(ui.project) + '/tasks', { title:v.title.trim(), ownerId:v.owner, groupId:f.dataset.group, dueAt:new Date(v.due + 'T17:00:00').toISOString(), priority:'medium' }); ui.adding = null; ctx.toast(tr(`任务已分派给 ${person(v.owner).name}，已进入对方的任务中心`, `Assigned to ${person(v.owner).name}; it is now in their Task hub`)); }
+      if (f.id === 'pj-status') { await ctx.api.post('/projects/' + encodeURIComponent(ui.project) + '/updates', { health:v.health, body:v.text.trim() }); ui.adding = null; ctx.toast(tr('项目状态已更新', 'Project status updated')); }
+      if (f.id === 'pj-comment') { await ctx.api.post('/tasks/' + encodeURIComponent(f.dataset.id) + '/updates', { requestId:(crypto.randomUUID ? crypto.randomUUID() : String(Date.now())), body:v.text.trim() }); await loadComments(f.dataset.id); }
+      if (f.id === 'pj-new') { const tplMap = { blank:'blank', launch:'launch', campaign:'campaign', show:'event' }; const r = await ctx.api.post('/projects', { name:v.name.trim(), startDate:v.start, endDate:v.end, template:tplMap[v.tpl] || 'blank' }); ctx.closeOverlay(); ui.project = r.id; ui.tab = 'list'; ctx.toast(tr('项目已创建，按阶段添加任务吧', 'Project created — add tasks by stage')); }
+    } catch (e) { failed(e); }
+    await reloadLive();
+  }
+  async function loadComments(taskId) {
+    try { const r = await ctx.api.get('/tasks/' + encodeURIComponent(taskId) + '/updates'); const t = tasks.find(x => x.id === taskId); if (t) t.comments = (r.items || []).map(u => ({ by:u.actor_id, at:day(u.created_at), text:T2(u.body) })).reverse(); repaintPanel(); } catch {}
+  }
 
   /* Task hub inbox: every open project task assigned to me shows up in the Task hub automatically. */
   function taskInbox() { return ''; } // Sample projects never become live assignments.

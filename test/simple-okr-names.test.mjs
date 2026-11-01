@@ -18,9 +18,9 @@ test('names follow the interface language and fall back to the original name', (
 
 test('OKR is simple: title (+ optional done-definition), self score, leader score = final', () => {
   const okr = read('okr-board.js');
-  assert.match(okr, /simpleOkrScores/); assert.match(okr, /function scoreBlock\(o\)/); assert.match(okr, /'\/objectives\/' \+ encodeURIComponent\(form\.dataset\.id\) \+ '\/scores'/);
+  assert.match(okr, /simpleOkrScores/); assert.match(okr, /function scoreBlock\(kind, item, o\)/); for (const l of ['未开展','严重滞后','部分完成','接近完成','完成且卓越']) assert.match(okr, new RegExp(l)); assert.match(okr, /'\/key-results\/' : '\/objectives\/'/); assert.match(okr, /encodeURIComponent\(form\.dataset\.id\) \+ '\/scores'/);
   assert.match(okr, /更多设置（可不填）/, 'weight, owner, level and alignment move under optional settings');
-  assert.match(okr, /placeholder="\$\{tr\('自动', 'Auto'\)\}"/, 'weight is optional and automatic');
+  assert.match(okr, /分值（分）/, 'objectives are weighted in points'); assert.match(okr, /const krPoints/, 'KR weight is a share of its objective');
   assert.match(okr, /totalScore\(objs\)/);
 });
 
@@ -35,4 +35,20 @@ test('task board: drag rows between groups, right-click to move, one-field group
   const b = read('task-board.js');
   assert.match(b, /data-mb-row-drag/); assert.match(b, /addEventListener\('contextmenu'/); assert.match(b, /m\.kind==='context'/);
   assert.match(b, /name="name" required maxlength="80"/); assert.doesNotMatch(b, /<input name="en" required/);
+});
+
+test('task status: six employee choices, Not started is system-only, overdue and abandoned are shown everywhere', () => {
+  const board = read('task-board.js'), pj = read('projects.js');
+  assert.match(board, /function statusChoices\(\)\{return data\.config\.status\.filter\(l=>l\.id!=='not_started'\);\}/);
+  assert.match(board, /options\(m\.field==='status'\?statusChoices\(\)/); assert.match(board, /options\(statusChoices\(\),'pick-batch-status'\)/);
+  assert.match(board, /15 天无更新视为放弃/);
+  for (const k of ['overdue:\'overdue\'', 'abandoned:\'abandoned\'']) assert.ok(pj.includes(k), k);
+  assert.match(pj, /stuck:\['被暂停'/); assert.match(pj, /filter\(k => field !== 'status' \|\| k !== 'todo'\)/);
+});
+
+test('user guide opens from the top bar, follows the page and covers every rule', async () => {
+  const live = read('live-app.js'), guide = read('user-guide.js'), html = read('index.html');
+  assert.match(live, /data-guide-open="\$\{esc\(state\.page\)\}"/); assert.match(html, /user-guide\.js/); assert.match(html, /user-guide\.css/);
+  for (const id of ['start','tasks','assign','okr','projects','names','hints']) assert.match(guide, new RegExp(`\\['${id}'`));
+  for (const t of ['15 天','被暂停','0 分自评','10 月 25 日起','完成且卓越','领导评分 × 50%','不能修改']) assert.ok(guide.includes(t), t);
 });
