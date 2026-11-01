@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OneLaser 企业文化 · Make Better With One</title>
+<meta name="description" content="OneLaser culture: Make Better With One. Four core values and what Done means.">
+<link rel="icon" href="./assets/onelaser-logo-black.svg">
+<link rel="stylesheet" href="./fonts.css">
+<style>
+/* OneLaser culture page, served on craftos.app so every employee (US and China) can open it without another account.
+   Language switch is CSS-only (#en / #zh anchors) because the site's security policy allows no inline scripts. */
+:root{--bg:#f4f5f7;--surface:#fff;--ink:#15181e;--muted:#5b6270;--line:#e1e4ea;--accent:#d92d0d;--accent-soft:#fdece6;
+  --font-display:"Certia","PingFang SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  --font-body:"PingFang SC","Noto Sans CJK SC","Microsoft YaHei","Certia",system-ui,-apple-system,sans-serif;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#101216;--surface:#181b21;--ink:#eef0f4;--muted:#a2a9b6;--line:#2a2f38;--accent:#ff6a3d;--accent-soft:#2d1b15;color-scheme:dark}}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:17px;line-height:1.65}
+.en{display:none!important}
+html:has(#en:target) .en{display:inline!important}
+html:has(#en:target) .zh{display:none!important}
+#zh,#en{position:absolute;top:0;width:1px;height:1px;overflow:hidden}
+.wrap{max-width:920px;margin:0 auto;padding:0 20px}
+.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;gap:16px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink)}
+.brand img{height:22px;width:auto}
+.brand small{font-size:12px;color:var(--muted);letter-spacing:.06em}
+.logo-dark{display:none}
+@media (prefers-color-scheme:dark){.logo-light{display:none}.logo-dark{display:block}}
+.toggle{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--surface)}
+.toggle a{color:var(--muted);font:600 14px/1 var(--font-body);padding:8px 16px;border-radius:999px;text-decoration:none}
+.toggle a.t-zh{background:var(--ink);color:var(--bg)}
+html:has(#en:target) .toggle a.t-zh{background:transparent;color:var(--muted)}
+html:has(#en:target) .toggle a.t-en{background:var(--ink);color:var(--bg)}
+.toggle a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hero{padding:64px 0 40px}
+.eyebrow{font-family:var(--font-display);font-weight:700;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+h1{font-family:var(--font-display);font-weight:800;font-size:clamp(40px,8vw,76px);line-height:1.02;letter-spacing:-.02em;margin:0;text-wrap:balance}
+h1 .beam{color:var(--accent)}
+.lead{font-size:19px;color:var(--muted);max-width:640px;margin:22px 0 0}
+.decode{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:8px 0 56px}
+.decode>div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px}
+.decode .word{font-family:var(--font-display);font-weight:800;font-size:24px;letter-spacing:.02em}
+.decode .word::after{content:"";display:block;width:28px;height:3px;background:var(--accent);margin:10px 0 12px;border-radius:2px}
+.decode p{margin:0;color:var(--muted);font-size:15.5px}
+h2{font-family:var(--font-display);font-weight:800;font-size:28px;line-height:1.2;margin:0 0 20px;text-wrap:balance}
+.values{display:grid;gap:16px;margin-bottom:56px}
+.value{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:28px;display:grid;grid-template-columns:72px 1fr;gap:8px 24px}
+.num{font-family:var(--font-display);font-weight:800;font-size:56px;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.value h3{font-family:var(--font-display);font-size:24px;line-height:1.25;margin:4px 0;text-wrap:balance}
+.value .sub{color:var(--muted);font-size:14px;font-weight:500;letter-spacing:.02em;margin:0 0 14px}
+.core{font-size:19px;font-weight:700;margin:0 0 16px;padding:14px 16px;background:var(--accent-soft);border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.value ul{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.value li{position:relative;padding-left:22px}
+.value li::before{content:"";position:absolute;left:2px;top:.72em;width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.redline{margin-top:18px;padding-top:14px;border-top:1px dashed var(--line);font-size:15px;color:var(--muted)}
+.redline .tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:1px 7px;margin-right:8px}
+.value-body{grid-column:2}
+.done{background:var(--ink);color:var(--bg);border-radius:18px;padding:32px 28px;margin-bottom:56px}
+.done h2{color:var(--bg);margin-bottom:6px}
+.done .q{opacity:.75;margin:0 0 24px}
+.formula{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.chip{border:1px solid color-mix(in srgb,var(--bg) 30%,transparent);border-radius:12px;padding:12px 16px;min-width:120px;text-align:center}
+.chip b{display:block;font-size:18px}.chip small{opacity:.7;font-size:13px}
+.op{font-family:var(--font-display);font-weight:800;font-size:26px;opacity:.6}
+.chip.result{background:var(--accent);border-color:var(--accent);color:#fff}
+.done .note{margin:22px 0 0;opacity:.8;font-size:15px}
+.donts{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:0 0 56px;padding:0;list-style:none}
+.donts li{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px 14px 46px;position:relative;font-size:15.5px}
+.donts li::before{content:"×";position:absolute;left:14px;top:11px;width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font:800 16px/22px var(--font-display);text-align:center}
+.closing{border-top:1px solid var(--line);padding:40px 0 72px}
+.closing blockquote{margin:0;font-family:var(--font-display);font-weight:700;font-size:clamp(22px,3.6vw,30px);line-height:1.35;max-width:760px;text-wrap:balance}
+.closing p{color:var(--muted);max-width:640px}
+.sign{font-weight:700;color:var(--ink)!important}
+.back{display:inline-flex;align-items:center;gap:8px;margin-top:8px;background:var(--accent);color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:12px}
+.back:hover{filter:brightness(.92)}
+@media (max-width:640px){.decode,.donts{grid-template-columns:1fr}.value{grid-template-columns:1fr;padding:22px}.value-body{grid-column:1}.num{font-size:44px}.hero{padding:44px 0 28px}.brand small{display:none}}
+</style>
+</head>
+<body>
+<span id="zh"></span><span id="en"></span>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="/"><img class="logo-light" src="./assets/onelaser-logo-black.svg" alt="OneLaser" width="2350" height="535"><img class="logo-dark" src="./assets/onelaser-logo-white.svg" alt="" width="2350" height="535" aria-hidden="true"><small>Work OS</small></a>
+    <nav class="toggle" aria-label="Language"><a class="t-zh" href="#zh" lang="zh-CN">中文</a><a class="t-en" href="#en" lang="en">English</a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <p class="eyebrow"><span class="zh">OneLaser 企业文化</span><span class="en">OneLaser Culture</span></p>
+    <h1>Make Better<br><span class="beam">With One</span></h1>
+    <p class="lead"><span class="zh">一家好企业，每天都在变得更好：产品更好，人更好，服务客户的方式更好。无论身在全球哪个地方，我们都是 One Team。</span><span class="en">A great company gets better every day: better products, better people, better ways to serve our customers. Wherever we are in the world, we are One Team.</span></p>
+  </section>
+
+  <section class="decode" aria-label="Slogan">
+    <div><div class="word">MAKE</div><p><span class="zh">用行动和速度创造结果</span><span class="en">Create results through action and speed</span></p></div>
+    <div><div class="word">BETTER</div><p><span class="zh">每天进步，坚持最高标准</span><span class="en">Improve every day, hold the highest standard</span></p></div>
+    <div><div class="word">WITH ONE</div><p><span class="zh">与客户同行，与团队一体</span><span class="en">Walk with customers, work as one team</span></p></div>
+  </section>
+
+  <h2><span class="zh">四大核心价值观</span><span class="en">Our Four Core Values</span></h2>
+  <section class="values">
+    <article class="value"><div class="num">01</div><div class="value-body">
+      <h3><span class="zh">每天进步一点</span><span class="en">Learn &amp; Get Better Every Day</span></h3>
+      <p class="sub"><span class="zh">Learn &amp; Get Better Every Day</span><span class="en">每天进步一点</span></p>
+      <p class="core"><span class="zh">公司成长的速度，取决于每个人成长的速度。</span><span class="en">OneLaser can only grow as fast as our people grow.</span></p>
+      <ul>
+        <li><span class="zh"><strong>产品</strong>：每一代、每一版，都比上一次更好。</span><span class="en"><strong>Products:</strong> every generation, every release beats the last.</span></li>
+        <li><span class="zh"><strong>人</strong>：主动学习新技能、新工具（包括 AI），学了就用。</span><span class="en"><strong>People:</strong> keep learning new skills and tools, including AI, and use them.</span></li>
+        <li><span class="zh"><strong>效率</strong>：今天一小时做完的事，明天争取半小时；能自动化就不手工重复。</span><span class="en"><strong>Efficiency:</strong> an hour today, thirty minutes tomorrow. If it can be automated, automate it.</span></li>
+        <li><span class="zh"><strong>复盘</strong>：可以犯错，同样的错不犯第二次。</span><span class="en"><strong>Review:</strong> mistakes are allowed. Repeating the same one is not.</span></li>
+      </ul>
+      <p class="redline"><span class="tag"><span class="zh">底线</span><span class="en">BOTTOM LINE</span></span><span class="zh">学习能力不足、不愿积极进取的人，不适合 OneLaser。</span><span class="en">People who can't learn or won't push forward are not a fit for OneLaser.</span></p>
+    </div></article>
+
+    <article class="value"><div class="num">02</div><div class="value-body">
+      <h3><span class="zh">以客户为尊</span><span class="en">The Customer Is Our Teacher</span></h3>
+      <p class="sub"><span class="zh">The Customer Is Our Teacher</span><span class="en">以客户为尊</span></p>
+      <p class="core"><span class="zh">客户是我们的老师。Start with the customer and work backwards.</span><span class="en">Every question, complaint and review teaches us how to get better. Start with the customer and work backwards.</span></p>
+      <ul>
+        <li><span class="zh"><strong>懂客户</strong>：客户买的是一门生意、一份创造力。知道他们真正想要什么，并保持敏感和警惕。</span><span class="en"><strong>Know them:</strong> customers buy a business and a creative ability. Know what they truly want, and stay alert as it changes.</span></li>
+        <li><span class="zh"><strong>先问一句</strong>：做任何决定前，先问“这对客户有什么好处？”</span><span class="en"><strong>Ask first:</strong> before any decision, ask "How does this help the customer?"</span></li>
+        <li><span class="zh"><strong>亲自去看</strong>：看工单原文、上机复现、听客户原话。</span><span class="en"><strong>Go and see:</strong> read the original ticket, reproduce it on the machine, hear the customer's own words.</span></li>
+        <li><span class="zh"><strong>开箱就能出好结果</strong>：这就是对客户最大的尊重。</span><span class="en"><strong>Great results out of the box:</strong> the highest form of respect for a customer.</span></li>
+        <li><span class="zh"><strong>说真话</strong>：参数真实可复现，绝不虚标，承诺的一定做到。</span><span class="en"><strong>Tell the truth:</strong> real, reproducible specs. No inflated claims. We deliver what we promise.</span></li>
+      </ul>
+    </div></article>
+
+    <article class="value"><div class="num">03</div><div class="value-body">
+      <h3><span class="zh">创新来自行动与速度</span><span class="en">Innovation = Action + Speed</span></h3>
+      <p class="sub"><span class="zh">Innovation = Action + Speed</span><span class="en">创新来自行动与速度</span></p>
+      <p class="core"><span class="zh">创新是做出来的，不是想出来的。速度来自聪明：巧妙找到最优解，最快实施。</span><span class="en">Innovation is built, not imagined. Speed comes from being smart: find the best solution, then execute it fast.</span></p>
+      <ul>
+        <li><span class="zh"><strong>先行动再完善</strong>：小成本快速验证，跑通了再放大。</span><span class="en"><strong>Act, then refine:</strong> test small and fast, scale what works.</span></li>
+        <li><span class="zh"><strong>找最聪明的路</strong>：善用已有技术、工具和伙伴，不重复造轮子。</span><span class="en"><strong>Take the smartest path:</strong> use existing technology, tools and partners. Don't reinvent the wheel.</span></li>
+        <li><span class="zh"><strong>用结果说话</strong>：汇报结果和数据，忙不等于贡献。</span><span class="en"><strong>Show results:</strong> report outcomes and data. Busy is not the same as contributing.</span></li>
+        <li><span class="zh"><strong>24 小时响应</strong>：做不到的事提前说，不拖到截止日。</span><span class="en"><strong>Respond within 24 hours:</strong> if you can't deliver, say so early, not at the deadline.</span></li>
+      </ul>
+      <p class="redline"><span class="tag"><span class="zh">底线</span><span class="en">BOTTOM LINE</span></span><span class="zh">没有行动力、执行力的人，天天说空话、放卫星、没有结果的人，不适合 OneLaser。</span><span class="en">People who don't act, can't execute, or talk big without results are not a fit for OneLaser.</span></p>
+    </div></article>
+
+    <article class="value"><div class="num">04</div><div class="value-body">
+      <h3><span class="zh">坚持最高标准</span><span class="en">Hold the Highest Standard</span></h3>
+      <p class="sub"><span class="zh">Hold the Highest Standard</span><span class="en">坚持最高标准</span></p>
+      <p class="core"><span class="zh">It's not done until it's done. 没完成就是没完成，不提前庆祝。</span><span class="en">It's not done until it's done. No celebrating before the finish line.</span></p>
+      <ul>
+        <li><span class="zh"><strong>三层质量</strong>：产品质量、工作质量、交付质量，交付前自己先验收。</span><span class="en"><strong>Three layers of quality:</strong> product, work and delivery. Check your own work first.</span></li>
+        <li><span class="zh"><strong>人人有权叫停</strong>：发现质量问题，任何人都可以暂停出货，不会被责怪。</span><span class="en"><strong>Anyone can stop the line:</strong> spot a quality issue, hold the shipment, no blame.</span></li>
+        <li><span class="zh"><strong>One Team</strong>：语言、文化、种族的差异，不是合作的障碍，而是我们的优势。</span><span class="en"><strong>One Team:</strong> differences in language, culture or ethnicity are never a barrier. They are our strength.</span></li>
+        <li><span class="zh"><strong>One Standard</strong>：全球团队同一标准、同一数据。会上可以反对，决定后全力执行。</span><span class="en"><strong>One Standard:</strong> one standard and one set of data for every team worldwide. Disagree in the meeting, then commit fully.</span></li>
+      </ul>
+    </div></article>
+  </section>
+
+  <section class="done">
+    <h2><span class="zh">什么才算“完成”？</span><span class="en">What does "Done" mean?</span></h2>
+    <p class="q"><span class="zh">“我已经发出去了”不等于完成。</span><span class="en">"I sent it" is not done.</span></p>
+    <div class="formula">
+      <div class="chip"><b><span class="zh">交付</span><span class="en">Delivered</span></b><small><span class="zh">把结果交出去</span><span class="en">Hand over the result</span></small></div>
+      <div class="op">+</div>
+      <div class="chip"><b><span class="zh">确认</span><span class="en">Confirmed</span></b><small><span class="zh">对方确认可用</span><span class="en">Receiver confirms it works</span></small></div>
+      <div class="op">+</div>
+      <div class="chip"><b><span class="zh">复盘</span><span class="en">Reviewed</span></b><small><span class="zh">总结经验教训</span><span class="en">Lessons captured</span></small></div>
+      <div class="op">=</div>
+      <div class="chip result"><b>Done</b><small><span class="zh">这才算完成</span><span class="en">Now it's done</span></small></div>
+    </div>
+    <p class="note"><span class="zh">产品上线不算成功，卖出去、客户用好了才算。</span><span class="en">A launch is not a success. A product that sells and works well for customers is.</span></p>
+  </section>
+
+  <h2><span class="zh">我们不接受的行为</span><span class="en">What We Don't Accept</span></h2>
+  <ul class="donts">
+    <li><span class="zh">不学习、不进步，停在舒适区</span><span class="en">Refusing to learn, staying in the comfort zone</span></li>
+    <li><span class="zh">被动等指令，看到问题却不管</span><span class="en">Waiting for instructions, ignoring problems</span></li>
+    <li><span class="zh">说空话、放卫星，承诺做不到</span><span class="en">Empty talk and promises never kept</span></li>
+    <li><span class="zh">虚报进度、隐瞒问题、美化数据</span><span class="en">Misreporting progress, hiding problems, dressing up data</span></li>
+    <li><span class="zh">虚标参数，对客户夸大承诺</span><span class="en">Inflating specs or overpromising to customers</span></li>
+    <li><span class="zh">做事不闭环，交一半就当完成</span><span class="en">Half-finished work called "done"</span></li>
+    <li><span class="zh">信息不共享，各自为战</span><span class="en">Hoarding information, working in silos</span></li>
+    <li><span class="zh">因语言或文化差异推卸配合</span><span class="en">Using language or culture as an excuse not to cooperate</span></li>
+  </ul>
+
+  <section class="closing">
+    <blockquote><span class="zh">当没有人看着的时候，你怎么做，就是 OneLaser 的文化。</span><span class="en">What you do when no one is watching is OneLaser's culture.</span></blockquote>
+    <p><span class="zh">欢迎每一位愿意每天进步、尊重客户、敢于行动、坚持最高标准的伙伴，和我们一起 Make Better With One。</span><span class="en">To everyone who wants to get better every day, honor our customers, take action and hold the highest standard: welcome. Let's Make Better With One.</span></p>
+    <p class="sign">KC, Founder, OneLaser</p>
+    <p style="font-size:13px"><span class="zh">我们看重结果、质量和成长，而不是工作时长。所有工作安排遵守当地劳动法律法规。</span><span class="en">We value results, quality and growth, not hours worked. All work arrangements follow local labor laws.</span></p>
+    <a class="back" href="/"><span class="zh">进入 Work OS →</span><span class="en">Go to Work OS →</span></a>
+  </section>
+</main>
+</body>
+</html>

@@ -93,7 +93,7 @@ async function loadLive({authenticated=false,mode='live',taskTitle='Server-backe
 test('live mode without a session offers DingTalk sign-in and renders no employee seed data',async()=>{
   const {html,calls}=await loadLive();
   assert.match(html,/Sign in with DingTalk/);// The sign-in page shows OneLaser's product line (Hydra is a real machine); seed data must not appear anywhere else.
-  assert.match(html,/login-showcase/);assert.doesNotMatch(html.replace(/<div class="login-showcase"[\s\S]*?<div class="login-pillars">/,''),/Hydra|Lin Nan|陈一|m1/);assert.doesNotMatch(html,/Lin Nan|陈一/);
+  assert.match(html,/login-showcase/);assert.doesNotMatch(html.replace(/<div class="login-showcase"[\s\S]*?<div class="login-values-head">/,''),/Hydra|Lin Nan|陈一|m1/);assert.doesNotMatch(html,/Lin Nan|陈一/);
   assert.deepEqual(calls.map(call=>new URL(call.url).pathname),['/api/capabilities','/api/me']);
 });
 test('authenticated live mode renders authorized server records and has no identity selector',async()=>{

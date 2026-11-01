@@ -25,3 +25,12 @@ html:not([data-theme=dark]) .nav-sec-name{filter:brightness(.8)}
   .app-shell>.sidebar .nav-item span{white-space:normal;line-height:1.25}
 }
 .sidebar::-webkit-scrollbar{width:8px}.sidebar::-webkit-scrollbar-thumb{background:rgba(127,127,127,.35);border-radius:8px}.sidebar::-webkit-scrollbar-thumb:hover{background:rgba(127,127,127,.6)}
+/* Link to the OneLaser culture page under the workspace name */
+.culture-nav-link{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:8px;margin:10px 0 4px;padding:10px 12px;border-radius:12px;border:1px solid #f5c9bd;background:#fff6f3;color:#15181e;text-decoration:none}
+.culture-nav-link b{font-size:12.5px;font-weight:800;color:#d92d0d;letter-spacing:.02em}
+.culture-nav-link span{grid-column:1;font-size:12px;color:#6b6b70}
+.culture-nav-link .icon{grid-row:1/3;grid-column:2;width:16px;height:16px;color:#d92d0d}
+.culture-nav-link:hover{border-color:#d92d0d}
+html[data-theme=dark] .culture-nav-link{background:#2d1b15;border-color:#5a2a1f;color:#f5f5f7}
+html[data-theme=dark] .culture-nav-link b,html[data-theme=dark] .culture-nav-link .icon{color:#ff937c}
+html[data-theme=dark] .culture-nav-link span{color:#b8b8bf}
