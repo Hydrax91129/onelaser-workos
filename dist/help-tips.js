@@ -364,6 +364,7 @@
 
     ['.pp-att-row', h('打开任务','打开这项任务的详情。','“待我验收”的任务在详情里核对成果后确认或退回；逾期任务可以写进展或调整计划。','Open task','Opens this task’s details.','Review submissions there, or update overdue work.')],
     ['[data-pp="reload-team"]', h('刷新','重新计算团队数据。','','Refresh','Recalculates team data.','')],
+    ['[data-live-page="orgchart"].btn', h('查看组织架构','打开组织架构图，查看汇报线。','在这里修改直属上级后，组织架构图会同步更新。','View org chart','Opens the org chart with reporting lines.','Managers changed here appear on the org chart right away.')],
     ['[data-pp="org-view"]', h('切换视图','“成员与权限”用来修改设置；“汇报线图”检查组织结构。','','Switch view','Members & access to edit; Org chart to check the structure.','')],
     ['#pp-profile button[type="submit"]', h('保存资料','保存你的联系方式，同事会在通讯录和头像卡片上看到。','','Save profile','Saves your contact details for colleagues to see.','')],
     ['#pp-profile select[name="timezone"]', h('时区','选择你所在的时区，方便中美团队安排沟通时间。','','Time zone','Your time zone, to help US and China teams schedule.','')],
