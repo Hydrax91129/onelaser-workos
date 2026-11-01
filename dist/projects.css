@@ -268,3 +268,17 @@ html[data-theme=dark] .pj-inbox .pj-my-row{background:#2a2a2f}
 @media (max-width:640px){.pj-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 html[data-theme=dark] .pj-sum-cell{background:#23252f;border-color:#343745}
 .pj-stack.small.pj-card-stack{height:6px;margin:10px 0 6px;flex:none;border-radius:3px}
+/* Editable description and milestones on the project overview */
+.pj-ov .pj-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pj-ov .pj-panel-head h3{margin:0}
+.pj-ov .pj-panel-head+.pj-text,.pj-ov .pj-panel-head+.pj-empty-line,.pj-ov .pj-panel-head+.pj-status-form,.pj-ov .pj-panel-head+.pj-ms{margin-top:12px}
+.pj-text{white-space:pre-wrap}
+.pj-ms .pj-ms-check{display:inline-flex;padding:0;border:0;background:none;cursor:pointer;color:inherit}
+.pj-ms .pj-ms-check:hover{color:var(--pj-accent,#0073ea)}
+.pj-ms li b{margin-left:auto}
+.pj-ms .pj-ms-del{display:inline-flex;padding:2px;border:0;background:none;cursor:pointer;color:#9aa0a6;opacity:0;transition:opacity .15s}
+.pj-ms li:hover .pj-ms-del,.pj-ms .pj-ms-del:focus-visible{opacity:1}
+.pj-ms .pj-ms-del:hover{color:#e2445c}
+.pj-ms-form{display:grid;gap:8px;margin-top:10px}
+.pj-ms-form input{border:1px solid var(--pj-line,#e3e5e8);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px;background:var(--surface,#fff);color:inherit}
+@media (hover:none){.pj-ms .pj-ms-del{opacity:1}}

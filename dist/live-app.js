@@ -74,7 +74,36 @@
   function handleAuthError(error) { if (error?.status === 401) { clearPrivateData(); state.error = tr('登录已过期，请重新使用钉钉登录。','Your session expired. Sign in with DingTalk again.'); render(); return true; } return false; }
   function renderLogin() {
     const ready = state.capabilities.auth?.loginEnabled ?? configured(state.capabilities.dingtalk);
-    return `<div class="gateway"><header class="gateway-header">${brand()}${controls()}</header><main class="gateway-main live-login"><div class="gateway-label">WORK WITH CLARITY</div><h1>${tr('工作有方向，<br>成果有依据。','Work with direction.<br>Deliver with evidence.')}</h1><p class="gateway-intro">${tr('使用企业钉钉身份进入任务、OKR、客服与知识工作空间。工作记录保存在服务端，按员工和部门授权访问。','Use your company DingTalk identity to access tasks, OKRs, support and knowledge. Work records are stored on the server and authorized by employee and department.')}</p><div class="live-login-panel panel"><div class="panel-body"><h2>${tr('登录工作空间','Sign in to your workspace')}</h2><p class="fine" style="margin:12px 0 20px">${tr('钉钉成员直接用钉钉登录，无需另设密码；不在钉钉里的受邀成员请在下方用邮箱登录。账号状态由企业管理员管理。','DingTalk members sign in with DingTalk, no password needed; invited members outside DingTalk use email below. Your administrator manages account status.')}</p>${state.loading ? `<p role="status">${tr('正在连接服务…','Connecting to the service…')}</p>` : `<button class="btn primary" data-live-action="login" ${ready ? '' : 'disabled'}>${tr('使用钉钉登录','Sign in with DingTalk')} ${icon('arrow')}</button>${ready ? '' : `<p class="fine" style="margin-top:15px">${tr('钉钉登录尚未配置，请联系企业管理员完成应用授权。','DingTalk sign-in is not configured yet. Ask your organization administrator to authorize the application.')}</p>`}${button(tr('重新检查','Check again'),'refresh','','refresh')}${emailLogin()}`}${state.error ? `<p class="form-error" role="alert">${esc(state.error)}</p>` : ''}</div></div></main><footer class="gateway-footer"><span>${tr('企业模式 · 真实登录与服务端授权','Company mode · authenticated server access')}</span><span>${tr('仅语言和主题偏好保存在本机','Only language and theme preferences are stored locally')}</span></footer></div>`;
+    const products = [['x-series','X Series'],['hydra-series','Hydra'],['cobra','Cobra'],['vertigo','VertiGo']];
+    const pillars = [
+      ['ph-lightning','执行力','EXECUTION','承诺的事，按时交付；交付的事，经得起检验。','What we promise, we deliver on time — and it stands up to scrutiny.'],
+      ['ph-users-three','团队','TEAM','四地一心，没有旁观者，只有并肩作战的队友。','Four sites, one team. No bystanders — only teammates in the fight.'],
+      ['ph-flame','文化','CULTURE','坦诚直接，追求卓越，让结果替我们说话。','Candid, relentless about excellence, and we let results do the talking.']
+    ];
+    const signIn = state.loading
+      ? `<p role="status" class="login-status">${tr('正在连接服务…','Connecting to the service…')}</p>`
+      : `<button class="btn primary login-dingtalk" data-live-action="login" ${ready ? '' : 'disabled'}>${tr('使用钉钉登录','Sign in with DingTalk')} ${icon('arrow')}</button>${ready ? '' : `<p class="fine login-note">${tr('钉钉登录尚未配置，请联系企业管理员完成应用授权。','DingTalk sign-in is not configured yet. Ask your organization administrator to authorize the application.')}</p>${button(tr('重新检查','Check again'),'refresh','','refresh')}`}${emailLogin()}`;
+    return `<div class="gateway login-v2">
+      <header class="gateway-header">${brand()}${controls()}</header>
+      <main class="login-stage">
+        <section class="login-story">
+          <div class="gateway-label">MAKE BETTER WITH ONE</div>
+          <h1 class="login-headline">${tr('说到做到，<br><span>做就做到最好。</span>','Say it. Do it.<br><span>Do it best.</span>')}</h1>
+          <p class="login-lead">${tr('每一项任务都有负责人，每一个目标都有结果。东莞、济南、武汉与加州的伙伴在同一个系统里协同作战，用成果说话。','Every task has an owner. Every goal has a result. Teammates in Dongguan, Jinan, Wuhan and California work as one — and let results speak.')}</p>
+          <div class="login-showcase" aria-label="${tr('OneLaser 产品','OneLaser products')}">
+            <div class="login-showcase-stage">${products.map(([file,name],i) => `<figure class="login-slide" style="--i:${i}"><img src="./assets/login/${file}.jpg" alt="OneLaser ${name}" loading="${i ? 'lazy' : 'eager'}" width="800" height="600"><figcaption>${name}</figcaption></figure>`).join('')}</div>
+            <div class="login-showcase-copy"><div class="login-kicker">${tr('我们一起打造的产品','Built by all of us')}</div><p>${tr('从研发、工厂、测试到销售与服务，每一台 OneLaser 都凝聚着整个团队的执行力。','From R&D, factory and testing to sales and service, every OneLaser machine carries the whole team’s execution.')}</p><div class="login-models">${products.map(([,name],i) => `<span style="--i:${i}">${name}</span>`).join('')}</div></div>
+          </div>
+          <div class="login-pillars">${pillars.map(([ico,zh,en,szh,sen]) => `<article class="login-pillar"><i class="ph ${ico}" aria-hidden="true"></i><div><h3>${tr(zh,en.charAt(0)+en.slice(1).toLowerCase())}<small>${en}</small></h3><p>${tr(szh,sen)}</p></div></article>`).join('')}</div>
+        </section>
+        <aside class="login-card panel">
+          <div class="login-card-top"><div class="login-kicker">${tr('欢迎回来','Welcome back')}</div><h2>${tr('今天，也要把事情做成。','Let’s get it done today.')}</h2><p class="fine">${tr('钉钉成员直接用钉钉登录，无需另设密码；不在钉钉里的受邀成员请在下方用邮箱登录。','DingTalk members sign in with DingTalk, no password needed; invited members outside DingTalk use email below.')}</p></div>
+          ${signIn}${state.error ? `<p class="form-error" role="alert">${esc(state.error)}</p>` : ''}
+          <ul class="login-promises"><li>${icon('check')}${tr('任务、OKR、项目与知识，一处完成','Tasks, OKRs, projects and knowledge in one place')}</li><li>${icon('check')}${tr('工作记录保存在服务端，按员工与部门授权','Records stay on the server, authorized by employee and department')}</li></ul>
+        </aside>
+      </main>
+      <footer class="gateway-footer"><span>${tr('一个团队 · 一个目标 · 全力以赴','One team · One goal · All in')}</span><span>OneLaser · Lake Forest · ${tr('东莞 · 济南 · 武汉','Dongguan · Jinan · Wuhan')}</span></footer>
+    </div>`;
   }
   function publicKnowledge(){return `<section class="company-knowledge"><div class="page-heading"><div><div class="eyebrow">ONELASER · KNOWLEDGE CENTER</div><h1>${tr('知识中心 / Wiki','Knowledge center / Wiki')}</h1><p>${tr('产品指南、问题排查与下载资源。','Product guides, troubleshooting and downloads.')}</p></div></div>${window.WorkOSWiki?.render()||''}</section>`;}
   /* ---- email sign-in (invited members outside DingTalk) and invite acceptance ---- */

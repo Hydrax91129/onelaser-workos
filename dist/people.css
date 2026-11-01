@@ -167,3 +167,13 @@ html[data-theme=dark] .pp-name.missing{background:#3a2f22!important}
 
 .pp-name-field{display:flex;flex-direction:column;gap:1px;min-width:0}
 .pp-name-field em{font-style:normal;font-size:10.5px;font-weight:600;color:var(--muted,#7a8096);letter-spacing:.02em}
+/* Organization & permissions: one header row per work location */
+.pp-org tr.pp-group-row td{background:var(--surface-soft,#f5f6f8);padding:10px 16px;border-top:1px solid var(--border);font-size:13px}
+.pp-org tr.pp-group-row:first-child td{border-top:0}
+.pp-group-name{font-weight:800;font-size:14px;color:var(--ink);display:inline-flex;align-items:center;gap:6px}
+.pp-org tr.pp-group-row b{display:inline-block;margin-left:8px;min-width:22px;text-align:center;font-size:12px;border-radius:999px;padding:1px 8px;background:var(--surface,#fff);border:1px solid var(--border);color:var(--muted)}
+.pp-org tr.pp-group-row em{font-style:normal;color:var(--muted);margin-left:12px;font-size:12px}
+.pp-org tr.pp-group-row.unset td{background:#fff6e5}
+.pp-org tr.pp-group-row.unset .pp-group-name{color:#b25e00}
+html[data-theme=dark] .pp-org tr.pp-group-row.unset td{background:#3a2c14}
+html[data-theme=dark] .pp-org tr.pp-group-row.unset .pp-group-name{color:#ffc46b}
