@@ -191,7 +191,7 @@
     ['.ri-assign .ri-row', h('打开任务','查看任务详情、写进展或提交成果。','','Open task','View details, post progress or submit the result.','')],
     ['.ri-nudge', h('AI 跟进提醒','AI 根据截止日期和更新情况自动发出的提醒。','点击打开对应任务处理。','AI follow-up','Automatic reminder based on due date and activity.','Click to open the task.')],
     ['button.okb-pts, span.okb-pts, [data-okr="edit"][data-kind="o-weight"]', h('目标分值','这个目标值多少分；所有目标合计 100 分（例如 O1 = 40 分）。','点击修改。','Objective points','Points this objective is worth; all objectives add up to 100.','Click to change.')],
-    ['.okb-kr-simple [data-okr="edit"][data-kind="kr-weight"], .okb-kr-simple .okb-chip', h('KR 权重','占所属目标分值的百分比；同一目标下 KR 合计 100%。','例：目标 40 分、KR 25% → 这条 KR 值 10 分。','KR weight','Share of the objective’s points; KRs add up to 100%.','e.g. 40 points × 25% = 10 points.')],
+    ['.okb-kr-simple [data-okr="edit"][data-kind="kr-weight"], .okb-kr-simple .okb-chip', h('KR 权重','占所属目标分值的百分比；同一目标下所有 KR 合计必须正好 100%，不能超过。','例：目标 40 分、KR 25% → 这条 KR 值 10 分。','KR weight','Share of the objective’s points; KRs add up to 100%.','e.g. 40 points × 25% = 10 points.')],
     ['.okb-sc-btn, .okb-lv', h('自评 / 领导评分','六档：0 未开展 · 25 严重滞后 · 50 部分完成 · 75 接近完成 · 100 完成 · 125 完成且卓越。','自评由负责人打，领导评分由其上级打；点击打分。','Self / leader score','Six levels from 0 to 125.','Owner gives the self score, their leader the leader score; click to score.')],
     ['.okb-final', h('最终分','= 自评 50% + 领导评分 50%；领导判定自评不实时为 0。','','Final score','= 50% self + 50% leader; 0 if the leader marks the self score untrue.','')],
     ['.okb-kr-got, .okb-earned', h('得分','= 目标分值 × KR 权重 × 最终分。','评到 125 的部分会让总分超过 100。','Points earned','= objective points × KR % × final score.','125-level scores can push the total above 100.')],

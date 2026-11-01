@@ -207,8 +207,8 @@
         <span class="okb-kr-tag">KR${krsOf(o).length + 1}</span>
         <input name="title" placeholder="${tr('关键结果：怎样证明目标达成，例如：新增 30 家经销商', 'Key result, e.g. Sign 30 new dealers')}" required minlength="2" maxlength="300" data-okr-autofocus>
         <label class="okb-mini okb-target"><span>${tr('目标值', 'Target')}</span><input name="targetText" required maxlength="120" placeholder="${tr('填“完成”，或明确数字：30 家 / 3%', '“Done”, or a number: 30 dealers / 3%')}"></label>
-        <label class="okb-mini"><span>${tr('权重 %（占本目标）', 'Weight % of objective')}</span><input name="weight" type="number" min="0.01" max="100" step="0.01" value="${left || ''}"></label>
-        <div class="okb-form-actions"><span class="okb-form-tip">${tr(`= ${num(oPoints(o))} 分 × 权重；本目标 KR 合计 100%，还剩 ${left}%`, `= ${num(oPoints(o))} pts × weight · ${left}% left`)}</span><button class="okb-btn primary small" type="submit">${tr('添加', 'Add')}</button><button class="okb-btn small" type="button" data-okr="cancel-add">${tr('取消', 'Cancel')}</button></div>
+        <label class="okb-mini"><span>${tr('权重 %（占本目标）', 'Weight % of objective')}</span><input name="weight" type="number" min="0.01" max="${left || 0.01}" step="0.01" value="${left || ''}" required ${left > 0 ? '' : 'disabled'}></label>
+        <div class="okb-form-actions"><span class="okb-form-tip ${left > 0 ? '' : 'bad'}">${left > 0 ? tr(`= ${num(oPoints(o))} 分 × 权重；同一目标下 KR 合计必须正好 100%，还剩 ${num(left)}%`, `= ${num(oPoints(o))} pts × weight · KRs must total exactly 100% · ${num(left)}% left`) : tr('本目标的 KR 权重已满 100%，请先调低其他 KR 的权重，再添加新 KR。', 'KR weights already total 100%; lower another KR before adding one.')}</span><button class="okb-btn primary small" type="submit" ${left > 0 ? '' : 'disabled'}>${tr('添加', 'Add')}</button><button class="okb-btn small" type="button" data-okr="cancel-add">${tr('取消', 'Cancel')}</button></div>
         <p class="okb-form-error" role="alert"></p>
       </form>`;
     }
@@ -255,13 +255,16 @@
   const level = v => LEVELS.find(l => l[0] === v) || LEVELS.reduce((a, b) => Math.abs(b[0] - v) < Math.abs(a[0] - v) ? b : a);
   const num = v => Math.round(v * 10) / 10;
   const oPoints = o => Number(o.planning?.weight) || 0;
-  const krShare = (o, k) => { const ks = krsOf(o), set = ks.filter(x => Number.isFinite(x.planning?.weight)); return Number.isFinite(k.planning?.weight) ? k.planning.weight : ks.length ? Math.max(0, (100 - set.reduce((n, x) => n + x.planning.weight, 0)) / Math.max(1, ks.length - set.length)) : 0; };
+  const krSum = o => krsOf(o).reduce((n, x) => n + (Number(x.planning?.weight) > 0 ? Number(x.planning.weight) : 0), 0);
+  // KR weights must add up to exactly 100% under each objective; a KR without a weight counts as 0 until it is set.
+  const weightsOk = o => { const ks = krsOf(o); return !ks.length || (ks.every(x => Number(x.planning?.weight) > 0) && Math.abs(krSum(o) - 100) < 0.01); };
+  const krShare = (o, k) => { return Number(k.planning?.weight) > 0 ? Number(k.planning.weight) : 0; };
   const krPoints = (o, k) => oPoints(o) * krShare(o, k) / 100;
   const finalOf = x => x?.scores?.final ?? null;
   const earnedOf = o => { const ks = krsOf(o); if (!ks.length) { const f = finalOf(o); return { earned:f === null ? null : oPoints(o) * f / 100, pending:f === null ? 1 : 0 }; } let e = 0, pending = 0; for (const k of ks) { const f = finalOf(k); if (f === null) pending++; else e += krPoints(o, k) * f / 100; } return { earned:pending === ks.length ? null : e, pending }; };
   const scoreChip = (sc, label) => { if (!sc) return `<span class="okb-lv lv-none"><em>${label}</em> —</span>`; const l = level(sc.score); return `<span class="okb-lv ${sc.veto ? 'lv-veto' : l[3]}" title="${esc(tr(l[1], l[2]))}${sc.comment ? ' · ' + esc(sc.comment) : ''}"><em>${label}</em> ${sc.veto ? tr('0 不实', '0 untrue') : sc.score}${sc.score === 125 && !sc.veto ? ` <i class="okb-star">${icon('crown-simple')}${tr('卓越', 'Excellent')}</i>` : ''}</span>`; };
   function scoreBlock(kind, item, o) {
-    const mine = o.owner_id === me()?.id, lead = o.canLeadScore, sc = item.scores || {};
+    const ready = kind !== 'kr' || weightsOk(o), mine = o.owner_id === me()?.id && ready, lead = o.canLeadScore && ready, sc = item.scores || {};
     const btn = (k, label, can) => can ? `<button type="button" class="okb-sc-btn" data-okr="score" data-kind="${k}" data-target="${kind}" data-id="${esc(item.id)}">${scoreChip(sc[k === 'self' ? 'self' : 'manager'], label)}</button>` : scoreChip(sc[k === 'self' ? 'self' : 'manager'], label);
     const f = finalOf(item);
     return `<div class="okb-scores">${btn('self', tr('自评', 'Self'), mine)}${btn('manager', tr('领导评分', 'Leader'), lead)}<span class="okb-final ${f === null ? 'pending' : level(f)[3]}" title="${tr('最终评分 = 自评 50% + 领导评分 50%', 'Final = 50% self + 50% leader')}">${tr('最终', 'Final')} ${f === null ? tr('待评', 'pending') : num(f)}</span></div>`;
@@ -277,11 +280,11 @@
     return `<div class="okb-krs okb-krs-simple">${krs.map((k, i) => { const share = krShare(o, k), pts = krPoints(o, k), f = finalOf(k); const target = k.planning?.targetText || (Number.isFinite(k.target) && k.unit !== '完成' ? `${k.target} ${k.unit || ''}` : tr('完成', 'Done'));
       return `<div class="okb-kr okb-kr-simple" data-kr="${esc(k.id)}"><span class="okb-kr-tag">KR${i + 1}</span>
         <div class="okb-kr-main"><div class="okb-kr-title">${edit && collab() ? `<button type="button" class="okb-title-btn" data-okr="edit" data-kind="kr-title" data-id="${esc(k.id)}">${tx(k.title)}</button>` : `<span>${tx(k.title)}</span>`}</div><div class="okb-kr-target">${icon('flag')} ${tr('目标值', 'Target')}：${tx(target)}</div></div>
-        <div class="okb-kr-weight">${edit && collab() ? (ui.editing && ui.editing.kind === 'kr-weight' && ui.editing.id === k.id ? editable('kr-weight', k.id, k.planning?.weight, '', 'number') : `<button type="button" class="okb-chip" data-okr="edit" data-kind="kr-weight" data-id="${esc(k.id)}" title="${tr('KR 权重 = 占所属目标分值的百分比', 'KR weight = share of the objective’s points')}">${num(share)}% · ${num(pts)} ${tr('分', 'pts')}</button>`) : `<span class="okb-chip">${num(share)}% · ${num(pts)} ${tr('分', 'pts')}</span>`}</div>
+        <div class="okb-kr-weight">${edit && collab() ? (ui.editing && ui.editing.kind === 'kr-weight' && ui.editing.id === k.id ? editable('kr-weight', k.id, k.planning?.weight, '', 'number') : `<button type="button" class="okb-chip" data-okr="edit" data-kind="kr-weight" data-id="${esc(k.id)}" title="${tr('KR 权重 = 占所属目标分值的百分比', 'KR weight = share of the objective’s points')}">${share ? `${num(share)}% · ${num(pts)} ${tr('分', 'pts')}` : tr('未填权重', 'No weight')}</button>`) : `<span class="okb-chip">${share ? `${num(share)}% · ${num(pts)} ${tr('分', 'pts')}` : tr('未填权重', 'No weight')}</span>`}</div>
         <div class="okb-kr-score">${scoreBlock('kr', k, o)}</div>
         <div class="okb-kr-got" title="${esc(tr(`${num(oPoints(o))} 分 × ${num(share)}% × ${f === null ? '待评' : num(f) + '%'}`, `${num(oPoints(o))} × ${num(share)}% × ${f === null ? 'pending' : num(f) + '%'}`))}">${f === null ? '—' : num(pts * f / 100)}</div>
       </div>${ui.scoring && ui.scoring.kind === 'kr' && ui.scoring.id === k.id ? scoreForm('kr', k, o) : ''}`; }).join('') || `<div class="okb-empty-row">${tr('还没有关键结果。没有 KR 时直接给整个目标打分；也可以添加 KR，按权重拆分分值。', 'No key results. Score the objective directly, or add KRs to split its points by weight.')}</div>`}
-      ${krs.length && (!allSet || Math.abs(sumW - 100) > 0.01) && krs.some(k => Number.isFinite(k.planning?.weight)) ? `<div class="okb-warn">${icon('warning')} ${tr(`KR 权重合计 ${num(sumW)}%，应为 100%（未填权重的 KR 平分剩余部分）`, `KR weights total ${num(sumW)}%; they should add up to 100% (KRs without a weight share the rest)`)}</div>` : ''}
+      ${krs.length && !weightsOk(o) ? (() => { const unset = krs.filter(k => !(Number(k.planning?.weight) > 0)).length, over = sumW - 100; return over > 0.01 ? `<div class="okb-warn okb-warn-bad">${icon('warning-octagon')} ${tr(`KR 权重合计 ${num(sumW)}%，超出 ${num(over)}%。同一目标下所有 KR 的权重合计必须正好 100%，请调低某条 KR 的权重。`, `KR weights total ${num(sumW)}%, ${num(over)}% too much. KR weights under one objective must add up to exactly 100%; lower one of them.`)}</div>` : `<div class="okb-warn">${icon('warning')} ${tr(`KR 权重合计 ${num(sumW)}%，还差 ${num(100 - sumW)}%${unset ? `，有 ${unset} 条未填权重` : ''}。补齐到正好 100% 后才能评分。`, `KR weights total ${num(sumW)}%, ${num(100 - sumW)}% missing${unset ? `; ${unset} without a weight` : ''}. Scoring opens once they add up to exactly 100%.`)}</div>`; })() : ''}
       ${edit ? (ui.adding && ui.adding.kind === 'kr' && ui.adding.id === o.id ? newKrForm(o) : `<button type="button" class="okb-add-row" data-okr="add-kr" data-id="${esc(o.id)}">${icon('plus')} ${tr('添加关键结果', 'Add key result')}</button>`) : ''}</div>`;
   }
   function totalScore(objs) {
@@ -517,16 +520,19 @@
       if (kind === 'o-title') { const o = objectiveById(id); if (raw === o.title) ok = true; else ok = await mutate(() => patchO(o, { title:raw }), tr('已保存', 'Saved')); }
       if (kind === 'o-weight') ok = await mutate(() => patchO(objectiveById(id), { weight:Number(raw) }), tr('已保存', 'Saved'));
       if (kind === 'kr-title') { const k = findKr(id); if (raw === k.title) ok = true; else ok = await mutate(() => patchKr(k, { title:raw }), tr('已保存', 'Saved')); }
-      if (kind === 'kr-weight') ok = await mutate(() => patchKr(findKr(id), { weight:Number(raw) }), tr('已保存', 'Saved'));
+      if (kind === 'kr-weight') { const k = findKr(id), o = objectiveById(k.objective_id), w = Number(raw), others = krSum(o) - (Number(k.planning?.weight) > 0 ? Number(k.planning.weight) : 0), max = Math.round((100 - others) * 100) / 100;
+        if (w > max + 0.001 && w > (Number(k.planning?.weight) || 0)) { ctx.toast?.(tr(`同一目标下 KR 权重合计必须正好 100%，这条最多只能填 ${num(Math.max(0, max))}%。`, `KR weights must total exactly 100%; this one can be at most ${num(Math.max(0, max))}%.`)); return; }
+        ok = await mutate(() => patchKr(k, { weight:w }), tr('已保存', 'Saved')); }
       if (ok) ui.editing = null;
       return rerender();
     }
     if (form.id === 'okr-new-kr' && simple()) {
       const o = objectiveById(form.dataset.objectiveId), text = String(v.targetText || '').trim(), m = /^([0-9]+(?:\.[0-9]+)?)\s*(.*)$/.exec(text);
-      const planning = { weight:v.weight ? Number(v.weight) : undefined, description:'', targetText:text };
-      if (!planning.weight) delete planning.weight;
+      const left = Math.round((100 - krSum(o)) * 100) / 100, w = Number(v.weight);
+      if (!(w > 0)) { if (err) err.textContent = tr('请填写这条 KR 的权重。', 'Enter this KR’s weight.'); return; }
+      if (w > left + 0.001) { if (err) err.textContent = tr(`同一目标下 KR 权重合计必须正好 100%，这条最多只能填 ${num(Math.max(0, left))}%。`, `KR weights must total exactly 100%; this one can be at most ${num(Math.max(0, left))}%.`); return; }
+      const planning = { weight:w, description:'', targetText:text };
       const body = m && Number(m[1]) > 0 ? { title:v.title.trim(), baseline:0, target:Number(m[1]), direction:'increase', unit:(m[2] || '').trim().slice(0, 30) || tr('项', 'units'), planning } : { title:v.title.trim(), baseline:0, target:1, direction:'increase', unit:'完成', planning };
-      if (!planning.weight) { const share = Math.max(1, Math.round((100 - krsOf(o).reduce((n, k) => n + (k.planning?.weight || 0), 0)) * 100) / 100); body.planning.weight = Math.min(100, share); }
       const ok = await mutate(() => ctx.api.post('/objectives/' + encodeURIComponent(o.id) + '/key-results', body), tr('关键结果已添加', 'Key result added'));
       if (ok) ui.adding = { kind:'kr', id:o.id };
       rerender(); return;
@@ -558,7 +564,8 @@
     }
     if (form.id === 'okr-new-o') {
       const period = ui.cycle || nowPeriod();
-      const owner = v.ownerId || me().id, used = S().objectives.filter(x => x.owner_id === owner && x.planning?.period === period && x.level !== 'company').reduce((n, x) => n + (Number(x.planning?.weight) || 0), 0), autoWeight = Math.max(1, Math.round((100 - used) * 100) / 100 || 1);
+      const owner = v.ownerId || me().id, used = S().objectives.filter(x => x.owner_id === owner && x.planning?.period === period && x.level !== 'company').reduce((n, x) => n + (Number(x.planning?.weight) || 0), 0), autoWeight = Math.round((100 - used) * 100) / 100;
+      if (simple() && (v.weight ? Number(v.weight) > autoWeight + 0.001 : autoWeight <= 0)) { if (err) err.textContent = autoWeight > 0 ? tr(`本周期所有目标合计必须正好 100 分，这个目标最多只能填 ${num(autoWeight)} 分。`, `Objectives must total exactly 100 points; this one can be at most ${num(autoWeight)}.`) : tr('本周期目标分值已满 100 分，请先调低其他目标的分值。', 'Objectives already total 100 points; lower another one first.'); return; }
       const body = { title:v.title.trim(), level:v.level || 'personal', ownerId:owner, planning:{ period, weight:v.weight ? Number(v.weight) : Math.min(100, autoWeight), location:'', description:String(v.description || '').trim(), type:'mandatory', bonusIncluded:false, scoringDueDate:dueDateFor(period) }, ...(collab() && v.parentObjectiveId ? { parentObjectiveId:v.parentObjectiveId } : {}) };
       let createdId = null;
       const ok = await mutate(async () => { const r = await ctx.api.post('/objectives', body); createdId = r?.id; }, simple() ? tr('目标已创建，接着添加关键结果（目标值可以写“完成”或明确数字）', 'Objective created — add key results (target: “done” or a number)') : tr('目标已创建，接着添加关键结果吧', 'Objective created — now add its key results'));

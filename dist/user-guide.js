@@ -76,9 +76,9 @@
     ['okr', 'ph-target', 'OKR 怎么填、怎么算分', 'OKRs & scoring', () => `
       <h3>${tr('填写 OKR', 'Writing your OKR')}</h3>
       ${steps([
-        tr('新建目标（O），填写分值。一个月所有目标合计 <b>100 分</b>，例如 O1 = 40 分。', 'Add an objective (O) and give it points. All objectives for the month total <b>100 points</b>, e.g. O1 = 40.'),
+        tr('新建目标（O），填写分值。一个月所有目标合计必须正好 <b>100 分</b>（不能超过），例如 O1 = 40 分。', 'Add an objective (O) and give it points. All objectives for the month must total exactly <b>100 points</b> (never more), e.g. O1 = 40.'),
         tr('在目标下添加关键结果（KR），填写<b>目标值</b>：可以写“完成”，也可以写任何明确的数字，例如“30 条询盘”。', 'Under it add key results (KR) with a <b>target</b>: “Done”, or any clear number such as “30 enquiries”.'),
-        tr('给每条 KR 填权重，表示占这个目标的百分比。同一目标下的 KR 权重合计 100%。', 'Give each KR a weight: its share of the objective. KR weights under one objective total 100%.'),
+        tr('给每条 KR 填权重，表示占这个目标的百分比。同一目标下所有 KR 的权重合计必须<b>正好 100%</b>：系统不允许超过 100%，不到 100% 时这个目标的 KR 不能评分。', 'Give each KR a weight: its share of the objective. KR weights under one objective must add up to <b>exactly 100%</b>: the system refuses more than 100%, and KRs cannot be scored until they reach 100%.'),
         tr('保存后，每条 KR 自动变成你的任务，进入任务中心。', 'Once saved, each KR becomes a task in your Task Center.')
       ])}
       <h3>${tr('评分等级', 'Score levels')}</h3>

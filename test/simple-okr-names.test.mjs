@@ -67,3 +67,10 @@ test('task sources name the project and O/KR; updates button has a label; work c
   assert.match(rep, /tx\(t\.title\)/); assert.match(rep, /tx\(n\.message\)/);
   assert.match(pj, /function portfolioSummary/); assert.match(pj, /function projectCard/); assert.match(pj, /\$\{isLive\(\) \? '' : `<div class="pj-sample">/);
 });
+
+test('KR weights under an objective must add up to exactly 100%: no automatic shares, capped input, scoring waits', () => {
+  const okr = read('okr-board.js');
+  assert.match(okr, /const weightsOk = o =>/); assert.match(okr, /ready = kind !== 'kr' \|\| weightsOk\(o\)/);
+  assert.doesNotMatch(okr, /平分剩余部分/); assert.doesNotMatch(okr, /Math\.max\(1, Math\.round\(\(100 - used\)/);
+  assert.match(okr, /这条最多只能填/); assert.match(okr, /补齐到正好 100% 后才能评分/);
+});

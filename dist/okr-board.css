@@ -297,3 +297,5 @@ html[data-theme=dark] .okb-evidence-rule{color:#f3cf72}
 .okb-score-form .okb-file input{width:auto;border:0;padding:0;background:transparent}
 .okb-score-form .okb-form-error:empty{display:none}
 .okb-score-form .okb-form-error{flex-basis:100%}
+.okb-warn-bad{color:#d92c2c;font-weight:600}
+.okb-form-tip.bad{color:#d92c2c;font-weight:600}
