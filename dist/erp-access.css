@@ -1,0 +1,29 @@
+/* ERP permissions */
+.erpa{display:flex;flex-direction:column;gap:14px}
+.erpa-hint{font-size:12.5px;color:var(--muted,#7a8096);display:inline-flex;gap:6px;align-items:center}
+.erpa-note{display:flex;gap:8px;align-items:center;padding:9px 12px;border-radius:9px;background:#eef3ff;color:#245bdb;font-size:13px}
+.erpa-alert{padding:10px 12px;border-radius:9px;background:#ffe9e9;color:#b42318}
+.erpa-legend{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.erpa-card{display:flex;gap:10px;align-items:flex-start;text-align:left;padding:12px 14px;border:1px solid var(--border,#e4e7ef);border-radius:12px;background:#fff;font:inherit;color:inherit;cursor:pointer}
+.erpa-card>i{font-size:22px;color:#3c64f4;margin-top:2px}.erpa-card span{flex:1;display:flex;flex-direction:column;gap:2px}
+.erpa-card b{font-size:14px}.erpa-card em{font-style:normal;font-size:11.5px;color:var(--muted,#7a8096);line-height:1.4}
+.erpa-card strong{font-size:20px;color:#3c64f4}.erpa-card.on{border-color:#3c64f4;box-shadow:0 0 0 2px #3c64f433}
+.erpa-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.erpa-search{display:flex;align-items:center;gap:6px;border:1px solid var(--border,#d7dbe7);border-radius:8px;padding:0 10px;height:34px;min-width:280px;background:#fff}
+.erpa-search input{border:0;outline:0;font:inherit;background:transparent;flex:1;color:inherit}
+.erpa-link{border:0;background:transparent;color:#3c64f4;cursor:pointer;font:inherit;font-size:12.5px;display:inline-flex;gap:4px;align-items:center}
+.erpa-table-wrap{overflow:auto;border:1px solid var(--border,#e4e7ef);border-radius:12px;background:#fff}
+.erpa-table{width:100%;border-collapse:collapse;font-size:13px}
+.erpa-table th{background:#f7f8fb;text-align:left;font-weight:600;color:#5b6170;padding:9px 10px;border-bottom:1px solid var(--border,#e4e7ef);white-space:nowrap}
+.erpa-table td{padding:8px 10px;border-bottom:1px solid #f0f1f5;vertical-align:middle}
+.erpa-person{display:flex;gap:9px;align-items:center;min-width:170px}.erpa-person small{display:block;color:var(--muted,#9aa0b4);font-size:11.5px}
+.erpa-av{width:30px;height:30px;border-radius:50%;background:#5b8def;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+.erpa-seg{display:inline-flex;background:#f1f2f6;border-radius:8px;padding:2px;gap:2px;white-space:nowrap}
+.erpa-seg button{border:0;background:transparent;font:inherit;font-size:12px;padding:5px 9px;border-radius:6px;cursor:pointer;color:#6b7280}
+.erpa-seg button.on{background:#fff;color:#1f2433;font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.erpa-seg button.on.lv-view,.erpa-seg button.on.lv-msrp{color:#245bdb}.erpa-seg button.on.lv-manage,.erpa-seg button.on.lv-full{background:#3c64f4;color:#fff}
+.erpa-seg.ro button{cursor:not-allowed;opacity:.75}
+.erpa-empty{text-align:center;color:var(--muted,#9aa0b4);padding:28px!important}
+@media (max-width:1100px){.erpa-legend{grid-template-columns:repeat(2,minmax(0,1fr))}}
+html[data-theme=dark] .erpa-card,html[data-theme=dark] .erpa-table-wrap,html[data-theme=dark] .erpa-search{background:#1d1f27;border-color:#343745}
+html[data-theme=dark] .erpa-table th{background:#23252f;color:#b8bccb}html[data-theme=dark] .erpa-table td{border-color:#2a2d38}html[data-theme=dark] .erpa-seg{background:#23252f}html[data-theme=dark] .erpa-seg button.on{background:#343745;color:#fff}html[data-theme=dark] .erpa-note{background:#1f2c4d;color:#a9c2ff}

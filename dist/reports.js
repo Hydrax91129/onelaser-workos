@@ -19,7 +19,8 @@
   const now = () => Date.now();
   const DAY = 864e5;
   const okrH = () => window.WorkOSOkrBoard?._helpers;
-  const nameOf = id => S().directory.find(u => u.id === id)?.display_name || (me()?.id === id ? me().display_name : id || '—');
+  const ownerName = id => { const o = S().objectives.find(x => x.owner_id === id && (x.owner_name_zh || x.owner_name_en || x.owner_name)); return o ? (lang() === 'en' ? o.owner_name_en || o.owner_name_zh || o.owner_name : o.owner_name_zh || o.owner_name_en || o.owner_name) : ''; };
+  const nameOf = id => S().directory.find(u => u.id === id)?.display_name || (me()?.id === id ? me().display_name : '') || ownerName(id) || id || '—';
   const fmtDate = v => { try { return new Intl.DateTimeFormat(lang() === 'en' ? 'en-US' : 'zh-CN', { month:'short', day:'numeric' }).format(new Date(v)); } catch { return v; } };
   const avatar = (u, n) => window.WorkOSPeople?.avatar ? window.WorkOSPeople.avatar(u, n) : '';
 
@@ -203,9 +204,9 @@
   const dueTag = t => { const d = new Date(t.due_at).getTime(), days = Math.ceil((d - Date.now()) / 864e5); if (isDone(t)) return `<em class="ri-due done">${tr('已完成', 'Done')}${t.completion?.ai_score != null ? ' ' + t.completion.ai_score + '/10' : ''}</em>`; if (days < 0) return `<em class="ri-due over">${tr(`逾期 ${-days} 天`, `${-days}d overdue`)}</em>`; if (days <= 3) return `<em class="ri-due soon">${tr(`剩 ${days} 天`, `${days}d left`)}</em>`; return `<em class="ri-due">${new Date(t.due_at).toLocaleDateString(lang() === 'en' ? 'en-US' : 'zh-CN', { month:'short', day:'numeric' })}</em>`; };
   // Titles and AI messages follow the interface language (translate.js); names come from the localized directory.
   const tx = v => window.WorkOSTranslate ? window.WorkOSTranslate.html(v) : esc(v);
-  const who = (id, fallback) => (id && (S().directory || []).find(u => u.id === id)?.display_name) || fallback || '';
+  const who = (id, fallback, names) => (id && (S().directory || []).find(u => u.id === id)?.display_name) || (names && (lang() === 'en' ? names.en || names.zh : names.zh || names.en)) || fallback || '';
   const okrCode = t => { const r = t.okr_ref || {}; return (r.o ? 'O' + r.o : 'OKR') + (r.kr ? ' · KR' + r.kr : ''); };
-  const srcLabel = t => t.source_kind === 'okr' ? `<span class="ri-src okr" title="${esc(window.WorkOSTranslate ? window.WorkOSTranslate.text(t.kr_title || '') : t.kr_title || '')}">${icon('target')} ${esc(okrCode(t))}</span>` : t.source_kind === 'project' ? `<span class="ri-src" title="${esc(t.project_name || '')}">${icon('folder')} ${t.project_name ? tx(t.project_name) : tr('项目', 'Project')}</span>` : `<span class="ri-src direct">${icon('paper-plane-tilt')} ${esc(who(t.assigned_by_id, t.assigned_by_name))}</span>`;
+  const srcLabel = t => t.source_kind === 'okr' ? `<span class="ri-src okr" title="${esc(window.WorkOSTranslate ? window.WorkOSTranslate.text(t.kr_title || '') : t.kr_title || '')}">${icon('target')} ${esc(okrCode(t))}</span>` : t.source_kind === 'project' ? `<span class="ri-src" title="${esc(t.project_name || '')}">${icon('folder')} ${t.project_name ? tx(t.project_name) : tr('项目', 'Project')}</span>` : `<span class="ri-src direct">${icon('paper-plane-tilt')} ${esc(who(t.assigned_by_id, t.assigned_by_name, t.assigned_by_names))}</span>`;
   function assignPanel() {
     if (!S().capabilities?.assignTasks) return '';
     loadAssign();
@@ -217,10 +218,10 @@
     return `<div class="ri-grid ri-assign">
       <section class="ri-panel"><h3>${icon('tray-arrow-down')} ${tr('别人给我下达的任务', 'Assigned to me')} <b>${toMe.length}</b></h3>
         ${toMe.length ? toMe.slice(0, 6).map(t => `<button class="ri-row" data-live-task="${esc(t.id)}">${srcLabel(t)}<span class="ri-row-t">${tx(t.title)}</span>${dueTag(t)}</button>`).join('') : `<p class="ri-empty">${tr('目前没有别人下达给你的任务。', 'Nothing assigned to you right now.')}</p>`}
-        ${nudges.length ? `<div class="ri-nudges"><h4>${icon('robot')} ${tr('AI 跟进提醒', 'AI follow-ups')}${assign.unread ? ` <b>${assign.unread}</b>` : ''}</h4>${nudges.map(n => `<button class="ri-nudge ${n.read ? '' : 'unread'}" ${n.okr || !n.taskId ? 'data-live-page="okr"' : `data-live-task="${esc(n.taskId)}"`}><span>${tx(n.message)}</span><em>${n.role === 'assigner' ? tr(`抄送你 · ${esc(who(n.ownerId, n.ownerName))}`, `cc · ${esc(who(n.ownerId, n.ownerName))}`) : ''} ${new Date(n.createdAt).toLocaleString(lang() === 'en' ? 'en-US' : 'zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' })}</em></button>`).join('')}</div>` : ''}
+        ${nudges.length ? `<div class="ri-nudges"><h4>${icon('robot')} ${tr('AI 跟进提醒', 'AI follow-ups')}${assign.unread ? ` <b>${assign.unread}</b>` : ''}</h4>${nudges.map(n => `<button class="ri-nudge ${n.read ? '' : 'unread'}" ${n.okr || !n.taskId ? 'data-live-page="okr"' : `data-live-task="${esc(n.taskId)}"`}><span>${tx(n.message)}</span><em>${n.role === 'assigner' ? tr(`抄送你 · ${esc(who(n.ownerId, n.ownerName, n.ownerNames))}`, `cc · ${esc(who(n.ownerId, n.ownerName, n.ownerNames))}`) : ''} ${new Date(n.createdAt).toLocaleString(lang() === 'en' ? 'en-US' : 'zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' })}</em></button>`).join('')}</div>` : ''}
       </section>
       <section class="ri-panel"><h3>${icon('paper-plane-tilt')} ${tr('我下达的任务', 'Assigned by me')} <b>${open.length}</b>${late ? `<span class="ri-late">${tr(`${late} 项逾期`, `${late} overdue`)}</span>` : ''}</h3>
-        ${byMe.length ? byMe.slice(0, 6).map(t => `<button class="ri-row" data-live-task="${esc(t.id)}"><span class="ri-src">${icon('user')} ${esc(who(t.owner_id, t.owner_name))}</span><span class="ri-row-t">${tx(t.title)}</span>${dueTag(t)}</button>`).join('') : `<p class="ri-empty">${tr('在任务中心点“Assign Task”给同事下达任务，AI 会帮你跟进。', 'Use Assign Task in the Task hub; AI will follow up for you.')}</p>`}
+        ${byMe.length ? byMe.slice(0, 6).map(t => `<button class="ri-row" data-live-task="${esc(t.id)}"><span class="ri-src">${icon('user')} ${esc(who(t.owner_id, t.owner_name, t.owner_names))}</span><span class="ri-row-t">${tx(t.title)}</span>${dueTag(t)}</button>`).join('') : `<p class="ri-empty">${tr('在任务中心点“Assign Task”给同事下达任务，AI 会帮你跟进。', 'Use Assign Task in the Task hub; AI will follow up for you.')}</p>`}
       </section></div>`;
   }
 

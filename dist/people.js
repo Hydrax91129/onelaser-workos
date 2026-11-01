@@ -13,7 +13,8 @@
   const icon = n => `<i class="ph ph-${n}" aria-hidden="true"></i>`;
   const caps = () => S().capabilities?.orgProfiles === true;
   const me = () => S().actor;
-  const userById = id => S().directory.find(u => u.id === id) || (me()?.id === id ? me() : null) || ui.org?.items?.find(u => u.id === id);
+  // Team reports, the org chart and the admin list also carry people outside my department.
+  const userById = id => S().directory.find(u => u.id === id) || (me()?.id === id ? me() : null) || ui.org?.items?.find(u => u.id === id) || ui.team?.members?.find(u => u.id === id) || ui.chart?.items?.find(u => u.id === id);
   const nameOf = id => userById(id)?.display_name || id || '—';
   const hue = id => { let h = 0; for (const c of String(id || '')) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
   const initials = n => { n = String(n || '?').trim(); return /^[\x00-\x7f]+$/.test(n) ? n.split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase() : n.slice(-2); };
@@ -86,7 +87,7 @@
   async function loadTeam() {
     if (!caps()) return;
     ui.teamLoading = true; ui.teamError = '';
-    try { ui.team = await ctx.api.get('/reports/team' + (ui.teamScope === 'all' ? '?scope=all' : '')); }
+    try { ui.team = await ctx.api.get('/reports/team' + (ui.teamScope === 'all' ? '?scope=all' : '')); window.WorkOSNames?.apply(ui.team?.members); }
     catch (e) { ui.teamError = ctx.explainError(e); }
     finally { ui.teamLoading = false; if (S().page === 'team') ctx.rerender(); }
   }
@@ -117,6 +118,7 @@
 
   /* ---------------- personal settings ---------------- */
   const ZONES = ['America/Los_Angeles', 'America/Denver', 'America/Chicago', 'America/New_York', 'Asia/Shanghai', 'Asia/Hong_Kong', 'Asia/Tokyo', 'Europe/London', 'Europe/Berlin', 'Australia/Sydney'];
+  const erp = () => S().capabilities?.erpAccess === true;
   function settings() {
     const a = me(), manager = a.manager_id ? userById(a.manager_id) : null;
     const reports = S().directory.filter(u => u.manager_id === a.id);
@@ -197,7 +199,7 @@
         <label>${tr('工作地点', 'Work location')}<input name="location" maxlength="80" placeholder="${tr('如 Irvine, CA / 武汉', 'e.g. Irvine, CA')}" list="pp-locations"></label>
         <label>${tr('直属上级', 'Manager')}<select name="managerId">${opt('', tr('无（最高层）', 'None (top)'))}${active.map(u => opt(u.id, u.display_name)).join('')}</select></label>
         <label>${tr('角色', 'Role')}<select name="role">${opt('employee', tr('员工', 'Employee'))}${opt('manager', tr('主管', 'Manager'))}</select></label>
-        <div class="pp-invite-grants"><label class="pp-check"><input type="checkbox" name="products"> ${tr('产品管理区', 'Product hub')}</label><label class="pp-check"><input type="checkbox" name="product_cost_detail"> ${tr('成本明细', 'Cost detail')}</label>${ui.invites?.emailDelivery ? `<label class="pp-check"><input type="checkbox" name="sendEmail" checked> ${tr('同时发送邀请邮件', 'Also send an email')}</label>` : ''}</div>
+        <div class="pp-invite-grants" ${erp() ? 'hidden' : ''}><label class="pp-check"><input type="checkbox" name="products"> ${tr('产品管理区', 'Product hub')}</label><label class="pp-check"><input type="checkbox" name="product_cost_detail"> ${tr('成本明细', 'Cost detail')}</label>${ui.invites?.emailDelivery ? `<label class="pp-check"><input type="checkbox" name="sendEmail" checked> ${tr('同时发送邀请邮件', 'Also send an email')}</label>` : ''}</div>
         ${ui.inviteError ? `<div class="pp-alert">${esc(ui.inviteError)}</div>` : ''}
         <div class="pp-invite-actions"><button class="pp-btn primary" type="submit" ${ui.inviteBusy ? 'disabled' : ''}>${icon('link')} ${tr('生成邀请链接', 'Create invite link')}</button><span class="pp-hint">${tr('链接 7 天有效，只能使用一次；对方加入后自动出现在组织架构里。', 'Valid 7 days, single use; the person joins the org chart on acceptance.')}</span></div>
       </form></section>`;
@@ -235,19 +237,19 @@
     const opt = (v, label, cur) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(label)}</option>`;
     const check = (u, grant, disabled = false) => `<label class="pp-switch"><input type="checkbox" data-pp-grant="${grant}" data-id="${esc(u.id)}" ${(u.grants || []).includes(grant) ? 'checked' : ''} ${disabled ? 'disabled' : ''}><span></span></label>`;
     return `<div class="pp">${head}${canInvite() && !ui.inviteOpen ? `<div class="pp-org-actions"><button class="btn primary" data-pp="invite-open">${icon('user-plus')} ${tr('邀请成员', 'Invite member')}</button><span class="pp-hint">${tr('邀请不在钉钉里的人加入；关闭“状态”开关即可停用某人。', 'Invite people outside DingTalk; turn off Status to disable someone.')}</span></div>` : ''}${invitePanel(items)}
-      <section class="pp-panel pp-table-panel"><table class="pp-table pp-org" data-help-table="pp-org"><thead><tr><th>${tr('成员', 'Member')}</th><th>${tr('职位', 'Title')}</th><th>${tr('工作地点', 'Work location')}</th><th>${tr('直属上级', 'Manager')}</th><th>${tr('角色', 'Role')}</th><th>${tr('管理员', 'Admin')}</th><th>${tr('产品管理区', 'Product hub')}</th><th>${tr('成本明细', 'Cost detail')}</th><th>${tr('状态', 'Status')}</th></tr></thead><tbody>
+      <section class="pp-panel pp-table-panel"><table class="pp-table pp-org" data-help-table="pp-org"><thead><tr><th>${tr('成员', 'Member')}</th><th>${tr('职位', 'Title')}</th><th>${tr('工作地点', 'Work location')}</th><th>${tr('直属上级', 'Manager')}</th><th>${tr('角色', 'Role')}</th><th>${tr('管理员', 'Admin')}</th>${erp() ? '' : `<th>${tr('产品管理区', 'Product hub')}</th><th>${tr('成本明细', 'Cost detail')}</th>`}<th>${tr('状态', 'Status')}</th></tr></thead><tbody>
       ${items.map(u => `<tr><td><div class="pp-person">${avatar(u, 30)}<div><strong>${esc(u.display_name)}</strong><span>${esc(u.login_email || u.email || u.phone || '')} ${loginBadge(u)}</span><span class="pp-names"><label class="pp-name-field"><em>${tr('中文名', 'Chinese')}</em><input class="pp-inline pp-name ${u.name_zh ? '' : 'missing'}" data-pp-field="nameZh" data-id="${esc(u.id)}" value="${esc(u.name_zh || '')}" maxlength="40" placeholder="${tr('未填写', 'Not set')}" aria-label="${tr('中文名', 'Chinese name')}"></label><label class="pp-name-field"><em>${tr('英文名', 'English')}</em><input class="pp-inline pp-name ${u.name_en ? '' : 'missing'}" data-pp-field="nameEn" data-id="${esc(u.id)}" value="${esc(u.name_en || '')}" maxlength="60" placeholder="${tr('未填写', 'Not set')}" aria-label="${tr('英文名', 'English name')}"></label></span></div></div></td>
         <td><input class="pp-inline" data-pp-field="title" data-id="${esc(u.id)}" value="${esc(u.title || '')}" maxlength="80" placeholder="${tr('职位', 'Title')}"></td>
         <td><input class="pp-inline" data-pp-field="location" data-id="${esc(u.id)}" value="${esc(u.location || '')}" maxlength="80" placeholder="${tr('如 Irvine, CA / 武汉', 'e.g. Irvine, CA')}" list="pp-locations"></td>
         <td><select class="pp-inline" data-pp-field="managerId" data-id="${esc(u.id)}">${opt('', tr('无（最高层）', 'None (top)'), u.manager_id || '')}${items.filter(x => x.id !== u.id).map(x => opt(x.id, x.display_name, u.manager_id)).join('')}</select></td>
         <td><select class="pp-inline" data-pp-field="role" data-id="${esc(u.id)}">${opt('employee', tr('员工', 'Employee'), u.role)}${opt('manager', tr('主管', 'Manager'), u.role)}</select></td>
         <td>${u.adminSource === 'deployment' ? `<span class="pp-lock" title="${tr('由部署配置指定，不能在这里取消', 'Set in deployment config')}">${icon('lock-simple')} ${tr('系统', 'System')}</span>` : `<label class="pp-switch"><input type="checkbox" data-pp-admin data-id="${esc(u.id)}" ${u.admin ? 'checked' : ''}><span></span></label>`}</td>
-        <td>${check(u, 'products')}</td><td>${check(u, 'product_cost_detail', !(u.grants || []).includes('products'))}</td>
+        ${erp() ? '' : `<td>${check(u, 'products')}</td><td>${check(u, 'product_cost_detail', !(u.grants || []).includes('products'))}</td>`}
         <td class="pp-status">${statusCell(u)}</td></tr>${disablePanel(u, items)}`).join('')}
       </tbody></table><datalist id="pp-locations">${[...new Set(ui.org.items.map(u => (u.location || '').trim()).filter(Boolean))].map(l => `<option value="${esc(l)}">`).join('')}</datalist></section>${invitesList()}
       ${disabled.length ? `<section class="pp-panel pp-disabled"><h3 class="pp-sub-h">${icon('user-minus')} ${tr('已停用成员', 'Disabled members')} <b>${disabled.length}</b></h3><table class="pp-table"><tbody>${disabled.map(u => `<tr><td><div class="pp-person dim">${avatar(u, 26)}<div><strong>${esc(u.display_name)}</strong><span>${esc(u.title || '')} ${loginBadge(u)}</span></div></div></td><td class="pp-muted">${u.disabled_at ? tr(`${fmtDay(u.disabled_at)} 停用`, `Disabled ${fmtDay(u.disabled_at)}`) : tr('已离开钉钉', 'Left DingTalk')}</td><td class="pp-right">${canDisable() ? `<button class="pp-btn small" data-pp="enable" data-id="${esc(u.id)}">${icon('arrow-counter-clockwise')} ${tr('恢复', 'Restore')}</button>` : ''}</td></tr>`).join('')}</tbody></table></section>` : ''}
       <div class="pp-notes"><p>${icon('info')} ${tr('修改后立即保存并记录审计日志。“角色”设为主管后，可以管理本部门的任务和目标；钉钉重新登录不会覆盖这里的设置。', 'Changes save immediately and are audited. Managers can manage department tasks and goals; DingTalk re-login keeps these settings.')}</p>
-      <p>${icon('lock-simple')} ${tr('“产品管理区”只给需要的人开通；“成本明细”可以看到价格的计算过程，开通前请确认。客服工作台目前由部署配置管理。', 'Grant Product hub only to those who need it; Cost detail reveals how prices are calculated. Support access is currently managed in deployment config.')}</p></div>
+      ${erp() ? `<p>${icon('shield')} ${tr('产品、价格构成、供应链和仓库库存的权限已移到“产品管理区 → ERP 权限”统一设置。', 'Product, pricing, supply-chain and warehouse access now live in Product hub → ERP permissions.')} <button class="btn small" data-live-page="erp-access">${tr('前往 ERP 权限', 'Open ERP permissions')}</button></p>` : `<p>${icon('lock-simple')} ${tr('“产品管理区”只给需要的人开通；“成本明细”可以看到价格的计算过程，开通前请确认。客服工作台目前由部署配置管理。', 'Grant Product hub only to those who need it; Cost detail reveals how prices are calculated. Support access is currently managed in deployment config.')}</p>`}</div>
     </div>`;
   }
   /* ---------- org chart (everyone): name, title, location ---------- */

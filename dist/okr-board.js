@@ -28,7 +28,8 @@
   const collab = () => S().capabilities?.okrCollaboration === true;
   const me = () => S().actor;
   const isManager = () => me()?.role === 'manager';
-  const nameOf = id => id ? (S().directory.find(u => u.id === id)?.display_name || (orgChart || []).find(u => u.id === id)?.display_name || (me()?.id === id ? me().display_name : id)) : tr('公司','Company');
+  const ownerName = id => { const o = S().objectives.find(x => x.owner_id === id && (x.owner_name_zh || x.owner_name_en || x.owner_name)); return o ? (lang() === 'en' ? o.owner_name_en || o.owner_name_zh || o.owner_name : o.owner_name_zh || o.owner_name_en || o.owner_name) : ''; };
+  const nameOf = id => id ? (S().directory.find(u => u.id === id)?.display_name || (orgChart || []).find(u => u.id === id)?.display_name || (me()?.id === id ? me().display_name : '') || ownerName(id) || id) : tr('公司','Company');
   const initials = id => { const n = nameOf(id).trim(); return /^[\x00-\x7f]+$/.test(n) ? n.split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase() : n.slice(-2); };
   const hue = id => { let h = 0; for (const c of String(id || 'company')) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
   const avatar = (id, size = 28) => `<span class="okb-avatar" style="--okb-h:${hue(id)};width:${size}px;height:${size}px;font-size:${Math.round(size * .38)}px" aria-hidden="true">${esc(initials(id))}</span>`;

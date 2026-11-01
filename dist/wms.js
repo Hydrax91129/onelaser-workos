@@ -44,8 +44,8 @@
     const today = data.movements.filter(m => new Date(m.createdAt).toDateString() === new Date().toDateString()).length;
     return `<div class="wms">
       <div class="page-heading"><div><div class="eyebrow">WORK OS · WMS</div><h1>${tr('库存管理', 'Inventory')}</h1><p>${tr('按 SKU 和库位记录库存。每一次入库、出库、调拨和盘点调整都会留下流水；盘点调整需领导确认后生效。新建 SKU 请到“产品管理”。', 'Stock per SKU and location. Every goods-in, goods-out, transfer and count adjustment is logged; count adjustments take effect after a leader confirms. Create new SKUs in Product catalog.')}</p></div>
-        <div class="heading-actions">${data.canAssign ? `<button class="btn" data-wms="operators">${icon('user-gear')} ${tr('仓库管理员', 'Warehouse operators')}</button>` : ''}</div></div>
-      ${data.canOperate ? '' : `<div class="wms-note">${icon('eye')} ${tr('你可以查看库存；只有主管指定的仓库管理员可以加减库存。', 'You can view stock; only warehouse operators chosen by a manager can change it.')}</div>`}
+        <div class="heading-actions">${data.canAssign ? `<button class="btn" data-live-page="erp-access">${icon('user-gear')} ${tr('库存权限设置', 'Stock permissions')}</button>` : ''}</div></div>
+      ${data.canOperate ? '' : `<div class="wms-note">${icon('eye')} ${tr('你的仓库库存权限是“查看”：可以看库存和流水，不能加减数量。需要管理权限请联系主管在“ERP 权限”里开通。', 'Your warehouse access is view-only: you can see stock and movements but not change quantities. Ask a manager to grant Manage in ERP permissions.')}</div>`}
       <div class="wms-kpis">${data.locations.map(l => `<button class="wms-kpi ${ui.loc === l.id ? 'on' : ''}" data-wms="loc" data-v="${esc(l.id)}"><span>${esc(word(l))}</span><b>${fmtN(data.items.reduce((s, it) => s + Number(it.qty?.[l.id] || 0), 0))}</b><em>${data.items.filter(it => Number(it.qty?.[l.id] || 0) > 0).length} SKU</em></button>`).join('')}
         <div class="wms-kpi ${pending.length ? 'warn' : ''}"><span>${tr('待领导确认', 'Awaiting leader')}</span><b>${pending.length}</b><em>${tr('盘点调整', 'count adjustments')}</em></div>
         <div class="wms-kpi"><span>${tr('今日流水', 'Today')}</span><b>${today}</b><em>${tr('条操作', 'movements')}</em></div></div>

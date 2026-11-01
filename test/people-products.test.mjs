@@ -25,7 +25,7 @@ test('sidebar sections follow the requested order, and restricted pages are gate
   const ids = s => order.filter(o => o[2] === s).map(o => o[0]);
   assert.deepEqual(ids('work'), ['overview', 'okr', 'projects', 'tasks'], 'workbench is the first page of the Workspace');
   assert.deepEqual(ids('reports'), ['okr-analysis', 'project-analysis', 'team']);
-  assert.deepEqual(ids('product'), ['products', 'product-cost', 'supply-chain', 'wms'], 'product hub is its own section with its modules');
+  assert.deepEqual(ids('product'), ['products', 'product-cost', 'supply-chain', 'wms', 'erp-access'], 'product hub is its own section with its modules');
   assert.deepEqual(ids('labs'), ['support', 'knowledge', 'quality']);
   assert.deepEqual(ids('other'), ['settings', 'orgchart', 'org']);
   assert.ok(ids('hidden').includes('executive') && ids('hidden').includes('integrations'), 'executive board removed; integrations moved into settings');

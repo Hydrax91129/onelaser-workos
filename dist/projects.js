@@ -327,7 +327,7 @@
     const lvl = r => r >= 60 ? ['高', 'High', 'bad'] : r >= 30 ? ['中', 'Medium', 'warn'] : ['低', 'Low', 'ok'];
     const totalTasks = rows.reduce((s, r) => s + r.ts.length, 0), totalDone = rows.reduce((s, r) => s + r.done, 0), totalOd = rows.reduce((s, r) => s + r.od.length, 0);
     return `<div class="pj">
-      <div class="page-heading"><div><div class="eyebrow">WORK OS · REPORTS</div><h1>${tr('项目分析', 'Project analysis')}</h1><p>${tr('每个项目的进展、是否按时，以及延期的可能性。', 'Progress, timeliness and delay risk for every project.')}</p><div class="pj-sample">${icon('flask')} ${tr('测试版 · 示例数据：项目管理的后台还在开发，这里的项目和任务是示例，修改不会保存。', 'Test build · sample data: the projects backend is in development; projects and tasks here are examples and changes are not saved.')}</div></div></div>
+      <div class="page-heading"><div><div class="eyebrow">WORK OS · REPORTS</div><h1>${tr('项目分析', 'Project analysis')}</h1><p>${tr('每个项目的进展、是否按时，以及延期的可能性。', 'Progress, timeliness and delay risk for every project.')}</p>${isLive() ? '' : `<div class="pj-sample">${icon('flask')} ${tr('测试版 · 示例数据：项目管理的后台还在开发，这里的项目和任务是示例，修改不会保存。', 'Test build · sample data: the projects backend is in development; projects and tasks here are examples and changes are not saved.')}</div>`}</div></div>
       ${window.WorkOSInsights?.slot('project') || ''}
       ${isLive() ? '' : `<div class="pj-proto">${icon('flask')} ${tr('使用项目管理原型数据；项目管理接入后台后自动换成真实数据', 'Uses project prototype data; switches to real data once projects are connected')}</div>`}
       <div class="pj-an-stats">
