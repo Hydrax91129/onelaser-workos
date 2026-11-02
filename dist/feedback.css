@@ -1,0 +1,34 @@
+/* "Bug 与建议" button, dialog and admin page */
+.fb-btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:0;border-radius:8px;background:#e8452c;color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px #0002}
+.fb-btn:hover{background:#c9351f}.fb-btn:focus-visible{outline:2px solid #e8452c;outline-offset:2px}.fb-btn .ph{font-size:16px}
+@media (max-width:720px){.fb-btn span{display:none}.fb-btn{padding:0 8px}}
+.fb-backdrop{position:fixed;inset:0;background:#0007;z-index:3000}
+.fb-dialog{position:fixed;z-index:3001;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;background:#fff;color:#1f2433;border-radius:14px;box-shadow:0 20px 60px #0004;display:flex;flex-direction:column}
+.fb-dialog header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #eceef3}
+.fb-dialog h2{margin:0;font-size:17px;display:flex;align-items:center;gap:8px}.fb-dialog h2 .ph{color:#e8452c}
+.fb-x{border:0;background:none;font-size:18px;cursor:pointer;color:#5f667a;padding:6px;border-radius:6px}.fb-x:hover{background:#f1f2f6}
+.fb-dialog form{padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+.fb-label{font-size:13px;font-weight:600}
+.fb-dialog textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:10px 12px;border:1px solid #d7dbe5;border-radius:8px;resize:vertical;min-height:110px;background:#fff;color:inherit}
+.fb-drop{display:flex;flex-direction:column;align-items:center;gap:4px;padding:18px;border:2px dashed #c9cfdc;border-radius:10px;color:#4f566b;font-size:13px;cursor:pointer;text-align:center}
+.fb-drop .ph{font-size:24px;color:#6b7185}.fb-drop b{color:#245bdb}.fb-drop small{color:#6b7185}.fb-drop.on,.fb-drop:hover,.fb-drop:focus-visible{border-color:#245bdb;background:#f3f6ff;outline:none}
+.fb-thumbs{display:flex;flex-wrap:wrap;gap:8px}
+.fb-thumb{position:relative;margin:0;width:96px;height:72px;border-radius:8px;overflow:hidden;border:1px solid #dfe3ec;background:#f5f6fa;display:block}
+.fb-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.fb-thumb button{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;border:0;background:#000a;color:#fff;cursor:pointer;display:grid;place-items:center;font-size:12px}
+.fb-meta{margin:0;font-size:12px;color:#5f667a;display:flex;gap:6px;align-items:center}
+.fb-error{margin:0;color:#c62a43;font-size:13px}.fb-error:empty{display:none}
+.fb-dialog footer{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid #eceef3}
+.fb-page .fb-note{display:flex;gap:8px;align-items:flex-start;padding:10px 14px;border-radius:10px;background:#fff7e6;color:#7a4f00;border:1px solid #f2d9a6;font-size:13px;margin-bottom:14px;line-height:1.6}
+.fb-page .fb-note.ok{background:#e9f7ef;color:#16663a;border-color:#bfe5cd}
+.fb-list{display:flex;flex-direction:column;gap:12px}
+.fb-item{border:1px solid var(--border,#e4e7ef);border-radius:12px;padding:14px 16px;background:var(--panel,#fff)}
+.fb-item header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.fb-item header span{color:#5f667a;font-size:12px;flex:1}
+.fb-item p{white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0 0;line-height:1.6}.fb-item .fb-thumbs{margin-top:10px}.fb-item .fb-thumb{width:140px;height:100px}
+.fb-item.done{opacity:.6}
+[data-theme=dark] .fb-dialog{background:#1d1f27;color:#e7e9ef}[data-theme=dark] .fb-dialog header,[data-theme=dark] .fb-dialog footer{border-color:#2d313d}
+[data-theme=dark] .fb-dialog textarea{background:#15171e;border-color:#3a3f4d}[data-theme=dark] .fb-drop{border-color:#4a5062;color:#c3c8d6}[data-theme=dark] .fb-drop b{color:#8fb3ff}
+[data-theme=dark] .fb-drop small,[data-theme=dark] .fb-meta,[data-theme=dark] .fb-item header span{color:#a3a9b8}[data-theme=dark] .fb-drop.on,[data-theme=dark] .fb-drop:hover{background:#1f2738;border-color:#8fb3ff}
+[data-theme=dark] .fb-x{color:#c3c8d6}[data-theme=dark] .fb-x:hover{background:#2a2d38}[data-theme=dark] .fb-error{color:#ff8ea0}
+[data-theme=dark] .fb-page .fb-note{background:#33291a;color:#f0c674;border-color:#5a4520}[data-theme=dark] .fb-page .fb-note.ok{background:#16291f;color:#7fd8a4;border-color:#285a3c}
+[data-theme=dark] .fb-item{background:#1d1f27;border-color:#2d313d}
