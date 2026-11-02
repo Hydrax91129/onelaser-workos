@@ -177,3 +177,5 @@ html[data-theme=dark] .pp-name.missing{background:#3a2f22!important}
 .pp-org tr.pp-group-row.unset .pp-group-name{color:#b25e00}
 html[data-theme=dark] .pp-org tr.pp-group-row.unset td{background:#3a2c14}
 html[data-theme=dark] .pp-org tr.pp-group-row.unset .pp-group-name{color:#ffc46b}
+
+.pp-group-row td{background:var(--surface-2,#f5f6fa);font-size:12px;font-weight:700;color:var(--muted,#5f667a);padding:8px 12px!important}.pp-group-row b{font-weight:600;margin-left:6px;background:var(--blue-wash,#eef2ff);color:var(--blue,#3c64f4);border-radius:999px;padding:0 7px;font-size:11px}

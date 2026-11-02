@@ -56,7 +56,7 @@ test('user guide opens from the top bar, follows the page and covers every rule'
 test('self score needs a written explanation or a file; team OKR groups reports, peers and managers', () => {
   const okr = read('okr-board.js');
   assert.match(okr, /SELF_SCORE|至少 10 个字/); assert.match(okr, /uploadEvidence\(k\.task_id, f\)/); assert.match(okr, /body\.attachmentIds = ids/);
-  for (const t of ['我的汇报线', '团队 OKR（平级同事）', '我的上级', '其他同事']) assert.ok(okr.includes(t), t);
+  for (const t of ['直属下属', '间接下属（下属的团队）', '团队 OKR（平级同事）', '我的上级', '其他同事']) assert.ok(okr.includes(t), t);
   assert.match(okr, /function relationOf\(id\)/);
 });
 

@@ -94,12 +94,13 @@
   }
   function relationOf(id) {
     if (id === '__company' || id === me()?.id) return 'top';
-    const byId = new Map([...chartPeople(), ...S().directory].map(u => [u.id, u]));
+    const byId = new Map([...S().directory, ...chartPeople()].map(u => [u.id, u]));
     let cur = byId.get(id), guard = 0;
-    while (cur && cur.manager_id && guard++ < 20) { if (cur.manager_id === me()?.id) return 'reports'; cur = byId.get(cur.manager_id); }
+    // Direct reports have me as their manager; anyone further down my line is an indirect report.
+    while (cur && cur.manager_id && guard++ < 20) { if (cur.manager_id === me()?.id) return guard === 1 ? 'direct' : 'indirect'; cur = byId.get(cur.manager_id); }
     const mine = byId.get(me()?.id)?.manager_id ?? me()?.manager_id, other = byId.get(id), myDept = me()?.department_id;
     // Without a manager line on the org chart, a department manager leads the department's members.
-    if (other && !other.manager_id && isManager() && other.department_id === myDept && other.role !== 'manager') return 'reports';
+    if (other && !other.manager_id && isManager() && other.department_id === myDept && other.role !== 'manager') return 'direct';
     if (mine && other?.manager_id === mine) return 'peers';
     if (!mine && other && !other.manager_id && other.department_id === myDept && other.role === me()?.role) return 'peers';
     let up = mine, g2 = 0; while (up && g2++ < 20) { if (up === id) return 'managers'; up = byId.get(up)?.manager_id; }
@@ -123,10 +124,16 @@
       [cls(st.lead, st.items), tr('领导', 'Leader'), st.items ? `${st.lead}/${st.items}` : '—', tr(`领导评分：${st.lead}/${st.items} 项`, `Leader scores: ${st.lead}/${st.items}`)]];
     return `<span class="okb-stages">${chips.map(([c, label, val, title]) => `<i class="okb-stage ${c}" title="${esc(title)}">${label} <b>${val}</b></i>`).join('')}</span>`;
   }
+  let viaOf = () => '';
   function peopleSections() {
-    const list = people(), groups = { top:[], reports:[], peers:[], managers:[], others:[] };
+    const list = people(), groups = { top:[], direct:[], indirect:[], peers:[], managers:[], others:[] };
     list.forEach(id => groups[relationOf(id)].push(id));
-    return [['', groups.top], [tr('我的汇报线', 'My reporting line'), groups.reports], [tr('团队 OKR（平级同事）', 'Team OKRs (peers)'), groups.peers], [tr('我的上级', 'My managers'), groups.managers], [tr('其他同事', 'Others'), groups.others]].filter(([, ids]) => ids.length);
+    // Indirect reports are listed next to their own manager, who is shown under the name.
+    const byId = new Map([...S().directory, ...chartPeople()].map(u => [u.id, u]));
+    const boss = id => byId.get(id)?.manager_id || '';
+    groups.indirect.sort((a, b) => nameOf(boss(a)).localeCompare(nameOf(boss(b))) || nameOf(a).localeCompare(nameOf(b)));
+    viaOf = id => groups.indirect.includes(id) ? byId.get(id)?.manager_id || '' : '';
+    return [['', groups.top], [tr('直属下属', 'Direct reports'), groups.direct], [tr('间接下属（下属的团队）', 'Indirect reports (their teams)'), groups.indirect], [tr('团队 OKR（平级同事）', 'Team OKRs (peers)'), groups.peers], [tr('我的上级', 'My managers'), groups.managers], [tr('其他同事', 'Others'), groups.others]].filter(([, ids]) => ids.length);
   }
   function people() {
     const ids = new Set([...S().directory, ...chartPeople()].map(u => u.id));
@@ -435,7 +442,7 @@
       ${cycleBanner()}
       <nav class="okb-tabs" role="tablist">${tabs.map(([id, label, ic]) => `<button type="button" role="tab" aria-selected="${ui.tab === id}" class="${ui.tab === id ? 'active' : ''}" data-okr="tab" data-value="${id}">${icon(ic)} ${label}</button>`).join('')}<span class="okb-tabs-spacer"></span><button type="button" class="okb-btn small" data-okr="rubric">${icon('info')} ${tr('评分标准', 'Scoring guide')}</button></nav>
       ${ui.tab === 'align' ? alignView() : `<div class="okb-layout ${ui.tab === 'mine' ? 'okb-solo' : ''}">
-        ${ui.tab === 'team' ? `<aside class="okb-people"><label class="okb-search">${icon('magnifying-glass')}<input data-okr-search placeholder="${tr('搜索成员', 'Search people')}" value="${esc(ui.search)}"></label>${simple() ? stageLegend() : ''}<ul>${peopleSections().map(([label, ids]) => (label ? `<li class="okb-people-group"><span>${label}</span><b>${ids.length}</b></li>` : '') + ids.map(id => { const objs = objectivesOf(id), pct = averagePct(objs); return `<li><button type="button" class="${ui.person === id ? 'active' : ''}" data-okr="person" data-id="${esc(id)}">${id === '__company' ? `<span class="okb-avatar okb-company">${icon('buildings')}</span>` : avatar(id)}<span class="okb-people-name">${esc(id === '__company' ? tr('公司目标', 'Company objectives') : nameOf(id))}${id === me()?.id ? ` <em>${tr('我', 'Me')}</em>` : ''}</span>${simple() && id !== '__company' ? stageChips(id, objs) : `<span class="okb-people-pct">${objs.length ? (pct === null ? objs.length + tr(' 个', '') : pct + '%') : '—'}</span>`}</button></li>`; }).join('')).join('') || `<li class="okb-hint">${tr('没有匹配的成员', 'No matching people')}</li>`}</ul></aside>` : ''}
+        ${ui.tab === 'team' ? `<aside class="okb-people"><label class="okb-search">${icon('magnifying-glass')}<input data-okr-search placeholder="${tr('搜索成员', 'Search people')}" value="${esc(ui.search)}"></label>${simple() ? stageLegend() : ''}<ul>${peopleSections().map(([label, ids]) => (label ? `<li class="okb-people-group"><span>${label}</span><b>${ids.length}</b></li>` : '') + ids.map(id => { const objs = objectivesOf(id), pct = averagePct(objs); return `<li><button type="button" class="${ui.person === id ? 'active' : ''}" data-okr="person" data-id="${esc(id)}">${id === '__company' ? `<span class="okb-avatar okb-company">${icon('buildings')}</span>` : avatar(id)}<span class="okb-people-name">${esc(id === '__company' ? tr('公司目标', 'Company objectives') : nameOf(id))}${id === me()?.id ? ` <em>${tr('我', 'Me')}</em>` : ''}${viaOf(id) ? `<small class="okb-via">${icon('arrow-elbow-down-right')} ${tr('汇报给', 'reports to')} ${esc(nameOf(viaOf(id)))}</small>` : ''}</span>${simple() && id !== '__company' ? stageChips(id, objs) : `<span class="okb-people-pct">${objs.length ? (pct === null ? objs.length + tr(' 个', '') : pct + '%') : '—'}</span>`}</button></li>`; }).join('')).join('') || `<li class="okb-hint">${tr('没有匹配的成员', 'No matching people')}</li>`}</ul></aside>` : ''}
         <div class="okb-main">${ui.person ? personView(ui.person) : ''}</div>
       </div>`}
     </div>`;

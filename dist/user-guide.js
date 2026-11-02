@@ -101,7 +101,7 @@
         <tr><th>${tr('11 月 25 日 – 30 日', 'Nov 25 – 30')}</th><td>${tr('员工自评。30 日前没有自评的 KR，系统自动按 0 分自评。', 'Self scoring. Any KR without a self score by the 30th is scored 0 automatically.')}</td></tr>
         <tr><th>${tr('11 月 30 日 – 12 月 3 日', 'Nov 30 – Dec 3')}</th><td>${tr('领导评分，系统每天催办，直到评分完成。', 'Leader scoring, with daily reminders until it is done.')}</td></tr>
       </tbody></table>
-      <p>${tr('“团队 OKR”左侧分为“我的汇报线”（下属）、“团队 OKR（平级同事）”、“我的上级”和“其他同事”。每个人名下显示三个状态：本月 OKR 建立（是否已最终发布）、自评进度、领导评分进度。', 'Team OKRs lists my reporting line, team OKRs (peers), my managers and others. Under each name three stages show: OKR set up (published or not), self-score progress and leader-score progress.')}</p>
+      <p>${tr('“团队 OKR”左侧分为“直属下属”、“间接下属（下属的团队，名字下方注明汇报给谁）”、“团队 OKR（平级同事）”、“我的上级”和“其他同事”。每个人名下显示三个状态：本月 OKR 建立（是否已最终发布）、自评进度、领导评分进度。', 'Team OKRs lists direct reports, indirect reports (their teams, with who they report to), team OKRs (peers), my managers and others. Under each name three stages show: OKR set up (published or not), self-score progress and leader-score progress.')}</p>
       ${note('OKR 页面顶部的时间条会显示当前处在哪个阶段。', 'The timeline at the top of the OKR page shows which phase you are in.')}`],
 
     ['projects', 'ph-squares-four', '项目管理', 'Projects', () => `
