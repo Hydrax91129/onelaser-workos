@@ -61,7 +61,7 @@
       const p = data.people.find(x => x.id === b.dataset.user), area = b.dataset.area, before = p.access[area] || 'none';
       if (before === b.dataset.v) return;
       p.access[area] = b.dataset.v; saving = p.id; ctx.rerender();
-      try { await ctx.api.post('/erp/access', { userId:p.id, area, level:b.dataset.v }); ctx.toast?.(tr('已保存', 'Saved')); }
+      try { const r = await ctx.api.post('/erp/access', { userId:p.id, area, level:b.dataset.v }); if (r?.access) p.access = r.access; ctx.toast?.(tr('已保存', 'Saved')); }
       catch (x) { p.access[area] = before; ctx.toast?.(x.message || tr('保存失败', 'Could not save')); }
       finally { saving = ''; ctx.rerender(); }
     }

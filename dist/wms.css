@@ -10,7 +10,7 @@ div.wms-kpi{cursor:default}
 .wms-kpi.on{border-color:#3c64f4;box-shadow:0 0 0 2px #3c64f433}.wms-kpi.warn b{color:#d98a00}
 .wms-pending{border:1px solid #ffe08a;background:#fffaf0;border-radius:12px;padding:10px 14px}
 .wms-pending h3{margin:0 0 6px;font-size:14px;display:flex;gap:6px;align-items:center}.wms-pending h3 b{background:#d98a00;color:#fff;border-radius:999px;padding:0 7px;font-size:11.5px}
-.wms-pend-row{display:grid;grid-template-columns:auto 170px 120px 60px 1fr auto auto auto;gap:10px;align-items:center;padding:7px 0;border-top:1px dashed #f1dca0;font-size:13px}
+.wms-pend-row{display:grid;grid-template-columns:auto 170px 110px 56px 150px 1fr auto auto auto;gap:10px;align-items:center;padding:7px 0;border-top:1px dashed #f1dca0;font-size:13px}
 .wms-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border,#e4e7ef)}
 .wms-tabs button{border:0;background:transparent;font:inherit;padding:8px 12px;cursor:pointer;color:var(--muted,#6b7280);border-bottom:2px solid transparent;display:inline-flex;gap:6px;align-items:center}
 .wms-tabs button.on{color:#3c64f4;border-bottom-color:#3c64f4;font-weight:600}
