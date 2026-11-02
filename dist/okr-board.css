@@ -342,3 +342,6 @@ html[data-theme=dark] .okb-w-bar{background:#1f2738;border-color:#41558f}html[da
 .okb-w-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 2px 56px;font-size:13px}.okb-w-line .okb-w-bad{color:#c62a43}.okb-w-line .okb-w-ok{color:#11744a}.okb-w-note{font-style:normal;color:#8a93a3;font-size:12px}
 html[data-theme=dark] .okb-w-edit.w-bad input{background:#2a1a1c;border-color:#a0434d;color:#ff9aa8}html[data-theme=dark] .okb-w-edit.w-ok input{background:#15291f;border-color:#2f8a5a;color:#8fe0b4}
 html[data-theme=dark] .okb-w-static{background:#262d3a;color:#c9d1df}html[data-theme=dark] .okb-w-static.w-bad{background:#3a1f22;color:#ff9aa8}html[data-theme=dark] .okb-w-static.w-ok{background:#17352a;color:#8fe0b4}html[data-theme=dark] .okb-w-line .okb-w-bad{color:#ff9aa8}html[data-theme=dark] .okb-w-line .okb-w-ok{color:#8fe0b4}
+.okb-title-btn{cursor:pointer;border-bottom:1px dashed transparent}.okb-title-btn:hover{border-bottom-color:#9aa4b5}
+.okb-title-btn:hover::after{content:"✎";margin-left:6px;font-size:.85em;color:#6b7280}
+.okb-target-btn{font-size:inherit;color:inherit}

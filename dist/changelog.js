@@ -22,6 +22,12 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.21', date:'2026-11-02T14:40:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('最终发布前，点击 O、KR 名称和 KR 目标值即可直接修改', 'Before publish, click an objective, KR name or KR target to edit it'),
+      title:c('O 和 KR 点击即改', 'Click to edit objectives and KRs'),
+      changes:[
+        c('最终发布前，点击目标名称、KR 名称、KR 目标值都能直接在原处修改（之前 KR 名称点击没有反应，已修复）；回车或点击别处自动保存，Esc 取消。', 'Before final publish, click an objective name, KR name or KR target to edit in place (KR names did not respond before; fixed); Enter or clicking away saves, Esc cancels.'),
+        c('可修改的文字鼠标移上去会出现虚线和铅笔图标。', 'Editable text shows a dashed underline and a pencil on hover.')] },
     { version:'1.20', date:'2026-11-02T14:25:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('OKR 改名称和分值不再有“保存 / 取消”按钮：回车或点别处自动保存，Esc 取消', 'OKR inline edits: no Save/Cancel buttons; Enter or clicking away saves, Esc cancels'),
       title:c('OKR 编辑去掉保存按钮', 'OKR edits without a Save button'),
