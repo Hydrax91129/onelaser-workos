@@ -112,3 +112,8 @@ html[data-theme=dark] .topbar-right .env{background:#444444;border-color:#5a5a5a
 @media (max-width:560px){.task-edit-form .form-grid{grid-template-columns:1fr}}
 .drawer-title-actions{display:flex;gap:6px;flex:none}.drawer-title-actions .btn{display:inline-flex;align-items:center;gap:6px}.drawer-title-actions .btn .icon{width:15px;height:15px}
 .btn.nudge-btn{border-color:#f0b4a8;background:#fff4f1;color:#b4301b}html[data-theme=dark] .btn.nudge-btn{background:#3a221d;border-color:#7a3a2c;color:#ffb3a3}
+.modal.modal-wide{width:min(920px,100%)}
+.field:has(> :is(input,select,textarea)[required]) > span::after{content:" *";color:#d92d20;font-weight:700}
+.req-note{margin:12px 0 0;font-size:12px;color:#6b7280}.req-note b{color:#d92d20}
+html[data-theme=dark] .field:has(> :is(input,select,textarea)[required]) > span::after,html[data-theme=dark] .req-note b{color:#ff8a8a}
+#overlay-root .modal textarea{resize:vertical}

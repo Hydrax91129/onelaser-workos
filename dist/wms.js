@@ -102,7 +102,7 @@
         ${type === 'transfer' ? `<label class="field"><span>${tr('到库位', 'To')}</span>${locOpts('transit', 'toLocation')}</label>` : ''}
         ${type === 'adjust' ? `<label class="field"><span>${tr('实盘数量', 'Counted quantity')}</span><input name="counted" type="number" min="0" step="1" required><small class="wms-hint" data-wms-current></small></label>` : `<label class="field"><span>${tr('数量', 'Quantity')}</span><input name="qty" type="number" min="1" step="1" required></label>`}
       </div>
-      <label class="field"><span>${tr('原因（必填）', 'Reason (required)')}</span><input name="reason" required minlength="2" maxlength="200" list="wms-reasons"><datalist id="wms-reasons">${reasons.map(r => `<option value="${esc(r)}">`).join('')}</datalist></label>
+      <label class="field"><span>${tr('原因', 'Reason')}</span><input name="reason" required minlength="2" maxlength="200" list="wms-reasons"><datalist id="wms-reasons">${reasons.map(r => `<option value="${esc(r)}">`).join('')}</datalist></label>
       <label class="field"><span>${type === 'out' ? tr('订单号 / 单号（必填）', 'Order / reference no. (required)') : tr('单号（采购单、运单等，选填）', 'Reference (PO, waybill…, optional)')}</span><input name="reference" maxlength="80" ${type === 'out' ? 'required' : ''}></label>
       ${type === 'adjust' ? `<p class="wms-note">${icon('seal-question')} ${tr('盘点调整提交后需要你的直属主管确认，确认后才会改动库存。', 'A count adjustment changes stock only after your manager confirms it.')}</p>` : ''}
       <p class="wms-error" role="alert"></p>
@@ -141,7 +141,7 @@
       <div class="form-grid"><label class="field" data-wms-batch-from hidden><span>${tr('从库位', 'From')}</span>${locOpts('transit', 'location')}</label><label class="field"><span>${tr('入到库位', 'Into location')}</span>${locOpts('us', 'toLocation')}</label></div>
       <label class="field"><span>${tr('SKU 和数量（每行一个，可以从 Excel 直接复制两列粘贴）', 'SKU and quantity (one per line; paste two columns from Excel)')}</span><textarea name="lines" rows="8" required data-wms-batch-lines placeholder="${tr('例如：ODL-XRF-38-US01 20（一行一个）', 'e.g. SKU-001 20 (one per line)')}"></textarea></label>
       <div data-wms-batch-preview></div>
-      <div class="form-grid"><label class="field"><span>${tr('原因（必填）', 'Reason (required)')}</span><input name="reason" required minlength="2" maxlength="200" list="wms-batch-reasons" value="${tr('采购到货', 'Purchase received')}"><datalist id="wms-batch-reasons"><option value="${tr('采购到货', 'Purchase received')}"><option value="${tr('到港入仓', 'Arrived at warehouse')}"><option value="${tr('退货入库', 'Customer return')}"></datalist></label>
+      <div class="form-grid"><label class="field"><span>${tr('原因', 'Reason')}</span><input name="reason" required minlength="2" maxlength="200" list="wms-batch-reasons" value="${tr('采购到货', 'Purchase received')}"><datalist id="wms-batch-reasons"><option value="${tr('采购到货', 'Purchase received')}"><option value="${tr('到港入仓', 'Arrived at warehouse')}"><option value="${tr('退货入库', 'Customer return')}"></datalist></label>
       <label class="field"><span>${tr('单号（柜号、采购单等，选填）', 'Reference (container, PO…, optional)')}</span><input name="reference" maxlength="80"></label></div>
       <p class="wms-error" role="alert"></p></form>`, `<button class="btn" data-live-action="close">${tr('取消', 'Cancel')}</button><button class="btn primary" type="submit" form="wms-batch">${tr('确认入库', 'Confirm')}</button>`);
   }

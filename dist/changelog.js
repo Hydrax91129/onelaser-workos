@@ -22,6 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.14', date:'2026-11-02T11:05:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('工作台新增“下达任务给同事”；下达任务弹窗更宽、输入框随内容变高、必填项标红色 *', 'Assign Task on the Work Center; wider assign dialog, growing text boxes, red * on required fields'),
+      title:c('下达任务入口与弹窗改进', 'Assign Task entry and dialog'),
+      changes:[
+        c('个人工作台顶部：“新建个人任务”（给自己）和“下达任务给同事”（给别人，你是验收人）并排放在一起。', 'Work Center: “New task for me” and “Assign Task” sit side by side.'),
+        c('下达任务弹窗加宽；描述、支持、交付标准输入框随文字自动变高，超过约六成屏幕高度后可滚动查看。', 'The Assign Task dialog is wider; text boxes grow as you type and scroll past about 60% of the screen.'),
+        c('所有弹窗里的必填项在名称后显示红色 *。', 'Required fields in dialogs show a red *.')] },
     { version:'1.13', date:'2026-11-02T10:50:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
       short:c('新建任务的期望成果和验收标准输入框加高到 3 行；手机上新建任务和选日期更好用', 'Taller outcome and criteria boxes (3 lines); new task and date picking fit phones'),
       title:c('新建任务输入框加高、手机适配', 'Taller new-task boxes, phone layout'),

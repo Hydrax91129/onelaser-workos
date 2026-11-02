@@ -95,3 +95,5 @@ html[data-theme=dark] .ri-src.direct{background:#24324f;color:#9dbbff}html[data-
 .ri-nudged{flex:none;font-size:12px;color:#1f7a4c;display:inline-flex;gap:3px;align-items:center;padding:0 6px}
 .ri-nudge-tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:4px;background:#ffe6df;color:#a52a16;margin-right:4px}
 html[data-theme=dark] .ri-nudge-btn,html[data-theme=dark] .ri-nudge-all{background:#3a221d;border-color:#7a3a2c;color:#ffb3a3}html[data-theme=dark] .ri-nudged{color:#78d6a3}html[data-theme=dark] .ri-nudge-tag{background:#4a2620;color:#ffb3a3}
+.ri-assign-btn{background:#fff;border:1px solid #3370ff;color:#2558d9;font-weight:600}.ri-assign-btn:hover{background:#eef3ff}
+html[data-theme=dark] .ri-assign-btn{background:transparent;border-color:#6d95ff;color:#a8c2ff}html[data-theme=dark] .ri-assign-btn:hover{background:#1f2738}

@@ -349,7 +349,8 @@
     ['[data-live-action="refresh"]', h('刷新数据','从服务器重新读取最新数据。','同事刚更新了内容、而你这里没变化时点击。','Refresh data','Reloads the latest data from the server.','Click when a colleague has updated something you don’t see yet.')],
 
     // Overview / shared
-    ['[data-live-action="new-task"]', h('新建任务','给自己或同事布置一项有明确交付和验收标准的工作。','填写标题、说明、负责人、验收人、截止时间和验收标准（每行一条），可关联一个 KR。','New task','Assign a piece of work with a clear deliverable and acceptance criteria.','Fill in title, description, owner, reviewer, due date and criteria (one per line); optionally link a KR.')],
+    ['[data-live-action="new-task"]', h('新建个人任务','给自己建一项任务，出现在你的“个人任务”里。','要给别人布置工作，请用旁边的“下达任务给同事”。','New task for me','Create a task for yourself; it appears in My tasks.','To give work to someone else, use Assign Task next to it.')],
+    ['[data-live-action="assign-task"]', h('下达任务给同事','给公司任何同事下达任务，跨部门也可以。','任务进入对方的个人任务，你是验收人；到期前会自动提醒对方。','Assign Task','Give a task to any colleague, across teams.','It goes to their My tasks and you review it; they are reminded before it is due.')],
     ['.btn[data-live-page="tasks"]', h('全部任务','跳转到个人任务查看完整任务列表。','点击进入任务看板。','All tasks','Goes to the full task list in the Task hub.','Click to open the task board.')],
     ['.btn[data-live-page="support"]', h('进入客服工作台','跳转到客服工作台查看工单详情。','点击进入。','Open support','Goes to the support workspace.','Click to open.')],
     ['.btn[data-live-page]', h('查看全部','跳转到对应页面查看完整内容。','','View all','Opens the full page.','')],
