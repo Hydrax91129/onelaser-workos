@@ -244,7 +244,7 @@
         <span class="okb-kr-tag">KR${krsOf(o).length + 1}</span>
         <input name="title" placeholder="${tr('关键结果：怎样证明目标达成，例如：新增 30 家经销商', 'Key result, e.g. Sign 30 new dealers')}" required minlength="2" maxlength="300" data-okr-autofocus>
         <label class="okb-mini okb-target"><span>${tr('目标值', 'Target')}</span><input name="targetText" required maxlength="120" placeholder="${tr('填“完成”，或明确数字：30 家 / 3%', '“Done”, or a number: 30 dealers / 3%')}"></label>
-        <label class="okb-mini"><span>${tr('权重 %（占本目标）', 'Weight % of objective')}</span><input name="weight" type="number" min="1" max="${ks.length ? 100 - ks.length : 100}" step="0.01" value="${def}" required data-okr-weight-preview="kr" data-objective="${esc(o.id)}"></label>
+        <label class="okb-mini"><span>${tr('权重 %（占本目标）', 'Weight % of objective')}</span><input name="weight" type="number" min="1" max="100" step="0.01" value="${def}" required data-okr-weight-preview="kr" data-objective="${esc(o.id)}"></label>
         <div class="okb-form-actions"><span class="okb-form-tip" data-okr-preview>${previewText('kr', o.id, def)}</span><button class="okb-btn primary small" type="submit">${tr('添加', 'Add')}</button><button class="okb-btn small" type="button" data-okr="cancel-add">${tr('取消', 'Cancel')}</button></div>
         <p class="okb-form-error" role="alert"></p>
       </form>`;
@@ -314,17 +314,22 @@
   function earnedChip(o) { const e = earnedOf(o); return `<span class="okb-earned" title="${tr('= Σ（目标分值 × KR 权重 × KR 最终分）', '= Σ (points × KR % × KR final score)')}">${tr('得', 'Earned')} <b>${e.earned === null ? '—' : num(e.earned)}</b> / ${num(oPoints(o))}${e.pending ? `<i>${tr(`${e.pending} 条待评`, `${e.pending} pending`)}</i>` : ''}</span>`; }
   function simpleKrs(o, krs, edit) {
     const sumW = krs.reduce((n, k) => n + (Number.isFinite(k.planning?.weight) ? k.planning.weight : 0), 0), allSet = krs.length && krs.every(k => Number.isFinite(k.planning?.weight));
-    const weighing = edit && collab() && ui.weighting === o.id && krs.length;
+    const live = !!(edit && collab() && krs.length), wCls = krs.length ? (weightsOk(o) ? 'w-ok' : 'w-bad') : '';
     return `<div class="okb-krs okb-krs-simple">${krs.map((k, i) => { const share = krShare(o, k), pts = krPoints(o, k), f = finalOf(k); const target = k.planning?.targetText || (Number.isFinite(k.target) && k.unit !== '完成' ? `${k.target} ${k.unit || ''}` : tr('完成', 'Done'));
       return `<div class="okb-kr okb-kr-simple" data-kr="${esc(k.id)}"><span class="okb-kr-tag">KR${i + 1}</span>
         <div class="okb-kr-main"><div class="okb-kr-title">${edit && collab() ? `<button type="button" class="okb-title-btn" data-okr="edit" data-kind="kr-title" data-id="${esc(k.id)}">${tx(k.title)}</button>` : `<span>${tx(k.title)}</span>`}</div><div class="okb-kr-target">${icon('flag')} ${tr('目标值', 'Target')}：${tx(target)}</div></div>
-        <div class="okb-kr-weight">${weighing ? `<label class="okb-w-edit"><input type="number" min="0" max="100" step="0.01" inputmode="decimal" data-okr-w="${esc(k.id)}" data-objective="${esc(o.id)}" value="${esc(ui.wDraft[k.id] ?? '')}" aria-label="${esc(tr(`KR${i + 1} 权重 %`, `KR${i + 1} weight %`))}"><span>%</span><em data-okr-wpts="${esc(k.id)}">${num(oPoints(o) * (Number(ui.wDraft[k.id]) || 0) / 100)} ${tr('分', 'pts')}</em></label>` : edit && collab() ? `<button type="button" class="okb-chip okb-chip-edit" data-okr="weights" data-id="${esc(o.id)}" title="${tr('点击自己填写每条 KR 的权重，合计 100% 即可', 'Click to type each KR’s weight; they just need to total 100%')}">${icon('pencil-simple')} ${share ? `${num(share)}% · ${num(pts)} ${tr('分', 'pts')}` : tr('未填权重', 'No weight')}</button>` : `<span class="okb-chip">${share ? `${num(share)}% · ${num(pts)} ${tr('分', 'pts')}` : tr('未填权重', 'No weight')}</span>`}</div>
+        <div class="okb-kr-weight">${live ? `<label class="okb-w-edit ${wCls}"><input type="number" min="0" max="100" step="0.01" inputmode="decimal" data-okr-w="${esc(k.id)}" data-objective="${esc(o.id)}" value="${esc(Number(k.planning?.weight) > 0 ? Number(k.planning.weight) : '')}" aria-label="${esc(tr(`KR${i + 1} 权重 %`, `KR${i + 1} weight %`))}" title="${esc(tr('直接修改，离开输入框自动保存', 'Edit; saves when you leave the box'))}"><span>%</span><em data-okr-wpts="${esc(k.id)}">${num(pts)} ${tr('分', 'pts')}</em></label>` : `<span class="okb-w-static ${wCls}">${num(share)}% · ${num(pts)} ${tr('分', 'pts')}</span>`}</div>
         <div class="okb-kr-score">${scoreBlock('kr', k, o)}</div>
         <div class="okb-kr-got" title="${esc(tr(`${num(oPoints(o))} 分 × ${num(share)}% × ${f === null ? '待评' : num(f) + '%'}`, `${num(oPoints(o))} × ${num(share)}% × ${f === null ? 'pending' : num(f) + '%'}`))}">${f === null ? '—' : num(pts * f / 100)}</div>
       </div>${ui.scoring && ui.scoring.kind === 'kr' && ui.scoring.id === k.id ? scoreForm('kr', k, o) : ''}`; }).join('') || `<div class="okb-empty-row">${tr('还没有关键结果。没有 KR 时直接给整个目标打分；也可以添加 KR，按权重拆分分值。', 'No key results. Score the objective directly, or add KRs to split its points by weight.')}</div>`}
-      ${weighing ? weightBar(o, krs) : ''}
-      ${krs.length && !weightsOk(o) && !weighing ? (() => { const unset = krs.filter(k => !(Number(k.planning?.weight) > 0)).length, over = sumW - 100; return over > 0.01 ? `<div class="okb-warn okb-warn-bad">${icon('warning-octagon')} ${tr(`KR 权重合计 ${num(sumW)}%，超出 ${num(over)}%。同一目标下所有 KR 的权重合计必须正好 100%，请调低某条 KR 的权重。`, `KR weights total ${num(sumW)}%, ${num(over)}% too much. KR weights under one objective must add up to exactly 100%; lower one of them.`)}</div>` : `<div class="okb-warn">${icon('warning')} ${tr(`KR 权重合计 ${num(sumW)}%，还差 ${num(100 - sumW)}%${unset ? `，有 ${unset} 条未填权重` : ''}。点“设置权重”自己分配，补齐到正好 100% 后才能评分。`, `KR weights total ${num(sumW)}%, ${num(100 - sumW)}% missing${unset ? `; ${unset} without a weight` : ''}. Scoring opens once they add up to exactly 100%.`)}</div>`; })() : ''}
-      ${edit ? (ui.adding && ui.adding.kind === 'kr' && ui.adding.id === o.id ? newKrForm(o) : `<div class="okb-add-line"><button type="button" class="okb-add-row" data-okr="add-kr" data-id="${esc(o.id)}">${icon('plus')} ${tr('添加关键结果', 'Add key result')}</button>${krs.length && collab() && !weighing ? `<button type="button" class="okb-add-row okb-w-open" data-okr="weights" data-id="${esc(o.id)}">${icon('percent')} ${tr('设置权重', 'Set weights')}</button>` : ''}</div>`) : ''}</div>`;
+      ${krs.length ? `<div class="okb-w-line" data-okr-wline="${esc(o.id)}">${wLine(sumW, krs.filter(k => !(Number(k.planning?.weight) > 0)).length, live, o.id)}</div>` : ''}
+      ${edit ? (ui.adding && ui.adding.kind === 'kr' && ui.adding.id === o.id ? newKrForm(o) : `<div class="okb-add-line"><button type="button" class="okb-add-row" data-okr="add-kr" data-id="${esc(o.id)}">${icon('plus')} ${tr('添加关键结果', 'Add key result')}</button></div>`) : ''}</div>`;
+  }
+  /* KR weights are typed in place and saved on their own (no confirm). Green when an objective's KRs total exactly 100%, red otherwise with how far off. */
+  function wLine(sum, zero, live, oid) {
+    const t = Math.round(sum * 100) / 100, d = Math.round((100 - t) * 100) / 100;
+    if (Math.abs(d) < 0.01 && !zero) return `<span class="okb-w-ok">${icon('check-circle')} ${tr('KR 权重合计 100%', 'KR weights total 100%')}</span>`;
+    return `<span class="okb-w-bad">${icon('warning')} ${tr(`KR 权重合计 ${num(t)}%，${d > 0 ? `离 100% 还差 ${num(d)}%` : `超出 100% ${num(-d)}%`}${zero ? `；有 ${zero} 条未填` : ''}`, `KR weights total ${num(t)}%: ${d > 0 ? `${num(d)}% short of 100%` : `${num(-d)}% over 100%`}${zero ? `; ${zero} empty` : ''}`)}</span>${live ? `<button type="button" class="okb-btn small" data-okr="weights-even-save" data-id="${esc(oid)}">${tr('平均分配', 'Split evenly')}</button>` : ''}<em class="okb-w-note">${tr('合计 100% 后才能评分和最终发布', 'Scoring and final publish need exactly 100%')}</em>`;
   }
   /* KR weight editor: people type each KR's % themselves; saving needs exactly 100% in total. */
   const wTotal = krs => Math.round(krs.reduce((n, k) => n + (Number(ui.wDraft[k.id]) || 0), 0) * 100) / 100;
@@ -396,7 +401,8 @@
     if (!others.length) return tr('同一目标下 KR 权重合计 100%', 'KR weights total 100%');
     const sum = others.reduce((a, b) => a + b.w, 0), target = Math.max(0, 100 - (Number(w) || 0));
     if (Math.abs(sum - target) < 0.01) return tr(`= ${num(oPoints(objectiveById(objectiveId)) * (Number(w) || 0) / 100)} 分；合计正好 100%`, `= ${num(oPoints(objectiveById(objectiveId)) * (Number(w) || 0) / 100)} pts; total exactly 100%`);
-    return tr('添加后可以在“设置权重”里自己分配；先暂按比例调整为：', 'You can set every weight yourself after adding; for now others become: ') + others.map(x => `${x.label} ${num(Math.round((sum > 0 ? x.w * target / sum : target / others.length) * 100) / 100)}%`).join('、');
+    const t = Math.round((sum + (Number(w) || 0)) * 100) / 100, d = Math.round((100 - t) * 100) / 100;
+    return tr(`添加后合计 ${num(t)}%，${d > 0 ? `还差 ${num(d)}%` : `超出 ${num(-d)}%`}；其他 KR 不会自动改，添加后直接改红色的权重即可。`, `Total after adding: ${num(t)}% (${d > 0 ? `${num(d)}% short` : `${num(-d)}% over`}); other KRs stay as they are, edit the red weights after adding.`);
   }
   function readiness(objs) {
     const problems = [], total = objs.reduce((s, o) => s + (Number(o.planning?.weight) > 0 ? Number(o.planning.weight) : 0), 0);
@@ -526,12 +532,23 @@
 
   document.addEventListener('input', e => {
     const w = e.target; if (!w.matches?.('[data-okr-w]')) return;
-    ui.wDraft[w.dataset.okrW] = w.value === '' ? '' : Number(w.value);
-    const o = objectiveById(w.dataset.objective), ks = krsOf(o), bar = document.querySelector(`[data-okr-wbar="${CSS.escape(o.id)}"]`);
+    const o = objectiveById(w.dataset.objective); if (!o) return;
     const pts = document.querySelector(`[data-okr-wpts="${CSS.escape(w.dataset.okrW)}"]`); if (pts) pts.textContent = `${num(oPoints(o) * (Number(w.value) || 0) / 100)} ${tr('分', 'pts')}`;
-    if (bar) { bar.querySelector('[data-okr-wsum]').innerHTML = wStatus(ks); bar.querySelector('[data-okr="weights-save"]').disabled = !wReady(ks); }
+    const inputs = [...document.querySelectorAll(`[data-okr-w][data-objective="${CSS.escape(o.id)}"]`)], sum = inputs.reduce((n, x) => n + (Number(x.value) || 0), 0), zero = inputs.filter(x => !(Number(x.value) > 0)).length;
+    const ok = Math.abs(sum - 100) < 0.01 && !zero;
+    inputs.forEach(x => { const l = x.closest('.okb-w-edit'); if (l) { l.classList.toggle('w-ok', ok); l.classList.toggle('w-bad', !ok); } });
+    const line = document.querySelector(`[data-okr-wline="${CSS.escape(o.id)}"]`); if (line) line.innerHTML = wLine(sum, zero, true, o.id);
   });
-  document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches?.('[data-okr-w]')) { e.preventDefault(); document.querySelector('[data-okr="weights-save"]:not([disabled])')?.click(); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches?.('[data-okr-w]')) { e.preventDefault(); e.target.blur(); } });
+  document.addEventListener('change', async e => {
+    const w = e.target; if (!w.matches?.('[data-okr-w]')) return;
+    const k = findKr(w.dataset.okrW); if (!k) return;
+    const v = w.value === '' ? 0 : Number(w.value);
+    if (!(v >= 0 && v <= 100)) { ctx.toast?.(tr('权重要在 0–100% 之间', 'Weight must be 0–100%')); return; }
+    if (Math.abs(v - (Number(k.planning?.weight) || 0)) < 0.001) return;
+    await mutate(() => patchKr(k, { weight:v }), tr('权重已保存', 'Weight saved'));
+    rerender();
+  });
   document.addEventListener('input', e => {
     const el = e.target; if (!el.matches?.('[data-okr-weight-preview]')) return;
     const tip = el.closest('form')?.querySelector('[data-okr-preview]'); if (!tip) return;
@@ -559,6 +576,7 @@
       case 'add-kr': ui.adding = { kind:'kr', id }; ui.editing = null; ui.weighting = null; return rerender();
       case 'weights': { const o = objectiveById(id); if (!o) return; ui.weighting = id; ui.adding = null; ui.editing = null; ui.wDraft = Object.fromEntries(krsOf(o).map(k => [k.id, Number(k.planning?.weight) > 0 ? Number(k.planning.weight) : ''])); rerender(); requestAnimationFrame(() => document.querySelector(`[data-okr-w][data-objective="${CSS.escape(id)}"]`)?.focus()); return; }
       case 'weights-cancel': ui.weighting = null; ui.wDraft = {}; return rerender();
+      case 'weights-even-save': { const o = objectiveById(id), ks = krsOf(o); if (!ks.length) return; const base = Math.floor(10000 / ks.length) / 100; await mutate(() => ctx.api.post('/objectives/' + encodeURIComponent(o.id) + '/kr-weights', { weights:ks.map((k, i) => ({ id:k.id, weight:i === 0 ? Math.round((100 - base * (ks.length - 1)) * 100) / 100 : base })) }), tr('已平均分配，合计 100%', 'Split evenly; total 100%')); return rerender(); }
       case 'weights-even': { const ks = krsOf(objectiveById(id)), base = Math.floor(10000 / ks.length) / 100; ks.forEach((k, i) => { ui.wDraft[k.id] = i === 0 ? Math.round((100 - base * (ks.length - 1)) * 100) / 100 : base; }); return rerender(); }
       case 'weights-save': { const o = objectiveById(id), ks = krsOf(o); if (!wReady(ks)) return; const ok = await mutate(() => ctx.api.post('/objectives/' + encodeURIComponent(o.id) + '/kr-weights', { weights:ks.map(k => ({ id:k.id, weight:Number(ui.wDraft[k.id]) })) }), tr('KR 权重已保存', 'KR weights saved')); if (ok) { ui.weighting = null; ui.wDraft = {}; } return rerender(); }
       case 'add-o': ui.adding = { kind:'o' }; ui.editing = null; return rerender();
@@ -626,12 +644,10 @@
       const o = objectiveById(form.dataset.objectiveId), text = String(v.targetText || '').trim(), m = /^([0-9]+(?:\.[0-9]+)?)\s*(.*)$/.exec(text);
       const left = Math.round((100 - krSum(o)) * 100) / 100, w = Number(v.weight);
       if (!(w > 0)) { if (err) err.textContent = tr('请填写这条 KR 的权重。', 'Enter this KR’s weight.'); return; }
-      if (krsOf(o).length && w > 100 - krsOf(o).length) { if (err) err.textContent = tr(`其他 KR 每条至少保留 1%，这条最多 ${100 - krsOf(o).length}%。`, `Leave at least 1% for each other KR; at most ${100 - krsOf(o).length}%.`); return; }
       const planning = { weight:w, description:'', targetText:text };
       const body = m && Number(m[1]) > 0 ? { title:v.title.trim(), baseline:0, target:Number(m[1]), direction:'increase', unit:(m[2] || '').trim().slice(0, 30) || tr('项', 'units'), planning } : { title:v.title.trim(), baseline:0, target:1, direction:'increase', unit:'完成', planning };
-      body.rebalance = true;
-      const ok = await mutate(() => ctx.api.post('/objectives/' + encodeURIComponent(o.id) + '/key-results', body), left >= w - 0.001 ? tr('关键结果已添加', 'Key result added') : tr('关键结果已添加，其他 KR 已按比例调整', 'Key result added; other KRs rescaled'));
-      if (ok) { ui.adding = null; const fresh = objectiveById(o.id); ui.weighting = o.id; ui.wDraft = Object.fromEntries(krsOf(fresh).map(k => [k.id, Number(k.planning?.weight) > 0 ? Number(k.planning.weight) : ''])); }
+      const ok = await mutate(() => ctx.api.post('/objectives/' + encodeURIComponent(o.id) + '/key-results', body), Math.abs(krSum(o) + w - 100) < 0.01 ? tr('关键结果已添加，KR 权重合计 100%', 'Key result added; weights total 100%') : tr('关键结果已添加；KR 权重合计还不是 100%，直接改红色的权重即可', 'Key result added; weights don’t total 100% yet, edit the red ones'));
+      if (ok) ui.adding = null;
       rerender(); return;
     }
     if (form.id === 'okr-new-kr') {

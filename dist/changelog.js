@@ -22,6 +22,14 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.18', date:'2026-11-02T12:40:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('新增退货维修；OKR 发布前所有分值和 KR 权重可直接改，合计不是 100% 显示红色并提示差多少', 'Returns & repairs; OKR points and KR weights editable in place before publish, red until they total 100%'),
+      title:c('退货维修、KR 权重直接修改', 'Returns & repairs, KR weights in place'),
+      changes:[
+        c('“产品与库存”新增“退货维修”：登记退货（SKU、序列号、客户、订单、原因、收货日期），指定维修人员，填写问题诊断和更换配件，上传收货 / 诊断 / 维修后照片，自动计算维修用时。', 'New Returns & repairs tab: register returns, assign a technician, record diagnosis and parts, upload photos, repair time computed automatically.'),
+        c('修好后结案退回库存（默认进入新增的“美国仓·翻新品”库位，自动记一条库存入库流水），也可以报废或寄回客户；退回库存后可设置折扣和售价，标记网站待上架 / 已上架 / 已售出。', 'Restocking adds a goods-in movement (new US refurbished location); scrap or return also supported; refurbished units get a discount, price and listing status.'),
+        c('OKR：最终发布前，目标分值和 KR 权重随时可以直接改，不再需要点“确定 / 保存权重”，也不会因为超过 100 被拒绝。', 'OKR: before final publish, objective points and KR weights can be changed any time, without a confirm step or an over-100 refusal.'),
+        c('同一目标下 KR 权重合计不是 100% 时，权重显示红色并提示离 100% 还差多少（或超出多少）；正好 100% 显示绿色。合计 100% 后才能评分和最终发布。', 'KR weights show red with how far from 100% they are, green at exactly 100%; scoring and publish need 100%.')] },
     { version:'1.17', date:'2026-11-02T11:40:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
       short:c('登录后加载时显示工作台的预览骨架，不再闪出登录页和价值观画面', 'While loading after sign-in, show the Work Center outline instead of the sign-in and values page'),
       title:c('登录后加载显示工作台骨架', 'Work Center outline while loading'),

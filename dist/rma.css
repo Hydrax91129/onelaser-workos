@@ -1,0 +1,24 @@
+.rma .rma-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:4px 0 16px}
+.rma-kpi{border:1px solid var(--border,#e4e7ef);border-radius:10px;padding:12px 14px;background:var(--surface,#fff);display:flex;flex-direction:column;gap:2px}
+.rma-kpi span{font-size:12px;color:#6b7280}.rma-kpi b{font-size:24px;line-height:1.2}.rma-kpi b small{font-size:13px;font-weight:500;color:#6b7280}.rma-kpi em{font-style:normal;font-size:12px;color:#6b7280}
+.rma-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.rma-bar .wms-search{flex:1;min-width:220px}
+.rma-views{display:flex;gap:4px;flex-wrap:wrap}.rma-views button{border:1px solid var(--border,#d7dbe5);background:var(--surface,#fff);border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer;color:inherit}
+.rma-views button b{font-weight:600;color:#6b7280;margin-left:2px}.rma-views button.on{background:#eef3ff;border-color:#3370ff;color:#1f3f99}.rma-views button.on b{color:#1f3f99}
+.rma-table td small{display:block;color:#6b7280;font-size:12px}.rma-row{cursor:pointer}.rma-row:hover td{background:#f6f8fc}.rma-table td.late,.rma-facts dd.late{color:#c62a43;font-weight:600}
+.rma-badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:#eef0f4;color:#4b5565}
+.rma-badge.blue{background:#e8efff;color:#2448b5}.rma-badge.amber{background:#fff4dc;color:#8a5a00}.rma-badge.green{background:#e3f6ea;color:#16794a}.rma-badge.red{background:#fde8ea;color:#b4233a}.rma-badge.done{background:#eef0f4;color:#4b5565}
+.rma-detail{display:flex;flex-direction:column;gap:14px}.rma-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14px}
+.rma-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 18px;margin:0}.rma-facts div.full{grid-column:1/-1}.rma-facts dt{font-size:12px;color:#6b7280}.rma-facts dd{margin:2px 0 0;font-size:14px;white-space:pre-wrap}
+.rma-sec{border-top:1px solid var(--border,#e4e7ef);padding-top:12px}.rma-sec h3{font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:6px}
+.rma-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.rma-sep{flex:1}.rma-inline{display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.rma-photos{margin-bottom:10px}.rma-photos h4{font-size:13px;margin:0 0 6px;color:#4b5565}.rma-photos h4 small{color:#9aa4b5;font-weight:500}
+.rma-thumbs{display:flex;gap:8px;flex-wrap:wrap}.rma-thumb img{width:88px;height:88px;object-fit:cover;border-radius:8px;border:1px solid var(--border,#e4e7ef);background:#f1f3f7;display:block}
+.rma-add{width:88px;height:88px;border:1.5px dashed #c5ccda;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;color:#5b6475;cursor:pointer;text-align:center;padding:4px}
+.rma-add i{font-size:20px}.rma-add.over{border-color:#3370ff;background:#eef3ff}
+.rma-timeline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:13px}.rma-timeline time{color:#9aa4b5;margin-left:6px;font-size:12px}
+@media(max-width:900px){.rma .rma-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.rma-facts{grid-template-columns:1fr 1fr}}
+html[data-theme=dark] .rma-kpi,html[data-theme=dark] .rma-views button{background:#171b24;border-color:#2c3341}html[data-theme=dark] .rma-views button.on{background:#1f2738;border-color:#6d95ff;color:#cddaff}
+html[data-theme=dark] .rma-row:hover td{background:#1c212c}html[data-theme=dark] .rma-badge{background:#262d3a;color:#c9d1df}html[data-theme=dark] .rma-badge.blue{background:#1d2a4a;color:#a8c2ff}
+html[data-theme=dark] .rma-badge.amber{background:#3a2e12;color:#f3cf7a}html[data-theme=dark] .rma-badge.green{background:#17352a;color:#8fe0b4}html[data-theme=dark] .rma-badge.red{background:#3a1f22;color:#ff9aa8}
+html[data-theme=dark] .rma-kpi span,html[data-theme=dark] .rma-kpi em,html[data-theme=dark] .rma-kpi b small,html[data-theme=dark] .rma-facts dt,html[data-theme=dark] .rma-table td small{color:#9aa4b5}
+html[data-theme=dark] .rma-add{border-color:#3a4252;color:#b7c0d1}html[data-theme=dark] .rma-thumb img{background:#262d3a;border-color:#323a49}
