@@ -15,21 +15,20 @@
   'use strict';
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   const icon = n => `<i class="ph ph-${n}" aria-hidden="true"></i>`;
-  const AI = { zh:'Claude（AI 编程助手）', en:'Claude (AI coding assistant)' };
-  const BOSS = { zh:'cxw2020@gmail.com（Render）', en:'cxw2020@gmail.com (Render)' };
-  const ELIAN = { zh:'Elian（Render，迁移期间）', en:'Elian (Render, during the migration)' };
+  const KC = { zh:'KC', en:'KC' };
+  const ELIAN = { zh:'Elian', en:'Elian' };
   const c = (zh, en) => ({ zh, en });
 
   const RELEASES = [
-    { version:'v1.6', date:'2026-11-02T01:30:00-08:00', status:'pending', frontend:'', backend:'', author:c('Claude（AI 编程助手），Elian 发起', 'Claude (AI coding assistant), requested by Elian'), deployer:null,
+    { version:'v1.6', date:'2026-11-02T01:30:00-08:00', status:'pending', frontend:'', backend:'', author:ELIAN, deployer:null,
       title:c('新增“版本更新”页', 'New “Release notes” page'),
       changes:[c('“其他”分组下新增“版本更新”：列出每次上线的迭代号、改了什么、谁修改、谁发布，以及前后端提交号；当前线上版本自动标出。', 'New “Release notes” under Other: every release with its number, what changed, who changed and deployed it, and the frontend/backend commits; the live version is marked automatically.')] },
-    { version:'v1.5', date:'2026-11-02T00:50:00-08:00', frontend:'612588a', backend:'841b46b', author:AI, deployer:BOSS,
+    { version:'v1.5', date:'2026-11-02T00:50:00-08:00', frontend:'612588a', backend:'841b46b', author:KC, deployer:KC,
       title:c('公司 OKR 可编辑、负责人头像配色', 'Editable company OKR, owner avatar colours'),
       changes:[
         c('公司 OKR 的负责人和管理员可以编辑公司目标，包括 KR 权重。', 'The company OKR owner and admins can edit company objectives, including KR weights.'),
         c('每位负责人的头像有自己的颜色，看板上更容易区分。', 'Each owner’s avatar has its own colour, so boards are easier to scan.')] },
-    { version:'v1.4', date:'2026-11-02T00:11:00-08:00', frontend:'9f51f78', backend:'1bdc3d8', author:AI, deployer:BOSS,
+    { version:'v1.4', date:'2026-11-02T00:11:00-08:00', frontend:'9f51f78', backend:'1bdc3d8', author:KC, deployer:KC,
       title:c('产品 CSV 导入、KR 权重手填、Bug 与建议、任务抽屉可编辑', 'Product CSV import, KR weights by hand, Bug & ideas, editable task drawer'),
       changes:[
         c('产品管理和成本核算支持 CSV 导入（带模板，流程和库存管理一样），导入后用服务器数据代替示例数据。', 'Product catalog and cost calculator import CSV with templates (same flow as Inventory); server data replaces the samples.'),
@@ -37,16 +36,16 @@
         c('OKR：每个 KR 的权重自己填写，同一目标下合计必须正好 100%。', 'OKR: type every KR weight yourself; the KRs of an objective must total exactly 100%.'),
         c('右上角新增红色“Bug 与建议”按钮，可粘贴、拖入或上传截图；管理员在“Bug 与建议”页处理，配置邮件后自动发到管理员邮箱。', 'New red “Bug & ideas” button with paste, drag or upload screenshots; admins handle notes on the Bug & ideas page, and they are emailed once email is configured.'),
         c('任务详情抽屉变窄，可直接修改名称、状态、优先级、截止日、负责人、成果和验收标准；提交证据后验收标准固定。', 'The task drawer is narrower and edits name, status, priority, due date, owner, outcome and criteria in place; criteria lock once evidence is submitted.')] },
-    { version:'v1.3', date:'2026-11-01T22:51:00-08:00', frontend:'52b3a8e', backend:'db4022b', author:AI, deployer:BOSS,
+    { version:'v1.3', date:'2026-11-01T22:51:00-08:00', frontend:'52b3a8e', backend:'db4022b', author:KC, deployer:KC,
       title:c('直属与间接下属分开显示', 'Direct and indirect reports shown separately'),
       changes:[c('团队 OKR 和任务分析里，直属下属和间接下属分开显示；间接下属会标出他向谁汇报。', 'Team OKRs and Task analysis list direct and indirect reports separately; indirect reports show who they report to.')] },
-    { version:'v1.2', date:'2026-11-01T22:30:00-08:00', frontend:'66af581', backend:'d275e0f', author:AI, deployer:BOSS,
+    { version:'v1.2', date:'2026-11-01T22:30:00-08:00', frontend:'66af581', backend:'d275e0f', author:KC, deployer:KC,
       title:c('库存管理上线、项目权限、任务进展可编辑', 'Inventory goes live, project access, editable task updates'),
       changes:[
         c('库存管理（WMS）上线：新建 SKU，管理员用 CSV 导入期初库存，盘点调整由提交人的上级确认；ERP 权限页与服务器同步。', 'Inventory (WMS) goes live: new SKUs, opening stock CSV import for admins, count adjustments confirmed by the submitter’s manager; ERP permissions follow the server.'),
         c('项目只对项目管理员、项目成员和公司管理员可见。', 'Projects are visible only to the project admin, project members and company admins.'),
         c('任务进展：作者可以修改或删除自己发的进展，原文保留在审计记录里；每条进展显示发布了多久。', 'Task updates: authors can edit or delete their own update, with the original kept in the audit log; each update shows how long ago it was posted.')] },
-    { version:'v1.1', date:'2026-11-01T19:04:00-08:00', frontend:'228bb51', backend:'7751f2e', author:AI, deployer:ELIAN,
+    { version:'v1.1', date:'2026-11-01T19:04:00-08:00', frontend:'228bb51', backend:'7751f2e', author:KC, deployer:ELIAN,
       title:c('OKR 发布规则、项目管理、新登录页', 'OKR publishing rules, projects, new sign-in page'),
       changes:[
         c('OKR 权重规则：同一目标下 KR 合计 100%，同一周期目标合计 100 分；有阶段图例；最高负责人的公司 OKR 合并显示。', 'OKR weights: KRs total 100% per objective and objectives 100 points per cycle; stage legend; the top leader’s company OKR is merged in.'),
@@ -55,7 +54,7 @@
         c('项目：看板分组、每个视图都能按人筛选、自动分析、项目管理员和邀请；项目表格与任务中心同一风格。', 'Projects: board grouping, person filter on every view, automatic analysis, project admin and invites; project table in the Task hub style.'),
         c('新登录页介绍公司和 OneLaser 文化，新增 /culture.html；组织表按工作地点分组；项目描述和里程碑可编辑。', 'New sign-in page with the company story and culture, plus /culture.html; org table grouped by location; editable project description and milestones.'),
         c('修复：深浅色主题下文字都清晰；静态文件按内容更新缓存；中文错误提示；成本核算汇率请求失败时不再反复重试。', 'Fixes: readable text in light and dark themes, content-hashed asset caching, Chinese error messages, cost calculator stops looping on a failed exchange-rate request.')] },
-    { version:'v1.0', date:'2026-11-01T08:09:00-08:00', frontend:'53bf16c', backend:'9bebe89', author:AI, deployer:ELIAN,
+    { version:'v1.0', date:'2026-11-01T08:09:00-08:00', frontend:'53bf16c', backend:'9bebe89', author:KC, deployer:ELIAN,
       title:c('迁移到公司 Render 环境（基线版本）', 'Moved to the company Render environment (baseline)'),
       changes:[
         c('系统从个人环境迁移到公司的 Render 工作空间和数据库，正式入口为 craftos.app；73 张业务表逐表核对，记录数量一致。', 'Moved from the personal environment to the company Render workspace and database at craftos.app; all 73 business tables matched row for row.'),
