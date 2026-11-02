@@ -22,6 +22,10 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.20', date:'2026-11-02T14:25:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('OKR 改名称和分值不再有“保存 / 取消”按钮：回车或点别处自动保存，Esc 取消', 'OKR inline edits: no Save/Cancel buttons; Enter or clicking away saves, Esc cancels'),
+      title:c('OKR 编辑去掉保存按钮', 'OKR edits without a Save button'),
+      changes:[c('修改目标名称、KR 名称、目标分值时，不再出现“保存”“取消”按钮；按回车或点击页面其他地方就自动保存，按 Esc 放弃修改。', 'Editing an objective or KR name or objective points no longer shows Save/Cancel; press Enter or click elsewhere to save, Esc to discard.')] },
     { version:'1.19', date:'2026-11-02T12:35:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('给自己新建任务不再填期望成果和验收标准；提交成果只填说明 + 附件（拖入、粘贴、上传）', 'Own tasks: no outcome/criteria; optional details plus attachments (drop, paste, upload)'),
       title:c('简化给自己新建任务', 'Simpler tasks for yourself'),

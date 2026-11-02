@@ -158,7 +158,7 @@
   const weightText = w => Number.isFinite(w) ? `${w}%` : '—';
   function editable(kind, id, value, display, type = 'text', cls = '') {
     if (ui.editing && ui.editing.kind === kind && ui.editing.id === id) {
-      return `<form class="okb-inline-edit ${cls}" id="okr-edit" data-kind="${kind}" data-id="${esc(id)}"><input name="value" type="${type}" ${type === 'number' ? 'min="0.01" max="100" step="0.01"' : 'maxlength="300" minlength="1"'} value="${esc(value ?? '')}" data-okr-autofocus required><button class="okb-btn primary small" type="submit">${tr('保存', 'Save')}</button><button class="okb-btn small" type="button" data-okr="cancel-edit">${tr('取消', 'Cancel')}</button></form>`;
+      return `<form class="okb-inline-edit ${cls}" id="okr-edit" data-kind="${kind}" data-id="${esc(id)}"><input name="value" type="${type}" ${type === 'number' ? 'min="0.01" max="100" step="0.01"' : 'maxlength="300" minlength="1"'} value="${esc(value ?? '')}" data-okr-autofocus required title="${esc(tr('回车或点击别处自动保存，Esc 取消', 'Saves on Enter or when you click away; Esc cancels'))}"></form>`;
     }
     return display;
   }
@@ -620,7 +620,13 @@
   });
   document.addEventListener('keydown', event => {
     if (!ctx) return;
+    if (event.key === 'Escape') document.getElementById('okr-edit')?.setAttribute('data-cancel', '1');
     if (event.key === 'Escape' && (ui.editing || ui.adding || ui.menu || ui.confirm) && !document.querySelector('#overlay-root [role="dialog"]')) { ui.editing = null; ui.adding = null; ui.menu = null; ui.confirm = null; rerender(); }
+  });
+  /* Inline edits have no Save button: leaving the box saves it (Esc cancels). */
+  document.addEventListener('focusout', e => {
+    const form = e.target.closest?.('#okr-edit'); if (!form || form.contains(e.relatedTarget)) return;
+    setTimeout(() => { if (form.isConnected && !form.dataset.sent && !form.dataset.cancel) { const i = form.querySelector('input'); if (i && i.value.trim() && i.checkValidity()) form.requestSubmit(); else if (i && !i.value.trim()) { ui.editing = null; rerender(); } } }, 0);
   });
   document.addEventListener('submit', async event => {
     const form = event.target; if (!ctx || !form.id?.startsWith('okr-')) return;
@@ -628,6 +634,7 @@
     const v = Object.fromEntries(new FormData(form)), err = form.querySelector('.okb-form-error');
     if (err) err.textContent = '';
     if (form.id === 'okr-edit') {
+      if (form.dataset.sent) return; form.dataset.sent = '1';
       const kind = form.dataset.kind, id = form.dataset.id, raw = String(v.value || '').trim();
       if (!raw) return;
       let ok = false;
