@@ -22,6 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.12', date:'2026-11-02T02:45:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('产品管理和库存合并为“产品与库存”一个页面；新增批量入库 / 到港入仓', 'Products and stock on one page; batch goods in'),
+      title:c('产品与库存合并、批量入库', 'Products & stock on one page, batch goods in'),
+      changes:[
+        c('“产品管理”和“库存管理”合并为“产品与库存”，页面顶部切换“产品资料”和“库存”两个标签；各自的权限不变，没有权限的标签不显示。', 'Product catalog and inventory are now one page, “Products & stock”, with Catalog and Stock tabs; each tab keeps its own access rule.'),
+        c('产品资料里的海外仓、在途、工厂库存改为直接读取库存系统的实际数量。', 'Stock columns in the catalog now show the real numbers from inventory.'),
+        c('库存页新增“批量入库”：从 Excel 复制 SKU 和数量两列粘贴即可，先预览入库后的数量；可选“新货入库”或“到港入仓（从在途转入）”，所有行一起成功或一起不入。', 'New “Batch goods in”: paste SKU and quantity from Excel, preview the result, choose new goods or arrived-from-transit; all lines succeed or none.')] },
     { version:'1.11', date:'2026-11-02T02:25:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
       short:c('点任务名打开详情，详情可直接修改；新建任务分“期望成果”和“验收标准”；版本更新页保留全部记录', 'Task name opens details, edit in place; separate outcome and criteria; full release notes'),
       title:c('任务详情可直接修改、版本更新页', 'Editable task details, release notes page'),

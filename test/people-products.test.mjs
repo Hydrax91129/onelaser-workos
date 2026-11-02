@@ -25,14 +25,15 @@ test('sidebar sections follow the requested order, and restricted pages are gate
   const ids = s => order.filter(o => o[2] === s).map(o => o[0]);
   assert.deepEqual(ids('work'), ['overview', 'okr', 'projects', 'tasks'], 'workbench is the first page of the Workspace');
   assert.deepEqual(ids('reports'), ['okr-analysis', 'project-analysis', 'team']);
-  assert.deepEqual(ids('product'), ['products', 'product-cost', 'supply-chain', 'wms', 'erp-access'], 'product hub is its own section with its modules');
+  assert.deepEqual(ids('product'), ['products', 'product-cost', 'supply-chain', 'erp-access'], 'product hub is its own section with its modules');
   assert.deepEqual(ids('labs'), ['support', 'knowledge', 'quality']);
   assert.deepEqual(ids('other'), ['settings', 'orgchart', 'org', 'feedback', 'changelog']);
   assert.ok(ids('hidden').includes('executive') && ids('hidden').includes('integrations'), 'executive board removed; integrations moved into settings');
   assert.match(live, /const productAccess = \(\) => !!window\.WorkOSProducts && \(\(state\.actor\?\.grants\|\|\[\]\)\.includes\('products'\) \|\| state\.actor\?\.isAdmin === true\)/);
-  assert.match(live, /products:productAccess\(\), 'product-cost':productAccess\(\), 'supply-chain':productAccess\(\)/);
+  assert.match(live, /products:productAccess\(\)\|\|wmsAccess\(\), 'product-cost':productAccess\(\), 'supply-chain':productAccess\(\)/);
   assert.match(live, /org:!!window\.WorkOSPeople && state\.actor\?\.isAdmin===true/);
-  for (const id of ['products', 'product-cost', 'supply-chain']) assert.match(live, new RegExp(`'?${id}'?: \\(\\) => productAccess\\(\\) \\?`), `direct URL for ${id} is gated too`);
+  for (const id of ['product-cost', 'supply-chain']) assert.match(live, new RegExp(`'?${id}'?: \\(\\) => productAccess\\(\\) \\?`), `direct URL for ${id} is gated too`);
+  assert.match(live, /productAccess\(\) && \['catalog'[\s\S]*wmsAccess\(\) && \['stock'[\s\S]*if \(!tabs\.length\) return noAccess/, 'merged products & stock page shows only the tabs the person may see');
   assert.match(live, /function integrationPage\(\) \{ return state\.actor\?\.isAdmin===true/, 'integrations page is admin-only');
 });
 

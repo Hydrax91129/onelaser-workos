@@ -54,7 +54,7 @@
       <div class="wms-tabs"><button class="${ui.tab === 'stock' ? 'on' : ''}" data-wms="tab" data-v="stock">${icon('package')} ${tr('库存', 'Stock')}</button><button class="${ui.tab === 'log' ? 'on' : ''}" data-wms="tab" data-v="log">${icon('list-bullets')} ${tr('出入库流水', 'Movements')}</button></div>
       <div class="wms-toolbar"><label class="wms-search">${icon('magnifying-glass')}<input data-wms-search value="${esc(ui.q)}" placeholder="${tr('搜索 SKU 或产品名', 'Search SKU or product')}"></label>
         <span class="wms-spacer"></span>
-        ${data.canOperate ? Object.entries(TYPES).map(([k, [zh, en, ic]]) => `<button class="btn ${k === 'in' ? 'primary' : ''}" data-wms="op" data-type="${k}">${icon(ic)} ${tr(zh, en)}</button>`).join('') : ''}</div>
+        ${data.canOperate ? `<button class="btn primary" data-wms="batch">${icon('stack')} ${tr('批量入库', 'Batch goods in')}</button>` + Object.entries(TYPES).map(([k, [zh, en, ic]]) => `<button class="btn" data-wms="op" data-type="${k}">${icon(ic)} ${tr(zh, en)}</button>`).join('') : ''}</div>
       ${ui.tab === 'stock' ? stockTable(items) : logTable(ui.sku ? data.movements.filter(m => m.sku === ui.sku) : data.movements)}
     </div>`;
   }
@@ -117,6 +117,41 @@
     const it = data.items.find(x => x.sku === f.sku.value.trim()), slot = f.querySelector('[data-wms-current]');
     if (slot) slot.textContent = it ? tr(`系统数量：${fmtN(it.qty?.[f.location.value] || 0)}`, `System quantity: ${fmtN(it.qty?.[f.location.value] || 0)}`) : '';
   }
+  /* Batch goods in: paste two columns (SKU, quantity) straight from Excel; one location, reason and reference for all lines. */
+  let batchLines = [];
+  function parseBatch(text) {
+    const lines = [], problems = [], bySku = new Map(data.items.map(it => [it.sku.toLowerCase(), it]));
+    String(text || '').split(/\r?\n/).forEach((raw, i) => {
+      const line = raw.trim(); if (!line) return;
+      const parts = line.split(/[\t,，]+|\s{2,}|\s+(?=\S+$)/).map(x => x.trim()).filter(Boolean);
+      if (parts.length < 2) { problems.push(tr(`第 ${i + 1} 行：需要“SKU 数量”两列`, `Line ${i + 1}: needs SKU and quantity`)); return; }
+      if (/^sku$/i.test(parts[0])) return;
+      const qty = Number(String(parts.at(-1)).replace(/[,\s]/g, '')), sku = parts.slice(0, -1).join(' ').trim(), it = bySku.get(sku.toLowerCase());
+      if (!Number.isInteger(qty) || qty <= 0) { problems.push(tr(`第 ${i + 1} 行：${sku} 的数量“${parts.at(-1)}”不是正整数`, `Line ${i + 1}: ${sku} quantity is not a positive whole number`)); return; }
+      if (!it) { problems.push(tr(`第 ${i + 1} 行：找不到 SKU ${sku}，请先“新增 SKU”`, `Line ${i + 1}: SKU ${sku} not found; add it first`)); return; }
+      lines.push({ sku:it.sku, name:it.name, qty, line:i + 1 });
+    });
+    return { lines, problems };
+  }
+  function batchDialog() {
+    batchLines = [];
+    const locOpts = (sel, name) => `<select name="${name}">${data.locations.map(l => `<option value="${esc(l.id)}" ${l.id === sel ? 'selected' : ''}>${esc(word(l))}</option>`).join('')}</select>`;
+    ctx.modal(tr('批量入库', 'Batch goods in'), `<form id="wms-batch" class="wms-form">
+      <div class="wms-seg wms-batch-mode"><label><input type="radio" name="mode" value="in" checked> ${tr('新货入库（加到库位）', 'New goods (add to a location)')}</label><label><input type="radio" name="mode" value="transfer"> ${tr('到港入仓（从在途转入）', 'Arrived (move from in transit)')}</label></div>
+      <div class="form-grid"><label class="field" data-wms-batch-from hidden><span>${tr('从库位', 'From')}</span>${locOpts('transit', 'location')}</label><label class="field"><span>${tr('入到库位', 'Into location')}</span>${locOpts('us', 'toLocation')}</label></div>
+      <label class="field"><span>${tr('SKU 和数量（每行一个，可以从 Excel 直接复制两列粘贴）', 'SKU and quantity (one per line; paste two columns from Excel)')}</span><textarea name="lines" rows="8" required data-wms-batch-lines placeholder="${tr('例如：ODL-XRF-38-US01 20（一行一个）', 'e.g. SKU-001 20 (one per line)')}"></textarea></label>
+      <div data-wms-batch-preview></div>
+      <div class="form-grid"><label class="field"><span>${tr('原因（必填）', 'Reason (required)')}</span><input name="reason" required minlength="2" maxlength="200" list="wms-batch-reasons" value="${tr('采购到货', 'Purchase received')}"><datalist id="wms-batch-reasons"><option value="${tr('采购到货', 'Purchase received')}"><option value="${tr('到港入仓', 'Arrived at warehouse')}"><option value="${tr('退货入库', 'Customer return')}"></datalist></label>
+      <label class="field"><span>${tr('单号（柜号、采购单等，选填）', 'Reference (container, PO…, optional)')}</span><input name="reference" maxlength="80"></label></div>
+      <p class="wms-error" role="alert"></p></form>`, `<button class="btn" data-live-action="close">${tr('取消', 'Cancel')}</button><button class="btn primary" type="submit" form="wms-batch">${tr('确认入库', 'Confirm')}</button>`);
+  }
+  function batchPreview(f) {
+    const r = parseBatch(f.lines.value), slot = f.querySelector('[data-wms-batch-preview]'), err = f.querySelector('.wms-error');
+    batchLines = r.problems.length ? [] : r.lines; err.innerHTML = r.problems.slice(0, 6).map(esc).join('<br>') + (r.problems.length > 6 ? `<br>${tr(`…另有 ${r.problems.length - 6} 处`, `…and ${r.problems.length - 6} more`)}` : '');
+    const mode = f.mode.value, to = f.toLocation.value, from = f.location.value;
+    slot.innerHTML = r.lines.length ? `<div class="wms-batch-table"><table class="wms-table"><thead><tr><th>SKU</th><th>${tr('产品', 'Product')}</th><th class="num">${tr('数量', 'Qty')}</th><th class="num">${tr('入库后', 'After')}</th></tr></thead><tbody>${r.lines.map(l => { const it = data.items.find(x => x.sku === l.sku), after = Number(it.qty?.[to] || 0) + l.qty, short = mode === 'transfer' && l.qty > Number(it.qty?.[from] || 0); return `<tr class="${short ? 'wms-short' : ''}"><td class="mono">${esc(l.sku)}</td><td>${esc(l.name)}</td><td class="num pos">+${fmtN(l.qty)}</td><td class="num">${fmtN(after)}${short ? `<small>${tr(`${word(loc(from))}只有 ${fmtN(it.qty?.[from] || 0)}`, `only ${fmtN(it.qty?.[from] || 0)} at source`)}</small>` : ''}</td></tr>`; }).join('')}</tbody></table></div><p class="wms-hint">${tr(`共 ${r.lines.length} 行，${fmtN(r.lines.reduce((s, l) => s + l.qty, 0))} 件`, `${r.lines.length} lines, ${fmtN(r.lines.reduce((s, l) => s + l.qty, 0))} units`)}</p>` : '';
+  }
+
   /* New SKU (warehouse managers). */
   function newSkuDialog() {
     ctx.modal(tr('新增 SKU', 'New SKU'), `<form id="wms-sku" class="wms-form">
@@ -201,6 +236,7 @@
     if (a === 'op') return openOp(b.dataset.type, b.dataset.sku);
     if (a === 'operators') return operatorsDialog();
     if (a === 'new-sku') return newSkuDialog();
+    if (a === 'batch') return batchDialog();
     if (a === 'import') return importDialog();
     if (a === 'template') return downloadTemplate();
     if (a === 'approve' || a === 'reject') return act(() => ctx.api.post('/wms/movements/' + encodeURIComponent(b.dataset.id) + '/' + a, {}), a === 'approve' ? tr('已确认，库存已更新', 'Confirmed; stock updated') : tr('已驳回', 'Rejected'));
@@ -211,6 +247,7 @@
     if (t.matches?.('[data-wms-kind]')) { ui.kind = t.value; return ctx.rerender(); }
     if (t.matches?.('[data-wms-loc]')) { ui.loc = t.value; return ctx.rerender(); }
     if (t.closest?.('#wms-op')) refreshCurrent();
+    if (t.closest?.('#wms-batch')) { const f = t.closest('#wms-batch'); f.querySelector('[data-wms-batch-from]').hidden = f.mode.value !== 'transfer'; if (t.name === 'mode') f.reason.value = f.mode.value === 'transfer' ? tr('到港入仓', 'Arrived at warehouse') : tr('采购到货', 'Purchase received'); batchPreview(f); }
     if (t.matches?.('[data-wms-file]')) {
       const f = t.closest('form'), err = f.querySelector('.wms-error'), slot = f.querySelector('[data-wms-import-preview]'); err.textContent = ''; slot.innerHTML = ''; importRows = null;
       const file = t.files?.[0]; if (!file) return;
@@ -227,11 +264,22 @@
     }
   });
   document.addEventListener('input', e => {
+    if (e.target.matches?.('[data-wms-batch-lines]')) batchPreview(e.target.closest('form'));
     if (e.target.matches?.('[data-wms-search]')) { ui.q = e.target.value; const pos = e.target.selectionStart; ctx.rerender(); const n = document.querySelector('[data-wms-search]'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }
     if (e.target.closest?.('#wms-op') && e.target.name === 'sku') refreshCurrent();
   });
   document.addEventListener('submit', async e => {
     const f = e.target;
+    if (f.id === 'wms-batch') {
+      e.preventDefault(); const err = f.querySelector('.wms-error'); batchPreview(f);
+      if (!batchLines.length) { err.textContent = err.textContent || tr('请先粘贴要入库的 SKU 和数量。', 'Paste the SKUs and quantities first.'); return; }
+      const mode = f.mode.value, body = { type:mode, location:mode === 'transfer' ? f.location.value : f.toLocation.value, ...(mode === 'transfer' ? { toLocation:f.toLocation.value } : {}), reason:f.reason.value.trim(), reference:f.reference.value.trim() || undefined, lines:batchLines.map(l => ({ sku:l.sku, qty:l.qty })) };
+      if (mode === 'transfer' && body.location === body.toLocation) { err.textContent = tr('调出和调入库位不能相同。', 'From and to must differ.'); return; }
+      const btn = document.querySelector('button[form="wms-batch"]'); if (btn) btn.disabled = true;
+      try { const r = await ctx.api.post('/wms/movements/batch', body); ctx.closeOverlay(); ctx.toast?.(tr(`已入库 ${r.lines} 个 SKU，共 ${fmtN(r.units)} 件`, `${r.lines} SKUs, ${fmtN(r.units)} units received`)); batchLines = []; data = null; load(); }
+      catch (x) { err.textContent = x.message || tr('入库失败', 'Could not save'); if (btn) btn.disabled = false; }
+      return;
+    }
     if (f.id === 'wms-sku') {
       e.preventDefault(); const v = Object.fromEntries(new FormData(f)), err = f.querySelector('.wms-error');
       try { await ctx.api.post('/wms/items', { sku:String(v.sku).trim(), name:String(v.name).trim(), type:String(v.type || '').trim() || undefined }); ctx.closeOverlay(); ctx.toast?.(tr('SKU 已新增', 'SKU added')); data = null; load(); }

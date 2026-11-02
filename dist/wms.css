@@ -62,3 +62,9 @@ html[data-theme=dark] .wms-pending{background:#2c2718;border-color:#6b5a2a}html[
 html[data-theme=dark] .wms-select{background:#1d1f27;border-color:#343745}html[data-theme=dark] .wms-seg{background:#23252f}html[data-theme=dark] .wms-seg button.on{background:#343745;color:#fff}
 .wms-table td.top{background:#eaf1ff;color:#1d4ed8;font-weight:700}
 html[data-theme=dark] .wms-table td.top{background:#1f2c4d;color:#a9c2ff}
+.wms-batch-mode{display:flex;gap:8px;flex-wrap:wrap}.wms-batch-mode label{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border,#d7dbe5);border-radius:8px;cursor:pointer;font-size:13px}
+.wms-batch-mode label:has(input:checked){border-color:#3c64f4;background:#eef3ff;color:#1f3f99}html[data-theme=dark] .wms-batch-mode label:has(input:checked){background:#1f2738;color:#a8c2ff}
+.wms-batch-table{max-height:240px;overflow:auto;border:1px solid var(--border,#e4e7ef);border-radius:8px}.wms-batch-table .wms-table{margin:0}.wms-short td{background:#fff1f0}.wms-short small{display:block;color:#c62a43}
+html[data-theme=dark] .wms-short td{background:#3a1f22}html[data-theme=dark] .wms-short small{color:#ff8ea0}
+textarea[data-wms-batch-lines]{font-family:ui-monospace,Menlo,monospace;font-size:13px}
+.wms-form [hidden]{display:none!important}
