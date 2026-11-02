@@ -122,3 +122,6 @@ html[data-theme=dark] .mb-draft-hint{color:#9699a6}
   .mb-table td.mb-due>button,.mb-table td.mb-fresh>button{padding:0 4px}
   .mb-table th.mb-col-priority button{white-space:nowrap}
 }
+/* New task row: expected outcome and acceptance criteria side by side on their own line */
+.mb-draft .mb-draft-break{flex-basis:100%;height:0}
+.mb-draft input[name=description],.mb-draft input[name=criteria]{flex:1 1 calc(50% - 6px);min-width:240px}
