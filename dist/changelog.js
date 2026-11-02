@@ -22,11 +22,15 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
-    { version:'1.11', date:'2026-11-02T02:10:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:null,
-      short:c('新增“版本更新”页，保留全部更新说明', 'Release notes page with every version'),
-      title:c('新增“版本更新”页', 'New “Release notes” page'),
-      changes:[c('“其他”分组下新增“版本更新”：列出每个版本的版本号、改了什么、谁修改、谁发布，以及前后端提交号；当前线上版本自动标出。右上角版本号的弹出框也显示全部记录，点一下进入此页。', 'New “Release notes” under Other: every version with what changed, who changed and deployed it, and the commits; the live version is marked. The version badge at the top right lists every release and opens this page.')] },
-    { version:'1.10', date:'2026-11-02T01:51:00-08:00', frontend:'5131df5', backend:'97142ac', author:KC, deployer:null,
+    { version:'1.11', date:'2026-11-02T02:25:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
+      short:c('点任务名打开详情，详情可直接修改；新建任务分“期望成果”和“验收标准”；版本更新页保留全部记录', 'Task name opens details, edit in place; separate outcome and criteria; full release notes'),
+      title:c('任务详情可直接修改、版本更新页', 'Editable task details, release notes page'),
+      changes:[
+        c('点任务名称打开任务详情（改名仍在行右侧“…”菜单里）。', 'Clicking a task name opens its details (rename stays in the row’s “…” menu).'),
+        c('任务详情里点“编辑详情”，或直接点标题、期望成果、验收标准，就能修改并保存。', 'In task details, click “Edit details” or the title, expected outcome or criteria to edit and save.'),
+        c('新建任务和子任务时，“期望成果”和“验收标准”分成两个输入框，验收标准可以写多条，用；分开。', 'New tasks and subitems ask for the expected outcome and acceptance criteria separately; separate several criteria with ;.'),
+        c('“其他”分组下新增“版本更新”：每个版本的版本号、改了什么、谁修改、谁发布和提交号，当前线上版本自动标出；右上角版本号显示全部记录，点一下进入此页。', 'New “Release notes” under Other with every version, who changed and deployed it and the commits; the live one is marked. The top-right version badge lists every release and opens the page.')] },
+    { version:'1.10', date:'2026-11-02T01:51:00-08:00', frontend:'5131df5', backend:'97142ac', author:KC, deployer:c('Elian（随 v1.11 一起发布）', 'Elian (shipped with v1.11)'),
       short:c('上级和项目管理员可以修改下属 / 项目任务的截止时间；增加版本号与更新说明', 'Managers and project admins can change due dates; version notes'),
       title:c('上级可改截止时间、增加版本号', 'Managers change due dates, version badge'),
       changes:[
