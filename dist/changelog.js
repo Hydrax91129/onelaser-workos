@@ -23,11 +23,12 @@
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
     { version:'1.19', date:'2026-11-02T12:35:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
-      short:c('给自己新建任务不再填期望成果和验收标准；改为选填的详细描述，加附件（拖入、粘贴、上传）', 'Own tasks: no outcome/criteria; optional details plus attachments (drop, paste, upload)'),
+      short:c('给自己新建任务不再填期望成果和验收标准；提交成果只填说明 + 附件（拖入、粘贴、上传）', 'Own tasks: no outcome/criteria; optional details plus attachments (drop, paste, upload)'),
       title:c('简化给自己新建任务', 'Simpler tasks for yourself'),
       changes:[
         c('“新建任务 / 子任务”（给自己的）只需填任务名称、优先级和截止日期；不再要求期望成果和验收标准。', 'New tasks and subitems for yourself need only a name, priority and due date; no expected outcome or acceptance criteria.'),
         c('可选填写详细描述，并可附上文件：拖进来、直接粘贴截图，或点“＋上传”（最多 10 个，每个不超过 8 MB）。附件进入任务的“附件”，任务更新里自动记一条。', 'Optional details and attachments: drop, paste a screenshot or upload (up to 10 files, 8 MB each); they go to the task’s attachments and are noted in its updates.'),
+        c('提交成果只需两项：进展说明与成果证据（文字），以及附件（拖入、粘贴截图或上传）；不再填标题和链接，链接可以直接贴在说明里。', 'Submitting a deliverable needs only the progress note and optional attachments (drop, paste or upload); no title or link field.'),
         c('给别人下达任务（Assign Task）仍然要求期望成果、支持和交付标准。', 'Assign Task still requires the expected outcome, support and deliverable standard.')] },
     { version:'1.18', date:'2026-11-02T12:40:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('新增退货维修；OKR 发布前所有分值和 KR 权重可直接改，合计不是 100% 显示红色并提示差多少', 'Returns & repairs; OKR points and KR weights editable in place before publish, red until they total 100%'),
