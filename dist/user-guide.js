@@ -19,12 +19,12 @@
 
   const SECTIONS = [
     ['start', 'ph-compass', '快速上手', 'Getting started', () => `
-      <p>${tr('CraftOS 把每个人的工作放在一个地方：别人下达给你的任务、你的 OKR、你参与的项目，都会自动出现在你的任务中心。', 'CraftOS keeps everyone’s work in one place: tasks assigned to you, your OKRs and the projects you join all land in your Task Center automatically.')}</p>
+      <p>${tr('CraftOS 把每个人的工作放在一个地方：别人下达给你的任务、你的 OKR、你参与的项目，都会自动出现在你的个人任务。', 'CraftOS keeps everyone’s work in one place: tasks assigned to you, your OKRs and the projects you join all land in your Task Center automatically.')}</p>
       <table class="ug-table"><tbody>
         <tr><th>${tr('工作中心', 'Work Center')}</th><td>${tr('每天打开先看这里：谁给你下达了任务、哪些快到期、系统和 AI 的催办提醒。', 'Start each day here: who assigned you work, what is due soon, and reminders from the system and AI.')}</td></tr>
-        <tr><th>${tr('任务中心', 'Task Center')}</th><td>${tr('你所有的任务：更新进度、改状态、提交完成结果。', 'All your tasks: post progress, set status, submit results.')}</td></tr>
+        <tr><th>${tr('个人任务', 'Task Center')}</th><td>${tr('你所有的任务：更新进度、改状态、提交完成结果。', 'All your tasks: post progress, set status, submit results.')}</td></tr>
         <tr><th>OKR</th><td>${tr('每月设定目标和关键结果，月底自评、领导评分，分数自动算出。', 'Set objectives and key results each month; self score and leader score at month end, and the total is calculated for you.')}</td></tr>
-        <tr><th>${tr('项目管理', 'Projects')}</th><td>${tr('跨部门项目：建任务、分派负责人，任务自动进入负责人的任务中心。', 'Cross-team projects: create tasks and assign owners; tasks go straight to each owner’s Task Center.')}</td></tr>
+        <tr><th>${tr('项目管理', 'Projects')}</th><td>${tr('跨部门项目：建任务、分派负责人，任务自动进入负责人的个人任务。', 'Cross-team projects: create tasks and assign owners; tasks go straight to each owner’s Task Center.')}</td></tr>
         <tr><th>${tr('组织架构', 'Org chart')}</th><td>${tr('查看同事、汇报关系和工作地点；填写自己的中英文名字。', 'See colleagues, reporting lines and work locations; fill in your Chinese and English names.')}</td></tr>
       </tbody></table>
       ${note('不确定某个按钮是做什么的？把鼠标停在上面，就会出现说明。', 'Not sure what a button does? Hover over it to see a short explanation.')}`],
@@ -62,13 +62,13 @@
     ['assign', 'ph-paper-plane-tilt', '给同事下达任务', 'Assign Task', () => `
       <p>${tr('任何人都可以给公司里的任何同事下达任务。', 'Anyone can assign a task to any colleague in the company.')}</p>
       ${steps([
-        tr('在任务中心点击右上角 <b>Assign Task</b>。', 'In the Task Center, click <b>Assign Task</b> at the top right.'),
+        tr('在个人任务点击右上角 <b>Assign Task</b>。', 'In the Task Center, click <b>Assign Task</b> at the top right.'),
         tr('选择负责人，写清楚任务名称、说明和验收标准（做到什么算完成）。', 'Pick the owner and write the title, a description and the acceptance criteria (what counts as done).'),
         tr('设定截止日期和优先级，点击下达。', 'Set the due date and priority, then click Assign.')
       ])}
       <p>${tr('下达后：', 'After you assign it:')}</p>
       ${list([
-        tr('任务立即出现在对方的任务中心和工作中心，标注“由你下达”。', 'The task appears at once in their Task Center and Work Center, marked as assigned by you.'),
+        tr('任务立即出现在对方的个人任务和工作中心，标注“由你下达”。', 'The task appears at once in their Task Center and Work Center, marked as assigned by you.'),
         tr('AI 会跟踪进度：快到期、已逾期或 3 天没有更新时，通过系统内提醒和钉钉工作通知催办。', 'AI follows up: when it is due soon, overdue or has had no update for 3 days, it sends in-app and DingTalk reminders.'),
         tr('对方提交完成结果后，你作为审核人确认。', 'When they submit the result, you review it as the reviewer.')
       ])}
@@ -108,8 +108,8 @@
       ${steps([
         tr('点击“新建项目”，选择模板，填写开始和结束日期。成员可以来自不同部门。', 'Click “New project”, choose a template and set the start and end dates. Members can come from any department.'),
         tr('在分组里添加任务，选择负责人和截止日期。', 'Add tasks in a group and choose an owner and due date.'),
-        tr('任务确定后，自动进入负责人的任务中心，来源标为“项目”。负责人不能自己改任务名称和截止日期。', 'Each task goes straight to the owner’s Task Center, marked as a project task. The owner cannot change its title or due date.'),
-        tr('负责人在任务中心或项目里更新进度、选择状态；项目进度自动汇总。', 'Owners post progress and set status from the Task Center or the project; project progress rolls up automatically.')
+        tr('任务确定后，自动进入负责人的个人任务，来源标为“项目”。负责人不能自己改任务名称和截止日期。', 'Each task goes straight to the owner’s Task Center, marked as a project task. The owner cannot change its title or due date.'),
+        tr('负责人在个人任务或项目里更新进度、选择状态；项目进度自动汇总。', 'Owners post progress and set status from the Task Center or the project; project progress rolls up automatically.')
       ])}
       ${list([
         tr('表格、看板、时间线和日历四种视图，看的是同一批任务。', 'Table, board, timeline and calendar views all show the same tasks.'),

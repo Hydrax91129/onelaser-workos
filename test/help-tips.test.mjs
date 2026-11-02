@@ -71,7 +71,7 @@ test('buttons resolve to the matching hint, including clicks on inner icons', ()
   assert.equal(title(document.querySelector('[data-group="todo"]')), '添加任务');
   assert.equal(title(document.querySelector('[data-mb="new"]:not([data-group])')), '新建任务');
   assert.equal(title(document.querySelector('.btn[data-live-page]')), '全部任务');
-  assert.equal(title(document.querySelector('.nav-item')), '任务中心');
+  assert.equal(title(document.querySelector('.nav-item')), '个人任务');
   assert.equal(title(document.querySelector('[data-company-tab]')), '订单与物流');
 });
 

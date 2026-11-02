@@ -155,7 +155,7 @@ for (const stage of ['article', 'reviews']) {
       if (outcome === 'success') pending.resolve(response(pendingValue)); else pending.reject(new Error('Fixture network failure'));
       await flush();
       assert.equal(h.document.getElementById('overlay-root').innerHTML, '');
-      assert.equal(h.document.querySelector('.breadcrumb strong').textContent, 'Task hub');
+      assert.equal(h.document.querySelector('.breadcrumb strong').textContent, 'My tasks');
     });
 
     test(`a previous archive ${stage} ${outcome} cannot replace a newer open or its unsaved review`, async () => {

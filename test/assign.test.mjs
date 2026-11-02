@@ -15,6 +15,6 @@ test('task center offers Assign Task to anyone and shows where each task came fr
 test('workbench shows tasks others assigned to me, tasks I assigned and AI follow-ups', () => {
   const r = read('reports.js');
   assert.match(r, /\/tasks\/assignments/); assert.match(r, /\/nudges/);
-  assert.match(r, /别人给我下达的任务/); assert.match(r, /我下达的任务/); assert.match(r, /AI 跟进提醒/);
+  assert.match(r, /别人给我下达的任务/); assert.match(r, /我下达的任务/); assert.match(r, /跟进与催办/); assert.match(r, /一键催办/);
   assert.match(r, /\$\{slot\('home'\)\}\n\s+\$\{assignPanel\(\)\}/);
 });

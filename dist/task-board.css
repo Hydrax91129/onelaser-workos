@@ -7,3 +7,7 @@
 .mb-table input[type=checkbox]{min-height:0;min-width:0}
 .mb-avatar{background:#fb235d}
 
+.mb-viewing{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:10px 14px;border-radius:10px;background:#eef3ff;color:#1f3f99;font-size:13px;font-weight:600}.mb-viewing .mb-button{font-weight:600}
+html[data-theme=dark] .mb-viewing{background:#1f2738;color:#a8c2ff}
+.mb-group-delete{margin-top:14px;padding-top:12px;border-top:1px solid var(--mb-line);display:flex;flex-direction:column;gap:8px}.mb-group-delete h4{margin:0;font-size:13px}.mb-group-delete select{width:100%}
+.mb-button.mb-danger{background:#d83a52!important;color:#fff!important;border-color:#d83a52!important}.mb-button.mb-danger:hover{background:#b8263d!important}
