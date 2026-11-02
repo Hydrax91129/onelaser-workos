@@ -1,0 +1,23 @@
+/* "版本更新" release notes page */
+.cl-page{max-width:880px}
+.cl-now{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-radius:10px;border:1px solid var(--border,#e4e7ef);background:var(--panel,#fff);font-size:13px;margin-bottom:16px}
+.cl-now.ok{background:#e9f7ef;color:#16663a;border-color:#bfe5cd}
+.cl-now code,.cl-meta code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;padding:1px 6px;border-radius:5px;background:#0000000d}
+.cl-list{display:flex;flex-direction:column;gap:14px}
+.cl-item{border:1px solid var(--border,#e4e7ef);border-radius:12px;padding:16px 18px;background:var(--panel,#fff)}
+.cl-item.is-live{border-color:#3aa76d;box-shadow:0 0 0 1px #3aa76d33}
+.cl-item header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cl-item h2{margin:0;font-size:16px;font-weight:600;flex:1;min-width:200px}
+.cl-item time{font-size:12px;color:var(--muted,#5f667a)}
+.cl-ver{font-weight:700;font-size:13px;padding:2px 8px;border-radius:6px;background:#245bdb;color:#fff}
+.cl-tag{font-size:12px;padding:2px 8px;border-radius:999px;background:#fff3d6;color:#7a4f00}
+.cl-tag.live{background:#dff3e7;color:#16663a}
+.cl-item ul{margin:12px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px;line-height:1.6;font-size:14px}
+.cl-meta{display:flex;flex-wrap:wrap;gap:6px 20px;margin:14px 0 0;padding-top:12px;border-top:1px dashed var(--border,#e4e7ef);font-size:12px}
+.cl-meta div{display:flex;gap:6px;align-items:center}.cl-meta dt{color:var(--muted,#5f667a);display:flex;gap:4px;align-items:center}.cl-meta dd{margin:0}
+.cl-meta a{color:inherit;text-decoration:none}.cl-meta a:hover code{background:#245bdb22}
+[data-theme=dark] .cl-now.ok{background:#16291f;color:#7fd8a4;border-color:#285a3c}
+[data-theme=dark] .cl-item,[data-theme=dark] .cl-now{background:#1d1f27;border-color:#2d313d}
+[data-theme=dark] .cl-now code,[data-theme=dark] .cl-meta code{background:#ffffff14}
+[data-theme=dark] .cl-tag{background:#33291a;color:#f0c674}[data-theme=dark] .cl-tag.live{background:#16291f;color:#7fd8a4}
+[data-theme=dark] .cl-item time,[data-theme=dark] .cl-meta dt{color:#a3a9b8}
