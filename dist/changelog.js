@@ -22,6 +22,10 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.16', date:'2026-11-02T11:40:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
+      short:c('登录后加载时显示工作台的预览骨架，不再闪出登录页和价值观画面', 'While loading after sign-in, show the Work Center outline instead of the sign-in and values page'),
+      title:c('登录后加载显示工作台骨架', 'Work Center outline while loading'),
+      changes:[c('钉钉登录后、数据加载完成前，页面直接显示个人工作台的轮廓（问候区、进度环、分析卡片、待办数量）并带加载动画，不再先出现登录页和四大价值观；加载完成后无缝切换到真实内容。', 'After DingTalk sign-in, until data arrives, the page shows the Work Center outline (greeting, rings, analysis, counters) with a loading shimmer instead of the sign-in page and core values, then switches to the real content.')] },
     { version:'1.15', date:'2026-11-02T11:08:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('下达任务可以附上截图和文件：粘贴、拖入或点“上传”', 'Assign Task takes screenshots and files: paste, drop or upload'),
       title:c('下达任务带附件', 'Attachments when assigning a task'),
