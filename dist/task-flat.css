@@ -105,3 +105,20 @@ html[data-theme=dark] .mb-draft-row td{background:#1c2438}html[data-theme=dark] 
 .mb-draft-hint .mb-link{border:0;background:none;padding:0;color:#0073ea;font:inherit;font-weight:700;cursor:pointer;text-decoration:underline}
 html[data-theme=dark] .mb-draft-owner{background:#30324e;color:#d5d8df}
 html[data-theme=dark] .mb-draft-hint{color:#9699a6}
+/* Due date and last update are one-line pills, the same height as priority and status, so rows stay short */
+.mb-table td.mb-due>button,.mb-table td.mb-fresh>button{flex-direction:row;flex-wrap:nowrap;white-space:nowrap;height:36px;min-height:36px;padding:0 8px;gap:4px;overflow:hidden}
+.mb-due-text,.mb-fresh-text{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mb-due .mb-due-text small{display:inline;font-size:11.5px;font-weight:600;opacity:.95}
+.mb-due .mb-overdue{display:inline-flex;flex:none}
+.mb-fresh .mb-fresh-text{font-weight:700;font-size:12.5px}
+.mb-table th.mb-col-due,.mb-table td.mb-col-due{min-width:118px}
+.mb-table th.mb-col-updated,.mb-table td.mb-col-updated{min-width:104px}
+.mb-table th.mb-col-due button,.mb-table th.mb-col-updated button{white-space:nowrap}
+.mb-fresh .mb-short{display:none}
+/* Narrow screens: keep pills on one line by dropping the secondary text (still in the tooltip) */
+@media (max-width:1366px){
+  .mb-due .mb-due-text small{display:none}
+  .mb-fresh .mb-long{display:none}.mb-fresh .mb-short{display:inline}
+  .mb-table td.mb-due>button,.mb-table td.mb-fresh>button{padding:0 4px}
+  .mb-table th.mb-col-priority button{white-space:nowrap}
+}
