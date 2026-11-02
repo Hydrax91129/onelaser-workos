@@ -22,7 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
-    { version:'1.11', date:'2026-11-02T02:25:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
+    { version:'1.12', date:'2026-11-02T04:10:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
+      short:c('新建任务的期望成果和验收标准输入框加高到 3 行；手机上新建任务和选日期更好用', 'Taller outcome and criteria boxes (3 lines); new task and date picking fit phones'),
+      title:c('新建任务输入框加高、手机适配', 'Taller new-task boxes, phone layout'),
+      changes:[
+        c('新建任务和子任务时，“期望成果”和“验收标准”改成可以看到 3 行的多行输入框；验收标准每行一条，也可以用；分开。', 'When creating a task or subitem, the expected outcome and acceptance criteria boxes show 3 lines; one criterion per line, or separate with ;.'),
+        c('手机上新建任务的每个输入框都在屏幕内、一行一个，日期和优先级更容易点；输入时不会自动放大页面。', 'On phones every new-task field fits the screen on its own line, with larger date and priority controls; typing no longer zooms the page.')] },
+    { version:'1.11', date:'2026-11-02T02:25:00-08:00', frontend:'b5c3791', backend:'94172b2', author:ELIAN, deployer:ELIAN,
       short:c('点任务名打开详情，详情可直接修改；新建任务分“期望成果”和“验收标准”；版本更新页保留全部记录', 'Task name opens details, edit in place; separate outcome and criteria; full release notes'),
       title:c('任务详情可直接修改、版本更新页', 'Editable task details, release notes page'),
       changes:[
