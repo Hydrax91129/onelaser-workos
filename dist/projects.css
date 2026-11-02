@@ -322,3 +322,23 @@ html[data-theme=dark] .pj-sum-cell{background:#23252f;border-color:#343745}
 .pj-pick span{display:flex;flex-direction:column;min-width:0}.pj-pick b{font-weight:600}.pj-pick em{font-style:normal;font-size:11.5px;color:var(--muted,#676879);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pj-pick input:checked~span b{color:#0073ea}
 @media(max-width:600px){.pj-picker-list{grid-template-columns:1fr}}
+/* Project table in the Task hub style: centred headers, pill cells with breathing room */
+.pj-hub .pj-tr{grid-template-columns:minmax(260px,1fr) 140px 115px 130px 125px 135px}
+.pj-hub .pj-th>span{justify-content:center;font-size:13px;color:var(--pj-text);font-weight:600}
+.pj-hub .pj-th>span:first-child{justify-content:center}
+.pj-hub .pj-tr:not(.pj-th):not(.pj-sum){min-height:48px}
+.pj-hub .pj-td-owner{justify-content:center}
+.pj-pillcell{padding:6px 6px!important;justify-content:center}
+.pj-pillcell>.pj-cellbtn,.pj-pillcell>b{display:flex;align-items:center;justify-content:center;gap:2px;width:100%;height:36px;border-radius:8px;background:var(--c);color:#fff;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px;box-sizing:border-box}
+.pj-pillcell>b small{font-size:11.5px;font-weight:600}
+.pj-pillcell>b.calm{background:transparent;color:var(--pj-text);font-weight:600}
+.pj-pillcell>b.week{color:#8a1538}
+.pj-pillcell>b.over{box-shadow:0 0 0 2px #ff9aa8 inset;animation:pj-due-pulse 1.6s ease-in-out infinite}
+@keyframes pj-due-pulse{0%,100%{box-shadow:0 0 0 2px #ff9aa8 inset}50%{box-shadow:0 0 0 2px #ff9aa8 inset,0 0 12px 2px rgba(226,68,92,.7)}}
+@media (prefers-reduced-motion:reduce){.pj-pillcell>b.over{animation:none}}
+.pj-fresh{box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.pj-fresh .pj-short{display:none}
+.pj-hub .pj-sum{grid-template-columns:minmax(260px,1fr) 140px 115px 130px 125px 135px}
+@media (max-width:1366px){.pj-pillcell>b small{display:none}.pj-fresh .pj-long{display:none}.pj-fresh .pj-short{display:inline}}
+@media (max-width:1100px){.pj-hub .pj-tr,.pj-hub .pj-sum{grid-template-columns:minmax(200px,1fr) 110px 95px 105px 100px 95px}}
+@media (max-width:1100px){.pj-hub .pj-th>span:last-child,.pj-hub .pj-sum>span:last-child{display:flex}}

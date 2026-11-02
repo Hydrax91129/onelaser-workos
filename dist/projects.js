@@ -22,8 +22,9 @@
     'u-zhang':{ name:'张伟', role:{ zh:'东莞研发', en:'R&D, Dongguan' } },
     'u-li':{ name:'李娜', role:{ zh:'武汉网站', en:'Web, Wuhan' } },
   };
-  const STATUS = { done:['完成','Done','#00c875'], working:['进行中','Working','#fdab3d'], stuck:['被暂停','Paused','#df7689'], review:['待审批','In review','#a25ddc'], overdue:['延期','Overdue','#e2445c'], abandoned:['放弃','Abandoned','#4b4f5c'], todo:['未开始','Not started','#c4c4c4'] };
-  const PRIORITY = { urgent:['紧急','Urgent','#333333'], high:['高','High','#401694'], medium:['中','Medium','#5559df'], low:['低','Low','#579bfc'] };
+  // Same labels, order and colours as the Task hub, so a project reads exactly like the team task board.
+  const STATUS = { working:['进行中','Working','#fdbc65'], stuck:['被暂停','Paused','#df7689'], review:['待审批','In review','#b483d7'], done:['完成','Done','#34d391'], todo:['未开始','Not started','#797e93'], overdue:['延期','Overdue','#e2445c'], abandoned:['放弃','Abandoned','#4b4f5c'] };
+  const PRIORITY = { urgent:['紧急','Urgent','#ff7cd1'], high:['高','High','#6646aa'], medium:['中','Medium','#8581df'], low:['低','Low','#8eb8f9'] };
   const HEALTH = { on_track:['正常','On track','#00b37e'], at_risk:['有风险','At risk','#f5a623'], off_track:['延期','Off track','#e5484d'] };
   const d = s => s; // ISO dates
   const projects = [
@@ -90,7 +91,7 @@
         projects.push({ id:p.id, name:T2(p.name), color:p.color, emoji:p.icon, owner:p.owner_id, members:p.members || [], start:day(p.start_date), end:day(p.end_date), health:p.health, canEdit:p.canEdit, canManage:p.canManage, desc:T2(p.description || ''),
           groups:(p.groups || []).map(g => ({ id:g.id, name:T2(g.name), color:g.color })), milestones:(p.milestones || []).map(m => ({ id:m.id, name:T2(m.name), date:m.date, done:m.done })),
           updates:(p.updates || []).map(u => ({ by:u.author_id, at:day(u.created_at), health:u.health, text:T2(u.body) })) });
-        for (const t of p.tasks || []) tasks.push({ id:t.id, project:p.id, group:t.project_group_id, title:T2(t.title), owner:t.owner_id, status:FROM_BOARD[t.board_status] || 'todo', priority:t.board_priority || 'medium', start:day(t.created_at), due:day(t.due_at), subtasks:[], comments:[], desc:t.description || '', version:t.version, score:t.completion?.ai_score ?? null, live:true });
+        for (const t of p.tasks || []) tasks.push({ id:t.id, project:p.id, group:t.project_group_id, title:T2(t.title), owner:t.owner_id, status:FROM_BOARD[t.board_status] || 'todo', priority:t.board_priority || 'medium', start:day(t.created_at), due:day(t.due_at), lastUpdate:t.last_update_at || t.updated_at || t.created_at, subtasks:[], comments:[], desc:t.description || '', version:t.version, score:t.completion?.ai_score ?? null, live:true });
       }
       liveState = { loaded:true, loading:false, error:'' };
     } catch (e) { liveState = { loaded:true, loading:false, error:e.message || 'error' }; }
@@ -266,22 +267,34 @@
     const p = proj(t.project);
     return `<div class="pj-menu pj-menu-people">${(isLive() ? [...new Set([...p.members, ...Object.keys(PEOPLE)])] : p.members).map(id => `<button class="plain" data-pj="set-cell" data-id="${t.id}" data-f="owner" data-v="${id}">${av(id, 22)} ${esc(person(id).name)}</button>`).join('')}</div>`;
   }
+  // Task hub look: pill cells for priority, status, due date (urgency colours) and last update (freshness colours).
+  function dueCell(t) {
+    const label = t.due ? (lang() === 'en' ? fmt(t.due) : `${Number(t.due.slice(5, 7))}/${Number(t.due.slice(8, 10))}`) : '—';
+    if (!t.due || !isOpen(t)) return `<span class="pj-pillcell pj-due-cell"><b style="--c:transparent" class="calm">${label}</b></span>`;
+    const h = (new Date(t.due + 'T23:59:59') - new Date(isLive() ? Date.now() : TODAY + 'T12:00:00')) / 36e5, d = Math.ceil(h / 24);
+    const [cls, bg, note] = h < 0 ? ['over', '#e2445c', tr(`逾期${Math.max(1, Math.floor(-h / 24) || 1)}天`, `${Math.max(1, Math.floor(-h / 24) || 1)}d overdue`)] : d <= 3 ? ['soon', '#ff6b81', d <= 0 ? tr('今天到期', 'due today') : tr(`剩${d}天`, `${d}d left`)] : d <= 7 ? ['week', '#ffd1dc', tr(`剩${d}天`, `${d}d left`)] : ['', '', ''];
+    return `<span class="pj-pillcell pj-due-cell"><b class="${cls || 'calm'}" ${bg ? `style="--c:${bg}"` : ''} title="${esc(fmt(t.due) + (note ? ' · ' + note : ''))}">${label}${note ? `<small> · ${esc(note)}</small>` : ''}</b></span>`;
+  }
+  function freshCell(t) {
+    const at = new Date(t.lastUpdate || t.start || TODAY).getTime(), n = Math.floor(Math.max(0, ((isLive() ? Date.now() : new Date(TODAY + 'T12:00:00').getTime()) - at) / 864e5));
+    const bg = n <= 2 ? '#00c875' : n <= 4 ? '#a3e9bf' : n <= 7 ? '#ffffff' : n <= 9 ? '#c4c8d0' : '#111317';
+    return `<span class="pj-pillcell"><b class="pj-fresh" style="--c:${bg}" title="${esc(tr('最后更新：', 'Last update: ') + fmt(new Date(at).toISOString().slice(0, 10)))}"><span class="pj-long">${n ? tr(`${n} 天未更新`, `${n}d no update`) : tr('今天已更新', 'Updated today')}</span><span class="pj-short">${n ? tr(`${n}天前`, `${n}d ago`) : tr('今天', 'Today')}</span></b></span>`;
+  }
   function table(p) {
-    const lo = p.start, span = Math.max(1, days(p.start, p.end));
     return viewBar(p, false) + `<div class="pj-table-wrap">${p.groups.map(g => { const items = viewTasks(p).filter(t => t.group === g.id); return `<section class="pj-group" style="--gc:${g.color}">
-      <h3 class="pj-group-title">${icon('caret-down')} ${esc(L(g.name))} <span>${items.length} ${tr('项', 'items')}</span></h3>
-      <div class="pj-table" role="table">
-        <div class="pj-tr pj-th" role="row"><span>${tr('任务', 'Task')}</span><span>${tr('负责人', 'Owner')}</span><span>${tr('状态', 'Status')}</span><span>${tr('优先级', 'Priority')}</span><span>${tr('截止日期', 'Due')}</span><span>${tr('时间线', 'Timeline')}</span></div>
-        ${items.map(t => { const open = f => ui.cell && ui.cell.id === t.id && ui.cell.f === f; const left = Math.max(0, days(lo, t.start)) / span * 100, w = Math.max(3, days(t.start, t.due) / span * 100); return `<div class="pj-tr" role="row">
-          <span class="pj-td-title"><button class="pj-tlink" data-pj="open-task" data-id="${t.id}">${esc(L(t.title))}</button>${t.subtasks.length ? `<em>${icon('tree-view')} ${t.subtasks.filter(s => s.done).length}/${t.subtasks.length}</em>` : ''}${t.comments.length ? `<em>${icon('chat-circle')} ${t.comments.length}</em>` : ''}</span>
+      <h3 class="pj-group-title">${icon('caret-down')} ${esc(L(g.name))} <span>${items.length} ${tr('项任务', 'tasks')}</span></h3>
+      <div class="pj-table pj-hub" role="table">
+        <div class="pj-tr pj-th" role="row"><span>${tr('任务', 'Task')}</span><span>${tr('负责人', 'Owner')}</span><span>${tr('优先级', 'Priority')}</span><span>${tr('状态', 'Status')}</span><span>${tr('截止日期', 'Due date')}</span><span>${tr('最后更新', 'Last update')}</span></div>
+        ${items.map(t => { const open = f => ui.cell && ui.cell.id === t.id && ui.cell.f === f; return `<div class="pj-tr" role="row">
+          <span class="pj-td-title"><button class="pj-tlink" data-pj="open-task" data-id="${t.id}">${esc(L(t.title))}</button>${t.subtasks.length ? `<em>${icon('tree-view')} ${t.subtasks.filter(x => x.done).length}/${t.subtasks.length}</em>` : ''}${t.comments.length ? `<em>${icon('chat-circle')} ${t.comments.length}</em>` : ''}</span>
           <span class="pj-td-owner"><button class="pj-cellbtn plain" data-pj="cell" data-id="${t.id}" data-f="owner">${av(t.owner, 24)}<span>${esc(person(t.owner).name)}</span></button>${open('owner') ? ownerMenu(t) : ''}</span>
-          <span class="pj-td-color"><button class="pj-cellbtn" style="--c:${STATUS[t.status][2]}" data-pj="cell" data-id="${t.id}" data-f="status">${esc(tr(STATUS[t.status][0], STATUS[t.status][1]))}</button>${open('status') ? cellMenu(t, 'status') : ''}</span>
-          <span class="pj-td-color"><button class="pj-cellbtn" style="--c:${PRIORITY[t.priority][2]}" data-pj="cell" data-id="${t.id}" data-f="priority">${esc(tr(PRIORITY[t.priority][0], PRIORITY[t.priority][1]))}</button>${open('priority') ? cellMenu(t, 'priority') : ''}</span>
-          <span class="pj-due ${overdue(t) ? 'late' : ''}">${overdue(t) ? icon('warning-circle') + ' ' : ''}${fmt(t.due)}</span>
-          <span class="pj-mini-tl"><i style="left:${left}%;width:${w}%;--c:${g.color}"></i></span>
+          <span class="pj-pillcell"><button class="pj-cellbtn" style="--c:${(PRIORITY[t.priority] || PRIORITY.medium)[2]}" data-pj="cell" data-id="${t.id}" data-f="priority">${esc(tr(...(PRIORITY[t.priority] || PRIORITY.medium).slice(0, 2)))}</button>${open('priority') ? cellMenu(t, 'priority') : ''}</span>
+          <span class="pj-pillcell"><button class="pj-cellbtn" style="--c:${(STATUS[t.status] || STATUS.todo)[2]}" data-pj="cell" data-id="${t.id}" data-f="status">${esc(tr(...(STATUS[t.status] || STATUS.todo).slice(0, 2)))}</button>${open('status') ? cellMenu(t, 'status') : ''}</span>
+          ${dueCell(t)}
+          ${freshCell(t)}
         </div>`; }).join('')}
         ${ui.adding === g.id ? `<form class="pj-tr pj-addrow" id="pj-add" data-group="${g.id}"><input name="title" required placeholder="${tr('任务名称，回车保存', 'Task name, press Enter')}" data-pj-focus><select name="owner">${(isLive() ? [...new Set([...p.members, ...Object.keys(PEOPLE)])] : p.members).map(id => `<option value="${id}" ${id === me() ? 'selected' : ''}>${esc(person(id).name)}</option>`).join('')}</select><input name="due" type="date" value="${isLive() ? new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10) : '2026-11-20'}" required><button class="pj-btn small primary">${tr('添加', 'Add')}</button><button type="button" class="pj-btn small" data-pj="cancel">${tr('取消', 'Cancel')}</button></form>` : `<button class="pj-addline" data-pj="add-task" data-group="${g.id}">${icon('plus')} ${tr('添加任务', 'Add task')}</button>`}
-        <div class="pj-tr pj-sum"><span></span><span></span><span class="pj-stack small">${Object.keys(STATUS).map(s => { const n = items.filter(t => t.status === s).length; return n ? `<span style="--c:${STATUS[s][2]};flex:${n}"></span>` : ''; }).join('')}</span><span></span><span></span><span></span></div>
+        <div class="pj-tr pj-sum"><span></span><span></span><span class="pj-stack small">${Object.keys(PRIORITY).map(k => { const n = items.filter(t => t.priority === k).length; return n ? `<span style="--c:${PRIORITY[k][2]};flex:${n}"></span>` : ''; }).join('')}</span><span class="pj-stack small">${Object.keys(STATUS).map(k => { const n = items.filter(t => t.status === k).length; return n ? `<span style="--c:${STATUS[k][2]};flex:${n}"></span>` : ''; }).join('')}</span><span></span><span></span></div>
       </div></section>`; }).join('')}
       <button class="pj-btn pj-addgroup">${icon('plus')} ${tr('添加阶段', 'Add stage')}</button></div>`;
   }
