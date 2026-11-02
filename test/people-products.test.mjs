@@ -29,7 +29,7 @@ test('sidebar sections follow the requested order, and restricted pages are gate
   assert.deepEqual(ids('labs'), ['support', 'knowledge', 'quality']);
   assert.deepEqual(ids('other'), ['settings', 'orgchart', 'org']);
   assert.ok(ids('hidden').includes('executive') && ids('hidden').includes('integrations'), 'executive board removed; integrations moved into settings');
-  assert.match(live, /const productAccess = \(\) => !!window\.WorkOSProducts && \(state\.actor\?\.grants\|\|\[\]\)\.includes\('products'\)/);
+  assert.match(live, /const productAccess = \(\) => !!window\.WorkOSProducts && \(\(state\.actor\?\.grants\|\|\[\]\)\.includes\('products'\) \|\| state\.actor\?\.isAdmin === true\)/);
   assert.match(live, /products:productAccess\(\), 'product-cost':productAccess\(\), 'supply-chain':productAccess\(\)/);
   assert.match(live, /org:!!window\.WorkOSPeople && state\.actor\?\.isAdmin===true/);
   for (const id of ['products', 'product-cost', 'supply-chain']) assert.match(live, new RegExp(`'?${id}'?: \\(\\) => productAccess\\(\\) \\?`), `direct URL for ${id} is gated too`);

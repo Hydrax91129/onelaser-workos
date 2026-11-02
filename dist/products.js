@@ -37,29 +37,47 @@
     { sku:'DEMO-ACC-AF', name:{ zh:'示例 · 烟雾净化器', en:'Sample · fume extractor' }, type:'配件', status:'清库存', gross:28, dims:[50, 45, 75], factoryRmb:2100, ddpRate:14.6, lastMileRmb:170, msrp:899, shipFee:79, lead:'22天左右' },
   ];
   const injected = window.WORKOS_PRODUCT_DATA;
-  const source = injected?.source || tr('示例数据', 'Sample data');
+  let source = injected?.source || tr('示例数据', 'Sample data');
   // Deterministic sample inventory so the supply chain board has something to show until real stock data is connected.
   const seeded = (sku, n) => { let h = 7; for (const c of sku) h = (h * 31 + c.charCodeAt(0)) % 9973; return (h * (n + 3)) % 97; };
-  const products = (injected?.products || SAMPLE).map(raw => {
-    const machine = /整机/.test(raw.type), status = STATUS_FROM_ZH[raw.status] || 'none';
+  const buildProduct = raw => {
+    const machine = /整机/.test(raw.type || ''), status = STATUS_FROM_ZH[raw.status] || (STATUS[raw.status] ? raw.status : 'none');
     const selling = ['live', 'launch', 'clearance'].includes(status);
     const v = selling ? (machine ? (seeded(raw.sku || raw.name, 1) % 20) / 10 + 0.2 : (seeded(raw.sku || raw.name, 2) % 60) / 10 + 0.5) : 0;
     return { ...raw, sku:raw.sku || '', status, icon:iconFor(raw.type || ''), machine,
       moq:machine ? 5 : 50, prodDays:machine ? 25 : 12, shipDays:/工作日/.test(raw.lead || '') ? 12 : 30,
       wip:status === 'dev' ? 0 : seeded(raw.sku || raw.name, 3) % (machine ? 15 : 200), ready:seeded(raw.sku || raw.name, 4) % (machine ? 8 : 80), transit:seeded(raw.sku || raw.name, 5) % (machine ? 20 : 300), wh:selling ? seeded(raw.sku || raw.name, 6) % (machine ? 40 : 400) : 0,
       age:selling ? 15 + seeded(raw.sku || raw.name, 7) * 4 : 0, velocity:Math.round(v * 10) / 10 };
-  });
+  };
+  const products = (injected?.products || SAMPLE).map(buildProduct);
   const CHANNELS = { shopify:'1laser.com', amazon:'Amazon', dealer:{ zh:'经销商', en:'Dealers' } };
-  const shipments = [
+  const buildShipments = () => [
     { id:'MSKU 482190-3', mode:{ zh:'海运整柜', en:'Ocean FCL' }, eta:addDays(9), from:{ zh:'深圳盐田', en:'Yantian, Shenzhen' }, to:'Lake Forest, CA', items:products.filter(p => p.machine && p.status !== 'dev').slice(0, 3).map(p => [p.sku, p.transit]) },
     { id:'CMAU 771045-8', mode:{ zh:'海运拼柜', en:'Ocean LCL' }, eta:addDays(21), from:{ zh:'青岛', en:'Qingdao' }, to:'Lake Forest, CA', items:products.filter(p => !p.machine && p.status === 'live').slice(0, 4).map(p => [p.sku, p.transit]) },
   ];
+  const shipments = buildShipments();
 
+  /* ---------- server data: catalog and (for authorized people) cost inputs, imported from CSV ---------- */
+  const srv = { data:null, loading:false, error:'' };
+  function loadServer() {
+    if (srv.data || srv.loading || !ctx?.api?.get || ctx.state().capabilities?.productsData !== true) return;
+    srv.loading = true;
+    ctx.api.get('/products').then(r => { srv.data = r; srv.error = ''; if (r.items?.length) applyServer(r.items); }).catch(e => { srv.error = e.message || ''; srv.data = { items:[], failed:true }; }).finally(() => { srv.loading = false; ctx.rerender(); });
+  }
+  function applyServer(items) {
+    products.splice(0, products.length, ...items.map(buildProduct));
+    shipments.splice(0, shipments.length, ...buildShipments());
+    stockRows.splice(0, stockRows.length, ...buildStock());
+    syncInv();
+    source = tr(`系统数据 · ${items.length} 个 SKU`, `System data · ${items.length} SKUs`);
+    if (!bySku(ui.costSku)) ui.costSku = products.find(p => p.factoryRmb && p.msrp)?.sku || products[0]?.sku;
+    if (ui.product && !bySku(ui.product)) ui.product = null;
+  }
   const ui = { incomplete:false, ageLimit:180, tab:'catalog', product:null, search:'', typeFilter:'', statusFilter:'', costQuery:'', costSku:products.find(p => p.factoryRmb && p.msrp)?.sku || products[0]?.sku, viewAsBasic:false, scFilter:'all', safety:14, cover:45, scenario:'msrp' };
   /* Assumptions mirror the SKU master sheet: FX, 3% export markup, 15% freight buffer, 38% operating cost. */
   const assumptions = { fx:7.0, exportMarkup:3, freightBuffer:15, ddpFixedRmb:900, oceanRmbPerKg:8.5, hybridFixedRmb:140, parcelRmbPerKg:14.6, operatingPct:38, shipMode:'auto', dealerDiscount:30, dealerSupportPct:5, disc1:10, disc2:15, disc3:25, clearanceOpsPct:8 };
   const OPEX = [['kol', 'KOL', 'KOL', 4], ['ads', '广告', 'Advertising', 10], ['txn', '交易手续费', 'Transaction fees', 5], ['wh', '仓库', 'Warehouse', 2.5], ['rma', '售后退换', 'Returns & after-sales', 1.5], ['team', '团队运营', 'Team operations', 12], ['mgmt', '管理成本', 'Management', 3]];
-  const canDetail = () => (ctx.state().actor?.grants || []).includes('product_cost_detail') && !ui.viewAsBasic;
+  const canDetail = () => ((ctx.state().actor?.grants || []).includes('product_cost_detail') || (srv.data?.canSeePricing === true)) && !ui.viewAsBasic;
   const bySku = sku => products.find(p => p.sku === sku);
 
   /* ---------- cost model (per unit, USD) — follows the SKU master sheet ---------- */
@@ -146,12 +164,14 @@
   const INV = window.WORKOS_INVENTORY_DATA;
   const invSource = INV?.source || tr('示例库存', 'Sample inventory');
   const isMachine = t => /整机/.test(t || '');
-  const stockRows = (INV?.items || products.map(p => ({ sku:p.sku, name:L(p.name), type:p.type, factory:tr('示例工厂', 'Sample factory'), unitUsd:p.factoryRmb ? p.factoryRmb / assumptions.fx : 0, wh:p.wh, dg:p.ready, jn:0, transit:p.transit, transitEta:p.transit ? [[addDays(machineDays(p)).toISOString().slice(0, 10), p.transit]] : [], velocity:p.velocity, oldestAge:p.age, avgAge:Math.round(p.age * .7), aged90:p.age > 90 ? p.wh : 0, repair:0, out90:Math.round(p.velocity * 90) }))).map(r => {
+  const buildStock = () => (INV?.items || products.map(p => ({ sku:p.sku, name:L(p.name), type:p.type, factory:tr('示例工厂', 'Sample factory'), unitUsd:p.factoryRmb ? p.factoryRmb / assumptions.fx : 0, wh:p.wh, dg:p.ready, jn:0, transit:p.transit, transitEta:p.transit ? [[addDays(machineDays(p)).toISOString().slice(0, 10), p.transit]] : [], velocity:p.velocity, oldestAge:p.age, avgAge:Math.round(p.age * .7), aged90:p.age > 90 ? p.wh : 0, repair:0, out90:Math.round(p.velocity * 90) }))).map(r => {
     const cat = bySku(r.sku), machine = isMachine(r.type);
     return { ...r, cat, machine, status:cat?.status || 'none', factoryStock:(r.dg || 0) + (r.jn || 0), agedUnits:Math.min(r.wh || 0, r.aged90 || 0),
       moq:machine ? 5 : 20, prodDays:machine ? 25 : 12, shipDays:machine ? 35 : 20, icon:iconFor(r.type || '') };
   });
-  if (INV) products.forEach(p => { const r = stockRows.find(x => x.sku === p.sku); if (r) Object.assign(p, { wh:r.wh || 0, transit:r.transit || 0, ready:r.factoryStock, wip:0, velocity:r.velocity || 0, age:r.oldestAge || 0 }); else Object.assign(p, { wh:0, transit:0, ready:0, wip:0 }); });
+  const stockRows = buildStock();
+  const syncInv = () => { if (INV) products.forEach(p => { const r = stockRows.find(x => x.sku === p.sku); if (r) Object.assign(p, { wh:r.wh || 0, transit:r.transit || 0, ready:r.factoryStock, wip:0, velocity:r.velocity || 0, age:r.oldestAge || 0 }); else Object.assign(p, { wh:0, transit:0, ready:0, wip:0 }); }); };
+  syncInv();
   function machineDays(p) { return /整机/.test(p.type || '') ? 30 : 14; }
   function supply(r) {
     const v = r.velocity || 0, lead = r.prodDays + r.shipDays, pipeline = (r.wh || 0) + (r.transit || 0) + r.factoryStock;
@@ -184,17 +204,21 @@
     if (!ctx) return '';
     if (tab && tab !== ui.tab) { ui.tab = tab; ui.product = null; }
     let [eyebrow, zh, en, dzh, den] = PAGES[ui.tab] || PAGES.catalog;
+    loadServer();
     if (ui.tab === 'cost' && !canDetail()) { dzh = '输入 SKU 或名称，查询产品的零售价。'; den = 'Enter a SKU or name to look up the retail price.'; }
+    const d = srv.data, live = !!d?.items?.length, last = ui.tab === 'cost' ? d?.lastPricingImport : d?.lastCatalogImport;
+    const actions = ui.tab === 'catalog' && d?.canImportCatalog ? `<button class="pd-btn" data-pd="import" data-kind="catalog">${icon('upload-simple')} ${tr('导入产品资料', 'Import catalog')}</button>`
+      : ui.tab === 'cost' && d?.canImportPricing && !ui.viewAsBasic ? `<button class="pd-btn" data-pd="import" data-kind="pricing">${icon('upload-simple')} ${tr('导入成本数据', 'Import cost data')}</button>` : '';
     return `<div class="pd">
-      <div class="page-heading"><div><div class="eyebrow">${eyebrow}</div><h1>${tr(zh, en)}</h1><p>${tr(dzh, den)}</p></div></div>
-      <div class="pd-banner">${icon('lock-simple')} ${tr(`受限区域 · 测试原型 · 数据来源：${source} · 修改不会保存`, `Restricted · test prototype · data: ${source} · changes are not saved`)}</div>
+      <div class="page-heading"><div><div class="eyebrow">${eyebrow}</div><h1>${tr(zh, en)}</h1><p>${tr(dzh, den)}${last && ui.tab !== 'supply' ? `<br><small class="pd-hint">${tr(`最近导入：${new Date(last.at).toLocaleString('zh-CN')} · ${last.rows} 行`, `Last import: ${new Date(last.at).toLocaleString('en-US')} · ${last.rows} rows`)}</small>` : ''}</p></div>${actions ? `<div class="heading-actions">${actions}</div>` : ''}</div>
+      <div class="pd-banner">${icon('lock-simple')} ${live ? tr(`受限区域 · 数据来源：${source} · 页面上直接修改暂不保存，请用“导入”更新`, `Restricted · data: ${source} · edits on this page are not saved yet; update by import`) : tr(`受限区域 · 测试原型 · 数据来源：${source} · 修改不会保存${d && !d.failed && (d.canImportCatalog) ? ' · 点右上角“导入产品资料”换成真实数据' : ''}`, `Restricted · test prototype · data: ${source} · changes are not saved${d && !d.failed && d.canImportCatalog ? ' · use “Import catalog” to load real data' : ''}`)}</div>
       ${ui.tab === 'cost' ? costBoard() : ui.tab === 'supply' ? supplyBoard() : ui.product ? productEditor(bySku(ui.product)) : catalog()}
     </div>`;
   }
 
   /* ---------- 1. catalog (Shopify admin style) ---------- */
   const pill = k => `<span class="pd-pill" style="--c:${STATUS[k][2]}">${esc(tr(STATUS[k][0], STATUS[k][1]))}</span>`;
-  const types = [...new Set(products.map(p => p.type).filter(Boolean))];
+  const typesOf = () => [...new Set(products.map(p => p.type).filter(Boolean))];
   const ATTRS = [['name', '名称', 'Name'], ['sku', 'SKU', 'SKU'], ['type', '产品线', 'Product line'], ['msrp', '零售价 MSRP', 'MSRP'], ['gross', '毛重', 'Gross weight'], ['dims', '包装尺寸', 'Package size'], ['best', '最优发货方式', 'Best shipping'], ['lead', '交期', 'Lead time']];
   const missingAttrs = p => ATTRS.filter(([k]) => { const v = p[k]; return v == null || v === '' || (Array.isArray(v) && !v.every(x => x > 0)); });
   const completeness = p => Math.round((ATTRS.length - missingAttrs(p).length) / ATTRS.length * 100);
@@ -203,7 +227,7 @@
     const list = products.filter(p => (!q || `${p.sku} ${nameText(p)} ${p.type || ''}`.toLowerCase().includes(q)) && (!ui.typeFilter || p.type === ui.typeFilter) && (!ui.statusFilter || p.status === ui.statusFilter) && (!ui.incomplete || completeness(p) < 100));
     const incompleteN = products.filter(p => completeness(p) < 100).length;
     const counts = Object.keys(STATUS).map(k => [k, products.filter(p => p.status === k).length]).filter(x => x[1]);
-    const detail = canDetail();
+    const detail = canDetail(), types = typesOf();
     return `<div class="pd-toolbar"><label class="pd-search">${icon('magnifying-glass')}<input data-pd-search placeholder="${tr('搜索 SKU、名称或产品线', 'Search SKU, name or product line')}" value="${esc(ui.search)}"></label>
       <select class="pd-select inline" data-pd-filter="typeFilter"><option value="">${tr('全部产品线', 'All product lines')} (${products.length})</option>${types.map(t => `<option value="${esc(t)}" ${ui.typeFilter === t ? 'selected' : ''}>${esc(t)} (${products.filter(p => p.type === t).length})</option>`).join('')}</select>
       <button class="pd-btn primary" data-pd="new-product">${icon('plus')} ${tr('添加产品', 'Add product')}</button></div>
@@ -418,6 +442,113 @@
   if (window.WorkOSInsights?.register) window.WorkOSInsights.register('supply', () => ctx ? supplyFacts() : {}, supplyRules);
   else window.addEventListener('DOMContentLoaded', () => window.WorkOSInsights?.register?.('supply', () => ctx ? supplyFacts() : {}, supplyRules));
 
+
+  /* ---------- CSV import (catalog / cost data), same flow as the WMS opening-stock import ---------- */
+  const norm = h => String(h || '').toLowerCase().replace(/[\s()（）_\-\/:：]/g, '');
+  const IMPORTS = {
+    catalog:{ title:['导入产品资料', 'Import catalog'], file:'products-catalog-template.csv', url:'/products/import',
+      cols:[['sku', 'SKU', ['sku']], ['nameZh', '中文名称', ['中文名称', '名称', '产品名称', 'namezh', 'chinesename']], ['nameEn', '英文名称', ['英文名称', 'nameen', 'englishname', 'name']], ['type', '产品线', ['产品线', '类型', 'type', 'productline']],
+        ['status', '供应链状态', ['供应链状态', '状态', 'status']], ['gross', '毛重(kg)', ['毛重kg', '毛重', 'grosskg', 'gross']], ['l', '长(cm)', ['长cm', '长', 'lengthcm', 'length']], ['w', '宽(cm)', ['宽cm', '宽', 'widthcm', 'width']], ['h', '高(cm)', ['高cm', '高', 'heightcm', 'height']],
+        ['lead', '交期', ['交期', 'leadtime', 'lead']], ['msrp', '零售价MSRP', ['零售价msrp', '零售价', 'msrp']], ['low', '最低价LowPrice', ['最低价lowprice', '最低价', 'lowprice', 'low']], ['shipFee', '结账运费', ['结账运费', '运费', 'shippingfee', 'shipfee']],
+        ['best', '最优发货方式', ['最优发货方式', 'bestshipping', 'best']], ['note', '备注', ['备注', 'note', 'notes']]],
+      example:'EXAMPLE-SKU-01,示例 60W 激光雕刻机,Sample 60W laser,示例整机,在售,120,120,90,70,30天左右,4999,4299,399,海运+尾程,示例备注',
+      hint:['把产品总表在 Excel 里“另存为 CSV（UTF-8）”后上传。只有 SKU 必填；空白格表示“不修改”，所以可以只放要更新的几列。供应链状态写：开发中 / 上新中 / 在售 / 清库存 / 计划停售 / 停售。', 'In Excel, save the product sheet as “CSV UTF-8” and upload it. Only SKU is required; blank cells mean “leave unchanged”, so you can include just the columns to update. Status: 开发中 / 上新中 / 在售 / 清库存 / 计划停售 / 停售.'] },
+    pricing:{ title:['导入成本数据', 'Import cost data'], file:'products-cost-template.csv', url:'/products/pricing/import',
+      cols:[['sku', 'SKU', ['sku']], ['factoryRmb', '工厂价(RMB)', ['工厂价rmb', '工厂价', 'factoryrmb']], ['factoryUsd', '工厂价(USD)', ['工厂价usd', 'factoryusd']], ['extraRmb', '额外成本(RMB)', ['额外成本rmb', '额外成本', 'extrarmb']],
+        ['ddpRate', 'DDP单价(RMB/kg)', ['ddp单价rmbkg', 'ddp单价', 'ddprate', 'ddp']], ['lastMileRmb', '尾程(RMB)', ['尾程rmb', '尾程', 'lastmilermb', 'lastmile']]],
+      example:'EXAMPLE-SKU-01,12000,,0,12,2800',
+      hint:['把成本表在 Excel 里“另存为 CSV（UTF-8）”后上传。SKU 必须已经在“产品管理”里；空白格表示“不修改”。工厂价填人民币或美元其中一个即可（填了美元就按美元算）。这些数据只有“价格组成”权限的人能看到。', 'In Excel, save the cost sheet as “CSV UTF-8” and upload it. Each SKU must already exist in the catalog; blank cells mean “leave unchanged”. Fill factory price in RMB or USD (USD wins if both). Only people with the full price build-up can see this data.'] },
+  };
+  const NUMERIC = new Set(['gross', 'l', 'w', 'h', 'msrp', 'low', 'shipFee', 'factoryRmb', 'factoryUsd', 'extraRmb', 'ddpRate', 'lastMileRmb']);
+  let importState = null;
+  function parseCsv(text) {
+    const out = []; let row = [], cell = '', q = false;
+    text = text.replace(/^﻿/, '');
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+      else if (c === '"') q = true;
+      else if (c === ',' || c === '\t') { row.push(cell); cell = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cell); out.push(row); row = []; cell = ''; }
+      else cell += c;
+    }
+    if (cell !== '' || row.length) { row.push(cell); out.push(row); }
+    return out.filter(r => r.some(x => String(x).trim() !== ''));
+  }
+  const STATUS_IN = v => { const t = String(v).trim(); if (!t) return undefined; if (STATUS_FROM_ZH[t]) return STATUS_FROM_ZH[t]; const k = Object.keys(STATUS).find(k => k !== 'none' && (k.toLowerCase() === t.toLowerCase() || STATUS[k][1].toLowerCase() === t.toLowerCase())); return k || null; };
+  function readImport(kind, text) {
+    const spec = IMPORTS[kind], grid = parseCsv(text);
+    if (grid.length < 2) throw new Error(tr('文件里没有数据行。', 'The file has no data rows.'));
+    const head = grid[0].map(norm), col = {};
+    for (const [k, , names] of spec.cols) { const i = head.findIndex(h => names.includes(h)); if (i >= 0) col[k] = i; }
+    if (col.sku === undefined) throw new Error(tr('找不到“SKU”这一列，请用模板的表头。', 'No “SKU” column found; use the template headers.'));
+    if (Object.keys(col).length < 2) throw new Error(tr('除了 SKU 之外没有认出任何一列，请用模板的表头。', 'No columns besides SKU were recognised; use the template headers.'));
+    const rows = [], problems = [], seen = new Set(), known = new Set(products.map(p => p.sku.toLowerCase()));
+    grid.slice(1).forEach((r, n) => {
+      const line = n + 2, sku = String(r[col.sku] || '').trim(); if (!sku) return;
+      if (seen.has(sku.toLowerCase())) { problems.push(tr(`第 ${line} 行：SKU ${sku} 重复`, `Row ${line}: duplicate SKU ${sku}`)); return; }
+      seen.add(sku.toLowerCase());
+      if (kind === 'pricing' && srv.data?.items?.length && !known.has(sku.toLowerCase())) { problems.push(tr(`第 ${line} 行：${sku} 还不在产品管理里，请先导入产品资料`, `Row ${line}: ${sku} is not in the catalog yet`)); return; }
+      const out = { sku };
+      for (const [k] of spec.cols) {
+        if (k === 'sku' || col[k] === undefined) continue;
+        const raw = String(r[col[k]] ?? '').trim(); if (raw === '') continue;
+        if (NUMERIC.has(k)) { const v = Number(raw.replace(/[,$¥\s]/g, '')); if (!Number.isFinite(v) || v < 0) { problems.push(tr(`第 ${line} 行：${sku} 的“${spec.cols.find(c => c[0] === k)[1]}”不是有效数字（${raw}）`, `Row ${line}: ${sku} “${k}” is not a valid number (${raw})`)); continue; } out[k] = v; }
+        else if (k === 'status') { const st = STATUS_IN(raw); if (st === null) problems.push(tr(`第 ${line} 行：${sku} 的供应链状态“${raw}”无法识别`, `Row ${line}: ${sku} status “${raw}” not recognised`)); else out.status = st; }
+        else out[k] = raw;
+      }
+      if (kind === 'catalog') {
+        const dims = ['l', 'w', 'h'].map(k => out[k]); ['l', 'w', 'h'].forEach(k => delete out[k]);
+        if (dims.some(x => x !== undefined)) { if (dims.every(x => x > 0)) out.dims = dims; else problems.push(tr(`第 ${line} 行：${sku} 的长宽高要三项都填`, `Row ${line}: ${sku} needs all of length, width and height`)); }
+      }
+      rows.push(out);
+    });
+    return { rows, problems, known };
+  }
+  function importDialog(kind) {
+    const spec = IMPORTS[kind]; importState = { kind, rows:null };
+    ctx.modal(tr(...spec.title), `<form id="pd-import" class="pd-import-form" data-kind="${kind}">
+      <p class="pd-hint">${tr(...spec.hint)} <button type="button" class="pd-link" data-pd="import-template" data-kind="${kind}">${icon('download-simple')} ${tr('下载模板', 'Download template')}</button></p>
+      <label class="pd-field"><span>${tr('文件（CSV）', 'File (CSV)')}</span><input name="file" type="file" accept=".csv,text/csv" required data-pd-import-file></label>
+      <div data-pd-import-preview></div>
+      <p class="pd-warn">${icon('warning')} ${tr('导入会按 SKU 更新：已有的 SKU 用表里的非空格覆盖，新的 SKU 会新增。表里没有的 SKU 不受影响。每次导入都会记入审计日志。', 'Import updates by SKU: existing SKUs take the non-blank cells, new SKUs are added. SKUs not in the file are unchanged. Every import is written to the audit log.')}</p>
+      <p class="pd-error" role="alert"></p></form>`, `<button class="btn" data-live-action="close">${tr('取消', 'Cancel')}</button><button class="btn primary" type="submit" form="pd-import">${tr('确认导入', 'Import')}</button>`);
+  }
+  function downloadTemplate(kind) {
+    const spec = IMPORTS[kind], csv = '﻿' + spec.cols.map(c => c[1]).join(',') + '\n' + spec.example + '\n';
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' })); a.download = spec.file;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  document.addEventListener('change', async e => {
+    const t = e.target; if (!ctx || !t.matches?.('[data-pd-import-file]')) return;
+    const f = t.closest('form'), kind = f.dataset.kind, err = f.querySelector('.pd-error'), slot = f.querySelector('[data-pd-import-preview]');
+    err.textContent = ''; slot.innerHTML = ''; importState = { kind, rows:null };
+    const file = t.files?.[0]; if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { err.textContent = tr('文件太大（超过 5MB）。', 'File too large (over 5 MB).'); return; }
+    try {
+      const r = readImport(kind, await file.text());
+      if (r.problems.length) { err.innerHTML = r.problems.slice(0, 8).map(esc).join('<br>') + (r.problems.length > 8 ? `<br>${tr(`…另有 ${r.problems.length - 8} 处`, `…and ${r.problems.length - 8} more`)}` : ''); return; }
+      if (!r.rows.length) { err.textContent = tr('没有读到任何 SKU。', 'No SKUs found.'); return; }
+      if (r.rows.length > 5000) { err.textContent = tr('一次最多导入 5000 个 SKU。', 'At most 5000 SKUs per import.'); return; }
+      importState.rows = r.rows;
+      const live = srv.data?.items?.length ? new Set(srv.data.items.map(x => x.sku.toLowerCase())) : new Set();
+      const fresh = r.rows.filter(x => !live.has(x.sku.toLowerCase())).length;
+      const cols = IMPORTS[kind].cols.filter(([k]) => k !== 'sku' && r.rows.some(x => x[k] !== undefined || (['l', 'w', 'h'].includes(k) && x.dims))).map(c => c[1]);
+      slot.innerHTML = `<div class="pd-banner info">${icon('check-circle')} ${kind === 'catalog' ? tr(`读取到 ${r.rows.length} 个 SKU（新增 ${fresh} 个，更新 ${r.rows.length - fresh} 个）`, `${r.rows.length} SKUs read (${fresh} new, ${r.rows.length - fresh} updated)`) : tr(`读取到 ${r.rows.length} 个 SKU 的成本数据`, `Cost data for ${r.rows.length} SKUs read`)}<br><small>${tr('会更新的列：', 'Columns to update: ')}${esc(cols.join('、'))}</small></div>`;
+    } catch (x) { err.textContent = x.message || tr('读取失败', 'Could not read the file'); }
+  });
+  document.addEventListener('submit', async e => {
+    const f = e.target; if (!ctx || f.id !== 'pd-import') return; e.preventDefault();
+    const kind = f.dataset.kind, err = f.querySelector('.pd-error');
+    if (!importState?.rows) { err.textContent = err.textContent || tr('请先选择一个可以读取的 CSV 文件。', 'Choose a readable CSV file first.'); return; }
+    const btn = document.querySelector('button[form="pd-import"]'); if (btn) btn.disabled = true;
+    try {
+      const r = await ctx.api.post(IMPORTS[kind].url, { rows:importState.rows });
+      ctx.closeOverlay?.(); ctx.toast(kind === 'catalog' ? tr(`已导入 ${r.rows} 个 SKU：新增 ${r.created}，更新 ${r.updated}`, `Imported ${r.rows} SKUs: ${r.created} new, ${r.updated} updated`) : tr(`已导入 ${r.rows} 个 SKU 的成本数据`, `Imported cost data for ${r.rows} SKUs`));
+      importState = null; srv.data = null; loadServer();
+    } catch (x) { err.textContent = x.message || tr('导入失败', 'Import failed'); if (btn) btn.disabled = false; }
+  });
+
   /* ---------- events ---------- */
   const rerender = () => ctx.rerender();
   document.addEventListener('click', e => {
@@ -428,6 +559,8 @@
     if (a === 'tab') { ui.tab = t.dataset.v; ui.product = null; return rerender(); }
     if (a === 'open-product') { ui.product = t.dataset.sku; return rerender(); }
     if (a === 'back') { ui.product = null; return rerender(); }
+    if (a === 'import') return importDialog(t.dataset.kind);
+    if (a === 'import-template') return downloadTemplate(t.dataset.kind);
     if (a === 'save-product') { ctx.toast(tr('原型：已模拟保存', 'Prototype: save simulated')); return; }
     if (a === 'new-product') { ctx.toast(tr('原型：将打开新产品表单', 'Prototype: opens a new product form')); return; }
     if (a === 'cost-for' || a === 'pick-cost') { ui.tab = 'cost'; ui.costSku = t.dataset.sku; ui.costQuery = ''; ui.product = null; return rerender(); }

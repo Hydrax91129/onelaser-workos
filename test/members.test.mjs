@@ -81,6 +81,6 @@ test('live app wires email sign-in, invite acceptance, disabled-account notice a
   assert.match(live, /\/auth\/invite\/'\+inviteUi\.token\+'\/accept'/);
   assert.match(live, /login_error=disabled/);
   assert.match(live, /if\(!state\.capabilities\?\.passwordLogin\)return '';/, 'email login only when the backend supports it');
-  assert.match(live, /noAccess\(tr\('产品管理区'/);
+  assert.match(live, /noAccess\(tr\('产品\+供应链'/);
   assert.match(live, /ownerRow\.manager_id/, 'reviewer list includes the owner\'s manager');
 });
