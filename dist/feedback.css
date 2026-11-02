@@ -39,3 +39,5 @@
 .fb-ver-pop b{font-size:13px;margin-bottom:2px}.fb-ver-row{display:grid;grid-template-columns:42px 40px 1fr;gap:6px;align-items:baseline}.fb-ver-row em{font-style:normal;font-weight:700;color:#245bdb}.fb-ver-row i{font-style:normal;color:#6b7185}
 [data-theme=dark] .fb-ver{color:#a3a9b8}[data-theme=dark] .fb-ver:hover,[data-theme=dark] .fb-ver:focus-visible{background:#2a2d38;color:#e7e9ef}
 [data-theme=dark] .fb-ver-pop{background:#1d1f27;color:#e7e9ef;border-color:#2d313d}[data-theme=dark] .fb-ver-row em{color:#8fb3ff}[data-theme=dark] .fb-ver-row i{color:#a3a9b8}
+
+.fb-ver{text-decoration:none;cursor:pointer;border:0;background:none;font-family:inherit}.fb-ver-pop{max-height:min(70vh,520px);overflow:auto}.fb-ver-pop small{color:#6b7185;margin-top:4px}[data-theme=dark] .fb-ver-pop small{color:#a3a9b8}

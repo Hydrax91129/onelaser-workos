@@ -11,22 +11,15 @@
   let ctx = null, images = [], sending = false, lastFocus = null, list = null, listLoading = false, listError = '';
   const tr = (zh, en) => (ctx?.lang?.() === 'en' ? en : zh);
 
-  /* Release notes: newest first. Keep the last 10; one short line per release. */
-  const RELEASES = [
-    ['1.10', '11/02', '上级和项目管理员可以修改下属 / 项目任务的截止时间；增加版本号与更新说明', 'Managers and project admins can change due dates; version notes'],
-    ['1.9', '11/02', '个人任务只显示自己的任务；分组可删除；任务分析里查看下属任务；催办与一键催办', 'Personal task list; delete groups; view reports’ tasks; reminders'],
-    ['1.8', '11/02', '公司目标的 KR 权重可保存；每位负责人固定头像颜色', 'Company KR weights save; per-person avatar colours'],
-    ['1.7', '11/02', '产品资料和成本数据可导入；KR 权重自己填；Bug 与建议；任务详情可编辑', 'Product & cost import; KR weights; Bug & ideas; editable task details'],
-    ['1.6', '11/01', '直属下属和间接下属分开显示', 'Direct and indirect reports shown separately'],
-    ['1.5', '11/01', '任务更新可编辑、删除，并显示几天前', 'Edit and delete updates; “days ago” labels'],
-    ['1.4', '11/01', '库存管理（WMS）与 ERP 权限上线；项目只有成员可见', 'Inventory (WMS) and ERP permissions; private projects'],
-    ['1.3', '11/01', '项目看板分组、按人筛选、自动分析、项目管理员与邀请成员', 'Project boards, person filter, auto analysis, project admins'],
-    ['1.2', '11/01', '企业文化登录页；成员按工作地点分组；项目描述可编辑', 'Culture sign-in page; members by location; editable project descriptions'],
-    ['1.1', '10/31', '任务表格样式统一，夜间模式文字更清楚', 'Task table styling; dark-mode readability'],
-  ];
+  /* Version badge: the full release list lives in changelog.js (WorkOSChangelog.RELEASES); every release is kept. */
   function versionChip() {
-    const [v] = RELEASES[0];
-    return `<span class="fb-ver" tabindex="0" aria-label="${tr(`当前版本 v${v}，查看更新说明`, `Version v${v}; release notes`)}">v${v}<span class="fb-ver-pop" role="tooltip"><b>${tr('最近更新', 'Recent updates')}</b>${RELEASES.slice(0, 10).map(([ver, d, zh, en]) => `<span class="fb-ver-row"><em>v${ver}</em><i>${d}</i><span>${esc(tr(zh, en))}</span></span>`).join('')}</span></span>`;
+    const list = window.WorkOSChangelog?.RELEASES || [];
+    if (!list.length) return '';
+    const shown = list;
+    const txt = v => window.WorkOSChangelog.text(v);
+    const md = iso => { const d = new Date(iso); return Number.isFinite(d.getTime()) ? `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')}` : ''; };
+    const v = shown[0].version; // this build's own version: the newest entry ships with it
+    return `<button type="button" class="fb-ver" data-live-page="changelog" aria-label="${tr(`当前版本 v${v}，查看全部更新说明`, `Version v${v}; all release notes`)}">v${esc(v)}<span class="fb-ver-pop" role="tooltip"><b>${tr('更新说明（全部）', 'Release notes (all)')}</b>${shown.map(r => `<span class="fb-ver-row"><em>v${esc(r.version)}</em><i>${md(r.date)}</i><span>${esc(txt(r.short))}</span></span>`).join('')}<small>${tr('点击版本号查看详细说明', 'Click the version for full notes')}</small></span></button>`;
   }
   function configure(next) { ctx = next; }
   function button() { return `<button class="fb-btn" data-feedback-open title="${tr('报告问题或提建议，直接发给管理员', 'Report a bug or suggest an improvement')}">${icon('bug')}<span>${tr('Bug 与建议', 'Bug & ideas')}</span></button>${versionChip()}`; }
