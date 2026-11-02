@@ -282,3 +282,43 @@ html[data-theme=dark] .pj-sum-cell{background:#23252f;border-color:#343745}
 .pj-ms-form{display:grid;gap:8px;margin-top:10px}
 .pj-ms-form input{border:1px solid var(--pj-line,#e3e5e8);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px;background:var(--surface,#fff);color:inherit}
 @media (hover:none){.pj-ms .pj-ms-del{opacity:1}}
+/* View bar: person filter on every view, board grouping */
+.pj-viewbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:0 0 14px}
+.pj-vb-who{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--pj-line,#e3e5e8);border-radius:8px;padding:0 4px 0 10px;background:var(--surface,#fff)}
+.pj-vb-who select{border:0;background:transparent;font:inherit;font-size:13px;height:32px;color:inherit;max-width:240px}
+.pj-vb-seg{display:inline-flex;align-items:center;gap:2px;background:var(--surface-soft,#f1f3f6);border-radius:8px;padding:3px}
+.pj-vb-seg span{font-size:12px;color:var(--muted,#676879);padding:0 8px}
+.pj-vb-seg button{border:0;background:none;border-radius:6px;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer;color:inherit}
+.pj-vb-seg button.active{background:var(--surface,#fff);box-shadow:0 1px 2px #0000001f;font-weight:700;color:#0073ea}
+.pj-vb-note{font-size:12.5px;color:var(--muted,#676879);display:inline-flex;gap:8px;align-items:center}
+.pj-link{border:0;background:none;padding:0;color:#0073ea;font:inherit;cursor:pointer;font-weight:600}
+.pj-link.plain{color:inherit;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.pj-link.plain:hover{color:#0073ea}
+.pj-cal-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}.pj-cal-head h3{margin:0 6px;min-width:120px;text-align:center}
+.pj-kfoot .pj-pill.small+.pj-pill.small{margin-left:-2px}
+/* Automatic analysis on the project overview */
+.pj-insight .pj-panel-head{align-items:baseline;flex-wrap:wrap}
+.pj-insight .pj-panel-head .pj-muted{font-size:12px}
+.pj-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
+.pj-kpis div{border:1px solid var(--pj-line,#e3e5e8);border-radius:12px;padding:10px 12px}
+.pj-kpis b{display:block;font-size:22px;line-height:1.2}
+.pj-kpis span{font-size:12px;color:var(--muted,#676879)}
+.pj-kpis .bad b{color:#e2445c}
+.pj-insight-lines{margin:0 0 12px;padding-left:20px;font-size:13.5px;line-height:1.8}
+.pj-people{width:100%;border-collapse:collapse;font-size:13px}
+.pj-people th{text-align:left;font-weight:600;color:var(--muted,#676879);font-size:12px;padding:6px 8px;border-bottom:1px solid var(--pj-line,#e3e5e8)}
+.pj-people td{padding:7px 8px;border-bottom:1px solid var(--pj-line,#eef0f3)}
+.pj-people td.late{color:#e2445c;font-weight:700}
+.pj-rate{display:inline-block;width:56px;height:6px;border-radius:3px;background:#e6e9ef;margin-right:6px;vertical-align:middle;overflow:hidden}
+.pj-rate i{display:block;height:100%;background:#00c875}
+@media(max-width:700px){.pj-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.pj-people th:nth-child(6),.pj-people td:nth-child(6){display:none}}
+/* Member picker (new project, invite) */
+.pj-picker{border:1px solid var(--pj-line,#e3e5e8);border-radius:12px;padding:8px;margin:4px 0 10px}
+.pj-picker input[type=search]{width:100%;box-sizing:border-box;height:34px;border:1px solid var(--pj-line,#e3e5e8);border-radius:8px;padding:0 10px;font:inherit;font-size:13px;background:var(--surface,#fff);color:inherit}
+.pj-picker-list{max-height:220px;overflow:auto;margin-top:8px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+.pj-pick{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:13px}
+.pj-pick:hover{background:var(--surface-soft,#f5f6f8)}
+.pj-pick[hidden]{display:none}
+.pj-pick span{display:flex;flex-direction:column;min-width:0}.pj-pick b{font-weight:600}.pj-pick em{font-style:normal;font-size:11.5px;color:var(--muted,#676879);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pj-pick input:checked~span b{color:#0073ea}
+@media(max-width:600px){.pj-picker-list{grid-template-columns:1fr}}
