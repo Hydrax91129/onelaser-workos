@@ -204,6 +204,7 @@
     document.documentElement.lang = i18n.lang === 'en' ? 'en' : 'zh-CN';
     document.title = `${publicView?tr('知识中心 / Wiki','Knowledge center / Wiki'):state.actor ? tr(...(navs.find(item => item[0] === state.page)?.slice(2,4) || ['工作空间','Workspace'])) : tr('登录','Sign in')} · OneLaser`;
     if (state.actor && state.capabilities?.bilingualNames && window.WorkOSNames?.missing(state.actor) && !document.getElementById('live-names')) setTimeout(namePrompt, 0);
+    else if (state.actor && state.capabilities?.notificationChannels && !String(state.actor.email || '').trim() && !document.getElementById('live-names') && !document.getElementById('live-email')) setTimeout(emailPrompt, 0);
     const invite=inviteRoute(); if (invite) { document.getElementById('app').innerHTML = renderInvite(invite); return; }
     if (!state.actor) { document.getElementById('app').innerHTML = publicView?renderPublicKnowledge():renderLogin(); return; }
     const pending = state.tasks.filter(task => task.status === 'submitted').length;
@@ -286,6 +287,11 @@
   function modal(title, content, footer = '', form = '') { closeOverlay(); overlay(`<div class="modal-header"><h2 id="live-dialog-title">${title}</h2><button class="icon-btn" data-live-action="close" aria-label="${tr('关闭弹窗','Close dialog')}">${icon('close')}</button></div><div class="modal-body">${content}<div class="form-error" id="live-form-error" role="alert"></div></div>${footer ? `<div class="modal-footer">${footer}</div>` : ''}`); }
   const submitButton = (form, label) => `<button class="btn primary" type="submit" form="${form}">${label}</button>`;
   /* Every member fills in a Chinese and an English name so colleagues in both countries can read them. */
+  /* Work email is required: task assignments and reminders are also sent there. */
+  function emailPrompt() {
+    if (!state.actor || !state.capabilities?.notificationChannels || String(state.actor.email || '').trim() || document.getElementById('live-email') || document.getElementById('live-names')) return;
+    overlay(`<div class="modal-header"><h2 id="live-dialog-title">${tr('请填写你的工作邮箱','Add your work email')}</h2></div><div class="modal-body"><p class="fine" style="margin-bottom:14px">${tr('别人给你下达任务、催办和到期提醒，会同时发到钉钉和这个邮箱。请填写你每天都会看的工作邮箱。管理员帮你填写后，本人不能再修改。','Task assignments, reminders and due-date alerts are sent to DingTalk and this email. Use the work email you check every day. Once an administrator sets it, only they can change it.')}</p><form id="live-email" class="form-grid">${field('email',tr('工作邮箱','Work email'),'<input name="email" type="email" required maxlength="200" autocomplete="email" placeholder="name@1laser.com">',true)}</form><div class="form-error" id="live-form-error" role="alert"></div></div><div class="modal-footer">${submitButton('live-email',tr('保存','Save'))}</div>`);
+  }
   function namePrompt() {
     if (!state.actor || document.getElementById('live-names')) return;
     const a = state.actor, base = a._dn ?? a.display_name ?? '', zh = a.name_zh || (/[\u3400-\u9fff]/.test(base) ? base : ''), en = a.name_en || (!/[\u3400-\u9fff]/.test(base) ? base : '');
@@ -557,6 +563,7 @@
     const data = new FormData(form), values = Object.fromEntries(data), id = openTaskId, errorTarget = form.querySelector('[role="alert"]') || document.getElementById('live-form-error');
     const buttons = Array.from(document.querySelectorAll('[type="submit"]')); buttons.forEach(button => button.disabled = true); busy = true;
     try {
+      if (form.id === 'live-email') { const r = await api.request('/me/profile',{method:'PATCH',body:{email:String(values.email||'').trim()}}); state.actor.email = r.email; const self=state.directory.find(u=>u.id===state.actor.id); if(self)self.email=r.email; }
       if (form.id === 'live-names') { const r = await api.request('/me/profile',{method:'PATCH',body:{nameZh:String(values.nameZh||'').trim(),nameEn:String(values.nameEn||'').trim()}}); Object.assign(state.actor,{name_zh:r.name_zh,name_en:r.name_en}); const self=state.directory.find(u=>u.id===state.actor.id); if(self)Object.assign(self,{name_zh:r.name_zh,name_en:r.name_en}); }
       if (form.id === 'live-assign-task') { const created = await api.post('/tasks/assign',{assigneeId:values.assigneeId,title:values.title.trim(),dueAt:new Date(values.dueAt).toISOString(),description:values.description.trim()+(String(values.support||'').trim()?'\n\n'+tr('我会提供的支持：','Support I will give: ')+String(values.support).trim():''),criteria:values.criteria.split('\n').map(v=>v.trim()).filter(Boolean),...(values.priority?{priority:values.priority}:{})}); await uploadAssignFiles(created?.id||created?.task?.id); }
       if (form.id === 'live-new-task') await api.post('/tasks',{title:values.title.trim(),description:values.description.trim(),ownerId:values.ownerId,reviewerId:values.reviewerId,dueAt:new Date(values.dueAt).toISOString(),criteria:values.criteria.split('\n').map(value=>value.trim()).filter(Boolean),...(values.krId ? {krId:values.krId} : {}),...(values.boardGroupId?{boardGroupId:values.boardGroupId}:{}),...(values.boardPriority?{boardPriority:values.boardPriority}:{}),...(values.boardCategory?{boardCategory:values.boardCategory}:{}),...(values.parentTaskId?{parentTaskId:values.parentTaskId}:{})});

@@ -22,6 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.16', date:'2026-11-02T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('工作邮箱必填；管理员填写后本人不能改；下达任务和催办同时发钉钉和邮件', 'Work email required and admin-locked; assignments and reminders go to DingTalk and email'),
+      title:c('工作邮箱与钉钉 + 邮件通知', 'Work email, DingTalk + email notifications'),
+      changes:[
+        c('每个人必须填写工作邮箱：没有邮箱的人登录后会先被要求填写。', 'Everyone must have a work email; people without one are asked on sign-in.'),
+        c('管理员可以在“组织与权限”里直接填写每个人的工作邮箱；管理员填写后本人不能修改（个人设置里显示为锁定）。', 'Admins can fill in each person’s work email in Organization & permissions; once set by an admin it is locked for the person.'),
+        c('下达任务、催办、一键催办、到期提醒和 OKR 提醒，在站内通知之外同时发钉钉工作通知和邮件（服务器配置好钉钉 AgentId 和发信邮箱后生效）。', 'Assignments, reminders, due-date alerts and OKR reminders also go out by DingTalk and email once those channels are configured on the server.')] },
     { version:'1.15', date:'2026-11-02T11:08:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('下达任务可以附上截图和文件：粘贴、拖入或点“上传”', 'Assign Task takes screenshots and files: paste, drop or upload'),
       title:c('下达任务带附件', 'Attachments when assigning a task'),
