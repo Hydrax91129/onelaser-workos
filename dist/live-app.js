@@ -477,7 +477,7 @@
     finally { busy = false; if (analysisAction && openTaskId === originId && state.details.has(originId)) patchAnalysis(state.details.get(originId)); }
   }
   document.addEventListener('click',event => {
-    const target = event.target.closest('button,[data-live-task],[data-live-action="task-edit"]'); if (target && !target.matches('button') && target.matches('[data-live-action]') && (getSelection?.()?.toString() || event.target.closest('a'))) return; if (!target) { if (event.target.matches('[data-live-overlay]')) closeOverlay(); return; }
+    const target = event.target.closest('button,[data-live-task],[data-live-action="task-edit"]'); if (target && target.tagName !== 'BUTTON' && target.dataset?.liveAction === 'task-edit' && (window.getSelection?.()?.toString() || event.target.closest?.('a'))) return; if (!target) { if (event.target.matches('[data-live-overlay]')) closeOverlay(); return; }
     if (target.dataset.liveLang) { const id = openTaskId; i18n.set(target.dataset.liveLang); if(!document.querySelector('[data-company-review]'))closeOverlay(); render(); if (id) openTask(id); return; }
     if (target.dataset.livePage) { const page=target.dataset.livePage; if(!navs.some(item=>item[0]===page))return; if(page==='tasks'&&window.WorkOSTaskBoard?.viewing?.())window.WorkOSTaskBoard.viewAs('');if(page===state.page){state.menu=false;closeOverlay();if(!updateShellChrome())render();return;} window.location.hash=page==='knowledge'?'knowledge/':page; applyRoute(); return; }
     if (target.dataset.liveTask) { openTask(target.dataset.liveTask); return; }
