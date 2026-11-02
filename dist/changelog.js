@@ -22,6 +22,12 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.15', date:'2026-11-02T11:08:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('下达任务可以附上截图和文件：粘贴、拖入或点“上传”', 'Assign Task takes screenshots and files: paste, drop or upload'),
+      title:c('下达任务带附件', 'Attachments when assigning a task'),
+      changes:[
+        c('下达任务弹窗新增“附件”：直接粘贴截图（⌘/Ctrl+V）、把文件拖进弹窗，或点“＋上传”；每个文件不超过 8 MB，最多 10 个，下达前可移除。', 'Assign Task now takes attachments: paste screenshots, drop files or click Upload; up to 10 files of 8 MB each, removable before sending.'),
+        c('下达后附件出现在这项任务的“附件”里，并在任务更新里自动记一条“下达任务时附上 N 个附件”。', 'After assigning, the files appear in the task’s attachments and an update notes them.')] },
     { version:'1.14', date:'2026-11-02T11:05:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('工作台新增“下达任务给同事”；下达任务弹窗更宽、输入框随内容变高、必填项标红色 *', 'Assign Task on the Work Center; wider assign dialog, growing text boxes, red * on required fields'),
       title:c('下达任务入口与弹窗改进', 'Assign Task entry and dialog'),

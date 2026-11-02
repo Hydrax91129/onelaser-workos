@@ -292,7 +292,38 @@
     overlay(`<div class="modal-header"><h2 id="live-dialog-title">${tr('请填写你的中文名和英文名','Add your Chinese and English names')}</h2></div><div class="modal-body"><p class="fine" style="margin-bottom:14px">${tr('公司在中美两地协作：界面是中文时同事看到你的中文名，界面是英文时看到英文名。填写后可以在“个人设置”里修改，管理员也可以帮你完善。','We work across China and the US: colleagues see your Chinese name in the Chinese interface and your English name in English. You can change them later in Personal settings; admins can help complete them.')}</p><form id="live-names" class="form-grid">${field('nameZh',tr('中文名','Chinese name'),`<input name="nameZh" required maxlength="40" value="${esc(zh)}" placeholder="${tr('例如：陈一','e.g. 陈一')}">`)}${field('nameEn',tr('英文名','English name'),`<input name="nameEn" required maxlength="60" pattern="[A-Za-z0-9 .'\\-]+" value="${esc(en)}" placeholder="${tr('例如：Yi Chen','e.g. Yi Chen')}">`)}</form><div class="form-error" id="live-form-error" role="alert"></div></div><div class="modal-footer">${submitButton('live-names',tr('保存','Save'))}</div>`);
   }
   /* Assign Task: give a task to anyone in the organization; you review it and AI follows up. */
+  /* Attachments for Assign Task: kept in memory until the task exists, then uploaded to it and announced in its updates. */
+  let assignFiles = [];
+  const ASSIGN_MIME = new Set(['image/png','image/jpeg','image/webp','image/gif','application/pdf','text/plain','text/csv','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation','video/mp4','application/zip']);
+  const kb = n => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+  function addAssignFiles(list) {
+    const err = document.getElementById('live-form-error'); let problem = '';
+    for (let f of [...list]) {
+      if (!f) continue;
+      if (f.type.startsWith('image/') && (!f.name || f.name === 'image.png')) { const d = new Date(), p2 = n => String(n).padStart(2, '0'); f = new File([f], `${tr('截图','screenshot')}-${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}.${(f.type.split('/')[1] || 'png').replace('jpeg','jpg')}`, { type:f.type }); }
+      if (assignFiles.length >= 10) { problem = tr('最多 10 个附件。','At most 10 attachments.'); break; }
+      if (!ASSIGN_MIME.has(f.type)) { problem = tr(`不支持这种文件：${f.name}（支持图片、PDF、Word、Excel、PPT、CSV、TXT、MP4、ZIP）`, `Unsupported file: ${f.name}`); continue; }
+      if (f.size > 8 * 1024 * 1024) { problem = tr(`${f.name} 超过 8 MB`, `${f.name} is larger than 8 MB`); continue; }
+      const item = { file:f, url:'' }; assignFiles.push(item);
+      if (f.type.startsWith('image/')) { const r = new FileReader(); r.onload = () => { item.url = String(r.result); drawAssignFiles(); }; r.readAsDataURL(f); }
+    }
+    if (err) err.textContent = problem; drawAssignFiles();
+  }
+  function drawAssignFiles() {
+    const ul = document.querySelector('[data-assign-list]'); if (!ul) return;
+    ul.innerHTML = assignFiles.map((it, i) => `<li>${it.url ? `<img src="${esc(it.url)}" alt="">` : `<span class="assign-ext">${esc((it.file.name.split('.').pop() || '').slice(0, 4).toUpperCase())}</span>`}<span class="assign-name" title="${esc(it.file.name)}">${esc(it.file.name)}</span><small>${kb(it.file.size)}</small><button type="button" class="icon-btn" data-live-action="assign-rm" data-i="${i}" aria-label="${tr('移除','Remove')}">${icon('close')}</button></li>`).join('');
+  }
+  const fileB64 = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] || ''); r.onerror = () => rej(new Error(tr('文件读取失败','Could not read the file'))); r.readAsDataURL(f); });
+  async function uploadAssignFiles(taskId) {
+    if (!taskId || !assignFiles.length) return;
+    const done = [], failed = [];
+    for (const it of assignFiles) { try { await api.post('/tasks/' + encodeURIComponent(taskId) + '/attachments', { name:it.file.name, mime:it.file.type, dataBase64:await fileB64(it.file) }); done.push(it.file.name); } catch (e) { failed.push(`${it.file.name}（${e.message || ''}）`); } }
+    if (done.length) await api.post('/tasks/' + encodeURIComponent(taskId) + '/updates', { requestId:crypto.randomUUID(), body:tr(`下达任务时附上 ${done.length} 个附件：`, `Attached ${done.length} file(s) when assigning: `) + done.join('、') + tr('（在“附件”里查看）', ' (see Attachments)') }).catch(() => {});
+    if (failed.length) toast(tr('任务已下达，但这些附件没传上去：', 'Task assigned, but these files failed: ') + failed.join('；'));
+    assignFiles = [];
+  }
   async function assignTask(context={}) {
+    assignFiles = [];
     let people=[]; try { people=(await api.get('/org/chart')).items||[]; } catch { people=state.directory; }
     people=people.filter(u=>u.id!==state.actor.id).sort((a,b)=>String(a.location||'').localeCompare(String(b.location||''))||String(a.display_name).localeCompare(String(b.display_name)));
     const groups=[...new Set(people.map(u=>u.location||tr('未填写工作地点','No location')))];
@@ -306,6 +337,7 @@
       ${field('description',tr('详细描述（至少 10 个字）：做什么、什么时候做完','Details (at least 10 characters): what to do and by when'),'<textarea name="description" required minlength="10" maxlength="10000" placeholder="'+tr('例如：整理 Hydra / Cobra 两条产品线 11 月的竞品价格，覆盖 xTool、Glowforge、OMTech，11 月 15 日前完成。','e.g. Compile November competitor prices for Hydra and Cobra (xTool, Glowforge, OMTech) by Nov 15.')+'"></textarea>',true)}
       ${field('support',tr('你会提供的支持','Support you will give'),'<textarea name="support" required minlength="4" maxlength="2000" placeholder="'+tr('例如：我提供竞品账号和历史价格表；有问题随时在任务里 @我。','e.g. I will share competitor logins and last month’s sheet; @ me in the task with questions.')+'"></textarea>',true)}
       ${field('criteria',tr('交付标准（每行一项，做到什么才算完成）','Deliverable standard (one per line: what counts as done)'),'<textarea name="criteria" required maxlength="20000" placeholder="'+tr('例如：\n价格表上传到共享盘\n每款标注来源链接和日期','e.g.\nSheet uploaded to the shared drive\nSource link and date for each model')+'"></textarea>',true)}
+      <div class="field full assign-files"><span>${tr('附件（截图、文件，选填）','Attachments (screenshots, files, optional)')}</span><div class="assign-drop" data-assign-drop>${icon('file')}<span>${tr('把文件拖到这里，或直接粘贴截图（⌘/Ctrl+V），或','Drop files here, paste a screenshot (⌘/Ctrl+V), or')}</span><button type="button" class="btn" data-live-action="assign-pick">＋ ${tr('上传','Upload')}</button><input type="file" multiple hidden data-assign-file accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/csv,.docx,.xlsx,.pptx,video/mp4,application/zip"></div><ul class="assign-list" data-assign-list></ul><small class="fine">${tr('每个文件不超过 8 MB，最多 10 个；下达后会出现在这项任务的附件和更新里。','Up to 10 files, 8 MB each; they appear in the task’s attachments and updates.')}</small></div>
     </div><p class="req-note"><b>*</b> ${tr('为必填项','required')}</p></form>`, submitButton('live-assign-task',tr('下达任务','Assign task')));
     document.querySelector('#overlay-root .modal')?.classList.add('modal-wide'); fitTextareas();
   }
@@ -506,11 +538,18 @@
     if (action === 'theme') { theme = theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = theme; try { localStorage.setItem('onelaser-workos-theme',theme); } catch {} if(!updateShellChrome())render(); return; }
     if (action === 'menu') { state.menu = !state.menu; if(!updateShellChrome())render(); return; }
     if (action === 'new-task') { newTask(); return; }
+    if (action === 'assign-pick') { document.querySelector('[data-assign-file]')?.click(); return; }
+    if (action === 'assign-rm') { assignFiles.splice(Number(target.dataset.i), 1); drawAssignFiles(); return; }
     if (action === 'assign-task') { if (state.capabilities?.assignTasks) assignTask(); return; }
     if (action === 'new-objective') { newObjective(); return; }
     if (action === 'list' || action === 'board') { state.board = action === 'board'; render(); return; }
     perform(action,target.dataset.liveJobId);
   });
+  document.addEventListener('change', e => { if (e.target.matches?.('[data-assign-file]')) { addAssignFiles(e.target.files); e.target.value = ''; } });
+  document.addEventListener('dragover', e => { const f = e.target.closest?.('#live-assign-task'); if (!f || !e.dataTransfer?.types?.includes('Files')) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; f.querySelector('[data-assign-drop]')?.classList.add('over'); });
+  document.addEventListener('dragleave', e => { const z = e.target.closest?.('#live-assign-task'); if (z && !z.contains(e.relatedTarget)) z.querySelector('[data-assign-drop]')?.classList.remove('over'); });
+  document.addEventListener('drop', e => { const f = e.target.closest?.('#live-assign-task'); if (!f || !e.dataTransfer?.files?.length) return; e.preventDefault(); f.querySelector('[data-assign-drop]')?.classList.remove('over'); addAssignFiles(e.dataTransfer.files); });
+  document.addEventListener('paste', e => { if (!e.target.closest?.('#live-assign-task') && !document.querySelector('#overlay-root #live-assign-task')) return; const files = [...(e.clipboardData?.files || [])]; if (!files.length) return; e.preventDefault(); addAssignFiles(files); });
   document.addEventListener('input',event => { if (event.target.tagName === 'TEXTAREA' && event.target.closest?.('#overlay-root .modal')) fitTextarea(event.target); if (event.target.id === 'live-search') { state.search = event.target.value; const results = document.getElementById('live-task-results'); results.innerHTML = state.board ? board(filteredTasks()) : `<div class="table-wrap"><table class="task-table live-task-table"><thead><tr><th>${tr('任务 / 关键结果','Task / key result')}</th><th>${tr('负责人','Owner')}</th><th>${tr('状态','Status')}</th><th>${tr('截止时间','Due date')}</th><th>${tr('成果版本','Submission')}</th></tr></thead><tbody>${taskRows(filteredTasks())}</tbody></table></div>`; document.querySelector('.filter-total').textContent = filteredTasks().length + ' ' + tr('项','tasks'); } });
   document.addEventListener('change',event => { if (event.target.id === 'live-status') { state.status = event.target.value; render(); } if (event.target.id === 'live-owner') updateTaskOptions(); if(event.target.id==='live-okr-owner'){state.okrOwner=event.target.value;render();} });
   document.addEventListener('submit',async event => {
@@ -519,7 +558,7 @@
     const buttons = Array.from(document.querySelectorAll('[type="submit"]')); buttons.forEach(button => button.disabled = true); busy = true;
     try {
       if (form.id === 'live-names') { const r = await api.request('/me/profile',{method:'PATCH',body:{nameZh:String(values.nameZh||'').trim(),nameEn:String(values.nameEn||'').trim()}}); Object.assign(state.actor,{name_zh:r.name_zh,name_en:r.name_en}); const self=state.directory.find(u=>u.id===state.actor.id); if(self)Object.assign(self,{name_zh:r.name_zh,name_en:r.name_en}); }
-      if (form.id === 'live-assign-task') await api.post('/tasks/assign',{assigneeId:values.assigneeId,title:values.title.trim(),dueAt:new Date(values.dueAt).toISOString(),description:values.description.trim()+(String(values.support||'').trim()?'\n\n'+tr('我会提供的支持：','Support I will give: ')+String(values.support).trim():''),criteria:values.criteria.split('\n').map(v=>v.trim()).filter(Boolean),...(values.priority?{priority:values.priority}:{})});
+      if (form.id === 'live-assign-task') { const created = await api.post('/tasks/assign',{assigneeId:values.assigneeId,title:values.title.trim(),dueAt:new Date(values.dueAt).toISOString(),description:values.description.trim()+(String(values.support||'').trim()?'\n\n'+tr('我会提供的支持：','Support I will give: ')+String(values.support).trim():''),criteria:values.criteria.split('\n').map(v=>v.trim()).filter(Boolean),...(values.priority?{priority:values.priority}:{})}); await uploadAssignFiles(created?.id||created?.task?.id); }
       if (form.id === 'live-new-task') await api.post('/tasks',{title:values.title.trim(),description:values.description.trim(),ownerId:values.ownerId,reviewerId:values.reviewerId,dueAt:new Date(values.dueAt).toISOString(),criteria:values.criteria.split('\n').map(value=>value.trim()).filter(Boolean),...(values.krId ? {krId:values.krId} : {}),...(values.boardGroupId?{boardGroupId:values.boardGroupId}:{}),...(values.boardPriority?{boardPriority:values.boardPriority}:{}),...(values.boardCategory?{boardCategory:values.boardCategory}:{}),...(values.parentTaskId?{parentTaskId:values.parentTaskId}:{})});
       if (form.id === 'live-new-objective') await api.post('/objectives',{title:values.title.trim(),level:values.level,ownerId:values.ownerId,planning:window.WorkOSOkr.readPlanning(values)});
       if (form.id === 'live-new-kr') await api.post('/objectives/' + encodeURIComponent(form.dataset.objectiveId) + '/key-results',{title:values.title.trim(),baseline:Number(values.baseline),target:Number(values.target),direction:values.direction,unit:values.unit.trim(),planning:window.WorkOSOkr.readPlanning(values,true)});

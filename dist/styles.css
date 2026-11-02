@@ -117,3 +117,11 @@ html[data-theme=dark] .topbar-right .env{background:#444444;border-color:#5a5a5a
 .req-note{margin:12px 0 0;font-size:12px;color:#6b7280}.req-note b{color:#d92d20}
 html[data-theme=dark] .field:has(> :is(input,select,textarea)[required]) > span::after,html[data-theme=dark] .req-note b{color:#ff8a8a}
 #overlay-root .modal textarea{resize:vertical}
+.assign-drop{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 16px;border:1.5px dashed #c5ccda;border-radius:8px;background:#fafbfd;color:#5b6475;font-size:13px}
+.assign-drop.over{border-color:#3370ff;background:#eef3ff;color:#1f3f99}.assign-drop .icon{width:18px;height:18px}.assign-drop .btn{padding:5px 12px}
+.assign-list{list-style:none;margin:8px 0 4px;padding:0;display:flex;flex-wrap:wrap;gap:8px}.assign-list:empty{display:none}
+.assign-list li{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 8px;border:1px solid #e1e5ee;border-radius:8px;background:#fff;max-width:300px}
+.assign-list img{width:40px;height:40px;object-fit:cover;border-radius:5px}.assign-ext{width:40px;height:40px;border-radius:5px;background:#eef1f6;display:grid;place-items:center;font-size:11px;font-weight:700;color:#4b5565}
+.assign-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.assign-list small{color:#6b7280;font-size:12px}.assign-list .icon-btn{width:26px;height:26px}
+html[data-theme=dark] .assign-drop{background:#171b24;border-color:#3a4252;color:#b7c0d1}html[data-theme=dark] .assign-drop.over{background:#1f2738;border-color:#6d95ff;color:#cddaff}
+html[data-theme=dark] .assign-list li{background:#1b2029;border-color:#323a49}html[data-theme=dark] .assign-ext{background:#262d3a;color:#c9d1df}html[data-theme=dark] .assign-list small{color:#9aa4b5}
