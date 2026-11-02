@@ -26,7 +26,7 @@
       short:c('新增“版本更新”页，保留全部更新说明', 'Release notes page with every version'),
       title:c('新增“版本更新”页', 'New “Release notes” page'),
       changes:[c('“其他”分组下新增“版本更新”：列出每个版本的版本号、改了什么、谁修改、谁发布，以及前后端提交号；当前线上版本自动标出。右上角版本号的弹出框也显示全部记录，点一下进入此页。', 'New “Release notes” under Other: every version with what changed, who changed and deployed it, and the commits; the live version is marked. The version badge at the top right lists every release and opens this page.')] },
-    { version:'1.10', date:'2026-11-02T01:51:00-08:00', frontend:'5131df5', backend:'97142ac', author:KC, deployer:KC,
+    { version:'1.10', date:'2026-11-02T01:51:00-08:00', frontend:'5131df5', backend:'97142ac', author:KC, deployer:null,
       short:c('上级和项目管理员可以修改下属 / 项目任务的截止时间；增加版本号与更新说明', 'Managers and project admins can change due dates; version notes'),
       title:c('上级可改截止时间、增加版本号', 'Managers change due dates, version badge'),
       changes:[
