@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
+  <script>try{if(!localStorage.getItem("onelaser-workos-language"))localStorage.setItem("onelaser-workos-language","zh")}catch(e){}if(!location.hash)location.hash="tasks";</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0073ea">
@@ -60,6 +61,7 @@
   <script src="./contrast-guard.js?v=cdc84653de" defer></script>
 </head>
 <body>
+  <div style="position:fixed;z-index:9999;left:50%;transform:translateX(-50%);bottom:10px;background:#1f2433;color:#fff;font:13px/1.4 system-ui;padding:6px 12px;border-radius:8px;opacity:.9;pointer-events:none">预览 · 示例数据，不连接正式站（分支 preview/demo）</div>
   <div id="app"></div>
   <div id="overlay-root"></div>
   <div id="toast" role="status" aria-live="polite"></div>
