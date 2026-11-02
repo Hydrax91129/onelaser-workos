@@ -75,11 +75,13 @@
   const dirty = sku => JSON.stringify(ov[sku] || null) !== JSON.stringify(saved[sku] || null) && !(isEmptyOv(ov[sku]) && !saved[sku]);
   const isEmptyOv = o => !o || (!Object.keys(o.fields || {}).length && !Object.keys(o.assume || {}).length && !Object.keys(o.opex || {}).length);
   function saveOv(sku) { if (isEmptyOv(ov[sku])) { delete ov[sku]; delete saved[sku]; } else saved[sku] = JSON.parse(JSON.stringify(ov[sku])); try { localStorage.setItem(OV_KEY, JSON.stringify(saved)); } catch {} }
-  const fxState = { live:null, asOf:null, source:null, locked:false, loading:false };
+  // failedAt: a failed or empty FX answer waits 5 minutes before the next try, so a render never re-triggers the request in a loop.
+  const fxState = { live:null, asOf:null, source:null, locked:false, loading:false, failedAt:0 };
   function loadFx() {
     if (fxState.loading || fxState.live || !ctx?.api?.get || ctx.state().capabilities?.liveFx === false) return;
+    if (fxState.failedAt && Date.now() - fxState.failedAt < 5 * 60 * 1000) return;
     fxState.loading = true;
-    ctx.api.get('/fx').then(r => { if (Number.isFinite(r?.rate)) { fxState.live = r.rate; fxState.asOf = r.asOf; fxState.source = r.source; if (!fxState.locked) assumptions.fx = Math.round(r.rate * 10000) / 10000; } }).catch(() => {}).finally(() => { fxState.loading = false; ctx.rerender(); });
+    ctx.api.get('/fx').then(r => { if (Number.isFinite(r?.rate)) { fxState.live = r.rate; fxState.asOf = r.asOf; fxState.source = r.source; fxState.failedAt = 0; if (!fxState.locked) assumptions.fx = Math.round(r.rate * 10000) / 10000; } else fxState.failedAt = Date.now(); }).catch(() => { fxState.failedAt = Date.now(); }).finally(() => { fxState.loading = false; ctx.rerender(); });
   }
   function cost(p0, scenario = ui.scenario) {
     const p = eff(p0), a = assumeFor(p0), fx = a.fx, buf = 1 + a.freightBuffer / 100;
