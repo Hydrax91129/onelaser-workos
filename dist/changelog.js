@@ -4,7 +4,7 @@
  *
  * HOW TO ADD A RELEASE (people and AI sessions alike): when you pin a new frontend commit in the
  * API repo and deploy it, add one entry at the TOP of RELEASES below in the same PR:
- *   - version: previous version + 0.1 (v1.6 → v1.7). Start a new major only for a big platform change.
+ *   - version: previous version + 0.1 (v1.7 → v1.8). Start a new major only for a big platform change.
  *   - date: ISO time with offset of the backend release commit.
  *   - frontend / backend: the commits that went live (frontend = deploy/frontend-revision.txt).
  *   - author: who wrote the change; deployer: who pressed deploy on Render (Events/Deploys).
@@ -20,9 +20,15 @@
   const c = (zh, en) => ({ zh, en });
 
   const RELEASES = [
-    { version:'v1.6', date:'2026-11-02T01:30:00-08:00', status:'pending', frontend:'', backend:'', author:ELIAN, deployer:null,
+    { version:'v1.7', date:'2026-11-02T01:45:00-08:00', status:'pending', frontend:'', backend:'', author:ELIAN, deployer:null,
       title:c('新增“版本更新”页', 'New “Release notes” page'),
       changes:[c('“其他”分组下新增“版本更新”：列出每次上线的迭代号、改了什么、谁修改、谁发布，以及前后端提交号；当前线上版本自动标出。', 'New “Release notes” under Other: every release with its number, what changed, who changed and deployed it, and the frontend/backend commits; the live version is marked automatically.')] },
+    { version:'v1.6', date:'2026-11-02T01:28:00-08:00', frontend:'1d848aa', backend:'5eedeeb', author:KC, deployer:KC,
+      title:c('个人任务中心、自定义分组、催办', 'Personal Task hub, own groups, reminders'),
+      changes:[
+        c('任务中心改为个人视图，只显示自己的任务；可以自己新增、改名、删除分组，删除分组时任务会移到其他分组。', 'The Task hub is personal: your own tasks, with groups you can add, rename and delete (tasks move when a group is deleted).'),
+        c('上级可以从“任务分析”只读打开下属的任务，按 Esc 返回。', 'Managers open a report’s tasks read-only from Task analysis; Esc returns.'),
+        c('新增“催办”：可以对单个任务催办，也可以一键催办 3 天内到期的任务。', 'New reminders (催办): nudge a single task, or all tasks due within 3 days in one click.')] },
     { version:'v1.5', date:'2026-11-02T00:50:00-08:00', frontend:'612588a', backend:'841b46b', author:KC, deployer:KC,
       title:c('公司 OKR 可编辑、负责人头像配色', 'Editable company OKR, owner avatar colours'),
       changes:[
