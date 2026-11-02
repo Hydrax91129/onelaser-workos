@@ -105,3 +105,8 @@ html[data-theme=dark] .topbar-right .env{background:#444444;border-color:#5a5a5a
 /* Native knowledge archive shares the Work OS shell. */
 .company-knowledge .page-heading{align-items:center;margin-bottom:24px}.company-archive-row{display:flex;width:100%;text-align:left}.company-knowledge .panel-head p{margin-top:8px}
 @media(max-width:670px){.company-knowledge .page-heading{align-items:flex-start;gap:14px;flex-direction:column}.company-knowledge .panel-head{flex-wrap:wrap}}
+.drawer{width:min(520px,100%)}.drawer-overlay{background:#1f212a33;backdrop-filter:none}
+.drawer-title-row{display:flex;align-items:flex-start;gap:12px;justify-content:space-between}.drawer-title-row .drawer-title{margin:0}.drawer-title-row .btn{flex:none;display:inline-flex;align-items:center;gap:6px}.drawer-title-row .btn .icon{width:15px;height:15px}
+.drawer-section.is-empty{display:none}
+.task-edit-form{display:flex;flex-direction:column;gap:12px;margin-top:12px}.task-edit-form .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.task-edit-form textarea{min-height:72px}.task-edit-form [disabled]{opacity:.65;cursor:not-allowed}
+@media (max-width:560px){.task-edit-form .form-grid{grid-template-columns:1fr}}
