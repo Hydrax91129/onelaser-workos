@@ -22,14 +22,20 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
-    { version:'1.12', date:'2026-11-02T02:45:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+    { version:'1.13', date:'2026-11-02T10:50:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
+      short:c('新建任务的期望成果和验收标准输入框加高到 3 行；手机上新建任务和选日期更好用', 'Taller outcome and criteria boxes (3 lines); new task and date picking fit phones'),
+      title:c('新建任务输入框加高、手机适配', 'Taller new-task boxes, phone layout'),
+      changes:[
+        c('新建任务和子任务时，“期望成果”和“验收标准”改成可以看到 3 行的多行输入框；验收标准每行一条，也可以用；分开。', 'When creating a task or subitem, the expected outcome and acceptance criteria boxes show 3 lines; one criterion per line, or separate with ;.'),
+        c('手机上新建任务的每个输入框都在屏幕内、一行一个，日期和优先级更容易点；输入时不会自动放大页面。', 'On phones every new-task field fits the screen on its own line, with larger date and priority controls; typing no longer zooms the page.')] },
+    { version:'1.12', date:'2026-11-02T10:31:00-08:00', frontend:'0958755', backend:'0376dcc', author:KC, deployer:c('Elian（随 v1.13 一起发布）', 'Elian (shipped with v1.13)'),
       short:c('产品管理和库存合并为“产品与库存”一个页面；新增批量入库 / 到港入仓', 'Products and stock on one page; batch goods in'),
       title:c('产品与库存合并、批量入库', 'Products & stock on one page, batch goods in'),
       changes:[
         c('“产品管理”和“库存管理”合并为“产品与库存”，页面顶部切换“产品资料”和“库存”两个标签；各自的权限不变，没有权限的标签不显示。', 'Product catalog and inventory are now one page, “Products & stock”, with Catalog and Stock tabs; each tab keeps its own access rule.'),
         c('产品资料里的海外仓、在途、工厂库存改为直接读取库存系统的实际数量。', 'Stock columns in the catalog now show the real numbers from inventory.'),
         c('库存页新增“批量入库”：从 Excel 复制 SKU 和数量两列粘贴即可，先预览入库后的数量；可选“新货入库”或“到港入仓（从在途转入）”，所有行一起成功或一起不入。', 'New “Batch goods in”: paste SKU and quantity from Excel, preview the result, choose new goods or arrived-from-transit; all lines succeed or none.')] },
-    { version:'1.11', date:'2026-11-02T02:25:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
+    { version:'1.11', date:'2026-11-02T02:25:00-08:00', frontend:'b5c3791', backend:'94172b2', author:ELIAN, deployer:ELIAN,
       short:c('点任务名打开详情，详情可直接修改；新建任务分“期望成果”和“验收标准”；版本更新页保留全部记录', 'Task name opens details, edit in place; separate outcome and criteria; full release notes'),
       title:c('任务详情可直接修改、版本更新页', 'Editable task details, release notes page'),
       changes:[
