@@ -22,6 +22,12 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.24', date:'2026-11-02T21:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('右上角新增消息铃铛：有新任务或新互动会出现红点，点进去直达对应任务', 'New inbox bell: a red dot for new tasks and interactions; click to open the task'),
+      title:c('消息红点提醒', 'Inbox red dot'),
+      changes:[c('右上角新增铃铛，红点数字是未读消息数：别人给你下达任务、任务有新进展、提交成果待验收、验收通过或需要修改、任务完成，以及催办和 OKR 提醒。', 'A bell at the top right shows the unread count: tasks assigned to you, new progress updates, submissions awaiting review, accepted or returned reviews, completed tasks, reminders and OKR alerts.'),
+        c('点击消息直接打开对应任务，并自动标为已读；打开任务时，这个任务的消息也会一起清掉；可以一键全部标为已读。', 'Clicking a message opens its task and marks it read; opening a task clears that task’s messages; one click marks everything read.'),
+        c('每分钟自动刷新，回到页面时也会刷新。', 'Refreshes every minute and whenever you return to the page.')] },
     { version:'1.23', date:'2026-11-02T20:50:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('下达任务去掉"你会提供的支持"；完成任务去掉自我评价和字数要求', 'Assign Task drops "Support you will give"; completing a task drops the self-evaluation and minimum length'),
       title:c('下达和完成任务更简洁', 'Simpler assigning and completing'),
