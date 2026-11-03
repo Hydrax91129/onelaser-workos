@@ -1,0 +1,19 @@
+.hr .rma-kpi b.late{color:#c62a43}
+.hr-reminders{border:1px solid var(--border,#e4e7ef);border-radius:10px;padding:10px 14px;margin:0 0 16px;background:var(--surface,#fff)}
+.hr-reminders h3{font-size:14px;margin:0 0 6px;display:flex;align-items:center;gap:6px}
+.hr-reminders ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.hr-reminders li{display:flex;gap:8px;align-items:baseline;padding:5px 0;border-top:1px solid var(--border,#eef0f4);font-size:13px;cursor:pointer}.hr-reminders li:first-child{border-top:0}
+.hr-reminders li span{margin-left:auto;color:#6b7280;white-space:nowrap}.hr-reminders li span.late,.hr-docs .late{color:#c62a43;font-weight:600}
+.hr-secret{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:7px 0;border-bottom:1px solid var(--border,#eef0f4);font-size:14px}
+.hr-secret>span{width:120px;color:#6b7280;font-size:13px}.hr-secret b{min-width:150px;font-weight:600;word-break:break-all}
+.hr-reason{flex:1;min-width:160px;max-width:280px;padding:5px 8px;border:1px solid var(--border,#d7dbe5);border-radius:6px;font:inherit;font-size:13px}
+.hr-salary{margin-top:10px}
+.hr-edit{margin-top:12px}.hr-edit summary{cursor:pointer;font-size:13px;font-weight:600;color:#245bdb;display:flex;align-items:center;gap:6px}.hr-edit form{margin-top:10px}
+.hr-pair{display:flex;gap:6px}.hr-pair select{flex:1}
+.hr-docs{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-direction:column;gap:6px}
+.hr-docs li{display:flex;align-items:center;gap:10px;font-size:13px}.hr-docs li>span:first-child{flex:1}.hr-docs small{color:#6b7280;margin-left:4px}
+.hr-event{margin-top:10px}
+@media(max-width:700px){.hr-secret>span{width:100%}.hr-secret b{min-width:0}.hr-reason{max-width:none}}
+html[data-theme=dark] .hr-reminders{background:#171b24;border-color:#2c3341}html[data-theme=dark] .hr-reminders li,html[data-theme=dark] .hr-secret{border-color:#2c3341}
+html[data-theme=dark] .hr-secret>span,html[data-theme=dark] .hr-reminders li span,html[data-theme=dark] .hr-docs small{color:#9aa4b5}
+html[data-theme=dark] .hr-reason{background:#11151d;border-color:#323a49;color:inherit}html[data-theme=dark] .hr-edit summary{color:#8fb0ff}

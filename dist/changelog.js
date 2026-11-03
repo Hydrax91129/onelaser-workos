@@ -22,6 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.25', date:'2026-11-02T23:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('新增“人事档案”：入职、合同、证件和履历；身份证号、银行卡和薪资加密保存', 'New HR records: hiring, contracts, documents and history; ID numbers, bank details and salary are encrypted'),
+      title:c('人事档案（HRM 第一阶段）', 'HR records (HRM phase 1)'),
+      changes:[c('侧边栏“其他”里新增“人事档案”：人事看全公司，主管看下属的雇佣信息，每个人都能看自己的档案。', 'New “HR records” under Other: HR sees everyone, managers see their reports’ employment facts, everyone sees their own record.'),
+        c('记录入职日期、用工类型、试用期、合同起止、职级、工作地点、在职状态、紧急联系人和履历；合同扫描件和证件可以加密上传。', 'Records hire date, employment type, probation, contract dates, level, location, status, emergency contact and history; contracts and ID documents upload encrypted.'),
+        c('身份证号、银行卡号和薪资加密保存，默认只显示后 4 位；点“查看”才显示完整内容，人事查看时必须填写原因，每次查看都会留下记录。主管看不到这些资料。', 'ID numbers, bank accounts and salary are encrypted and shown masked; View reveals one value, HR must give a reason, and every view is recorded. Managers never see them.'),
+        c('试用期结束、合同到期、证件到期前 30 天和 7 天，人事会在消息铃铛里收到提醒。', 'HR gets inbox reminders 30 and 7 days before probation ends, contracts end and documents expire.')] },
     { version:'1.24', date:'2026-11-02T21:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('右上角新增消息铃铛：有新任务或新互动会出现红点，点进去直达对应任务', 'New inbox bell: a red dot for new tasks and interactions; click to open the task'),
       title:c('消息红点提醒', 'Inbox red dot'),
