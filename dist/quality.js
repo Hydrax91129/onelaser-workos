@@ -261,5 +261,5 @@
   const reg = () => window.WorkOSInsights?.register?.('quality', facts, rules);
   if (window.WorkOSInsights) reg(); else window.addEventListener('DOMContentLoaded', reg);
 
-  window.WorkOSQuality = { configure, reset, render, _ui:ui, _detailHtml:i => detailHtml(i) };
+  window.WorkOSQuality = { configure, reset, render, open:openIssue, _ui:ui, _detailHtml:i => detailHtml(i) };
 })();
