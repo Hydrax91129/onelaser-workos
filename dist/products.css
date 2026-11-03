@@ -166,3 +166,14 @@ html[data-theme=dark] .pd-settings .pd-field.changed input{background:#3a2f1c}
 .ps-tabs button{display:inline-flex;align-items:center;gap:6px;border:0;background:none;padding:7px 16px;border-radius:7px;font:inherit;font-size:14px;font-weight:600;color:var(--muted,#4f566b);cursor:pointer}
 .ps-tabs button.on{background:#fff;color:var(--ink,#1f2433);box-shadow:0 1px 3px #0002}.ps-tabs button:focus-visible{outline:2px solid #3c64f4}
 html[data-theme=dark] .ps-tabs{background:#20232c}html[data-theme=dark] .ps-tabs button{color:#b4bac8}html[data-theme=dark] .ps-tabs button.on{background:#2f3340;color:#eef0f6}
+/* price system (company pricing rules) */
+.pd-viewseg{margin:0 0 12px}
+.pd-flag{margin-top:10px;padding:8px 12px;border-radius:8px;font-size:13px;line-height:1.5;display:flex;gap:8px;align-items:flex-start}
+.pd-flag.warn{background:#fff6e0;color:#7a5200}.pd-flag.bad{background:#fdecea;color:#a3150a}
+.pd-kpi strong.pd-warn-t{color:#b77900}
+.pd-table tr.pd-on td{background:#eef6ff}
+.pd-tag.alt{background:#fff3d6;color:#7a5200}
+.pd-table td input[data-pd-rule]{width:64px;text-align:right;padding:4px 6px;border:1px solid var(--pd-line,#dcdfe6);border-radius:6px;font:inherit}
+.pd-table td input[data-pd-rule]:disabled{background:transparent;border-color:transparent;color:inherit}
+.pd-estimate{margin-top:14px}.pd-estimate>summary{cursor:pointer;font-weight:600;padding:10px 4px;color:var(--pd-sub);display:flex;gap:8px;align-items:center}
+.pd-estimate[open]>summary{margin-bottom:6px}

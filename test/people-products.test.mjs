@@ -37,11 +37,11 @@ test('sidebar sections follow the requested order, and restricted pages are gate
   assert.match(live, /function integrationPage\(\) \{ return state\.actor\?\.isAdmin===true/, 'integrations page is admin-only');
 });
 
-test('without cost access only SKU and retail price are shown; with it the lowest cost, dealer price and price ladder', () => {
+test('without cost access only SKU and retail price are shown; with it the price system (tiers, wholesale, rules)', () => {
   const basic = load(['products.js'], baseState({ id:'u2', display_name:'Yong', grants:['products'] }));
   const html = basic.window.WorkOSProducts.render('cost');
   assert.match(html, /DEMO-HYD-60/); assert.match(html, /零售价[\s\S]*\$4,999\.00/);
-  assert.doesNotMatch(html, /最低成本|分销价 |经销商售价|成本构成|工厂价|净利润|利润率/);
+  assert.doesNotMatch(html, /最低成本|分销价 |经销商售价|成本构成|工厂价|净利润|利润率|送达成本|批发|定价规则/);
   assert.doesNotMatch(basic.window.WorkOSProducts.render('catalog'), /工厂价 ¥/, 'catalog hides factory price without cost access');
   const full = load(['products.js'], baseState({ id:'u1', display_name:'KC', grants:['products', 'product_cost_detail'] }));
   const fhtml = full.window.WorkOSProducts.render('cost');
@@ -50,7 +50,25 @@ test('without cost access only SKU and retail price are shown; with it the lowes
   full.window.WorkOSProducts._ui.product = 'DEMO-HYD-60';
   assert.doesNotMatch(full.window.WorkOSProducts.render('catalog'), /最低售价|工厂价|结账运费|最终成本|DDP 单价|美国尾程/, 'product editor shows MSRP only');
   full.window.WorkOSProducts._ui.product = null;
-  for (const t of ['最低成本', '分销价', '成本构成', '折扣力度 1', '折扣力度 2', '折扣力度 3', '经销商售价', '清货最低价', '利润率']) assert.match(fhtml, new RegExp(t), t);
+  for (const t of ['送达成本', '真实售价', '零售价格档位', '日常调整', '小促', '大促', '清货', '批发价', '贡献利润', '公司定价规则', '到岸价估算']) assert.match(fhtml, new RegExp(t), t);
+  full.window.WorkOSProducts._ui.costView = 'rules';
+  const rules = full.window.WorkOSProducts.render('cost');
+  for (const t of ['销售费率', '零售合计', '17%', '批发计价规则', '不可替代配件']) assert.match(rules, new RegExp(t), t);
+});
+
+test('price system applies the company pricing rules to one SKU', () => {
+  const { window } = load(['products.js'], baseState({ id:'u1', display_name:'KC', grants:['products', 'product_cost_detail'] }));
+  const D = window.WorkOSProducts._data, p = D.products.find(x => x.sku === 'DEMO-HYD-60');
+  Object.assign(p, { landedUsd:2800, lastMileUsd:399, msrp:5999, actualPrice:4999, shipFee:0, priceClass:'standard' });
+  const P = D.plan(p);
+  assert.equal(P.delivered, 3199);
+  assert.ok(Math.abs(P.suggested - 3199 / 0.53) < 1e-6, 'MSRP target = delivered ÷ (1 − 17% − 30%)');
+  assert.ok(Math.abs(P.actualCm.usd - (4999 * 0.83 - 3199)) < 1e-6 && P.actualTier === 'major', '$4,999 is 19% CM, the major-promotion tier');
+  const w = P.ws[0]; assert.equal(w.d, 25); assert.ok(Math.abs(w.price - 5999 * 0.75) < 1e-6);
+  assert.ok(Math.abs(w.our - (5999 * 0.75 * 0.93 - 2800)) < 1e-6, 'wholesale CM = price × 93% − landed (dealer pays freight)');
+  assert.equal(JSON.stringify(P.ws.map(x => x.d)), '[25,27,30,32,35]');
+  // Shipping the customer pays separately offsets the last mile.
+  p.shipFee = 399; assert.ok(Math.abs(D.plan(p).suggested - 2800 / 0.53) < 1e-6);
 });
 
 test('cost model follows the SKU sheet and the price ladder is consistent', () => {
@@ -61,7 +79,7 @@ test('cost model follows the SKU sheet and the price ladder is consistent', () =
   assert.ok(Math.abs(c.total - (c.hard + c.opexTotal)) < 1e-9);
   assert.ok(Math.abs(c.profit - (p.msrp + p.shipFee - c.total)) < 1e-9);
   assert.ok(Math.abs(c.minCost - (c.productUsd + Math.min(c.ddp, c.hybrid))) < 1e-9, 'lowest cost uses the cheaper freight');
-  assert.ok(Math.abs(c.opex.reduce((n, x) => n + x[2], 0) - c.opexTotal) < 1e-6, 'operating breakdown sums to 38%');
+  assert.ok(Math.abs(c.opex.reduce((n, x) => n + x[2], 0) - c.opexTotal) < 1e-6 && Math.abs(c.opexTotal - p.msrp * 0.17) < 1e-6, 'operating cost follows the 17% retail selling rate');
 });
 
 test('team analysis empty state explains reporting lines; workbench lists items needing attention', () => {

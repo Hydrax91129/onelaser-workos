@@ -62,7 +62,7 @@
   function loadServer() {
     if (srv.data || srv.loading || !ctx?.api?.get || ctx.state().capabilities?.productsData !== true) return;
     srv.loading = true;
-    ctx.api.get('/products').then(async r => { srv.data = r; srv.error = ''; if (r.items?.length) { applyServer(r.items); await applyStock(); } }).catch(e => { srv.error = e.message || ''; srv.data = { items:[], failed:true }; }).finally(() => { srv.loading = false; ctx.rerender(); });
+    ctx.api.get('/products').then(async r => { srv.data = r; srv.error = ''; if (r.pricingRules) { rules = { ...clone(DEFAULT_RULES), ...r.pricingRules }; syncOpex(); } if (r.items?.length) { applyServer(r.items); await applyStock(); } }).catch(e => { srv.error = e.message || ''; srv.data = { items:[], failed:true }; }).finally(() => { srv.loading = false; ctx.rerender(); });
   }
   // With real catalog data, the warehouse columns come from Inventory (WMS), never from sample numbers.
   async function applyStock() {
@@ -77,13 +77,28 @@
     stockRows.splice(0, stockRows.length, ...buildStock());
     syncInv();
     source = tr(`系统数据 · ${items.length} 个 SKU`, `System data · ${items.length} SKUs`);
+    if (srv.data?.pricingRules) { rules = { ...clone(DEFAULT_RULES), ...srv.data.pricingRules }; syncOpex(); }
     if (!bySku(ui.costSku)) ui.costSku = products.find(p => p.factoryRmb && p.msrp)?.sku || products[0]?.sku;
     if (ui.product && !bySku(ui.product)) ui.product = null;
   }
-  const ui = { incomplete:false, ageLimit:180, tab:'catalog', product:null, search:'', typeFilter:'', statusFilter:'', costQuery:'', costSku:products.find(p => p.factoryRmb && p.msrp)?.sku || products[0]?.sku, viewAsBasic:false, scFilter:'all', safety:14, cover:45, scenario:'msrp' };
+  const ui = { incomplete:false, ageLimit:180, tab:'catalog', product:null, search:'', typeFilter:'', statusFilter:'', costQuery:'', costSku:products.find(p => p.factoryRmb && p.msrp)?.sku || products[0]?.sku, viewAsBasic:false, costView:'sku', scFilter:'all', safety:14, cover:45, scenario:'msrp' };
   /* Assumptions mirror the SKU master sheet: FX, 3% export markup, 15% freight buffer, 38% operating cost. */
   const assumptions = { fx:7.0, exportMarkup:3, freightBuffer:15, ddpFixedRmb:900, oceanRmbPerKg:8.5, hybridFixedRmb:140, parcelRmbPerKg:14.6, operatingPct:38, shipMode:'auto', dealerDiscount:30, dealerSupportPct:5, disc1:10, disc2:15, disc3:25, clearanceOpsPct:8 };
-  const OPEX = [['kol', 'KOL', 'KOL', 4], ['ads', '广告', 'Advertising', 10], ['txn', '交易手续费', 'Transaction fees', 5], ['wh', '仓库', 'Warehouse', 2.5], ['rma', '售后退换', 'Returns & after-sales', 1.5], ['team', '团队运营', 'Team operations', 12], ['mgmt', '管理成本', 'Management', 3]];
+  /* Company pricing rules (KC, Nov 2026). Server copy wins when the API offers it; these are the defaults.
+   * price = (delivered cost − shipping the customer pays separately) ÷ (1 − selling rate − target contribution margin) */
+  const DEFAULT_RULES = {
+    retail:[{ key:'ads', zh:'广告', en:'Advertising', pct:5 }, { key:'txn', zh:'交易费', en:'Transaction fees', pct:3 }, { key:'kol', zh:'KOL', en:'KOL', pct:1.5 }, { key:'brand', zh:'品牌', en:'Brand & PR', pct:1.5 }, { key:'commission', zh:'线下提成', en:'Sales commission', pct:1 }, { key:'rma', zh:'退换货及保修售后', en:'Returns & warranty', pct:2.5 }, { key:'mgmt', zh:'管理费', en:'Management fee', pct:2.5 }],
+    wholesalePct:7, platformExtraPct:10, classes:{ standard:30, rd:40, accessory:50 },
+    tiers:{ everyday:[25, 30], small:[20, 25], major:[15, 20], clearance:[10, 15] }, floorPct:15, majorPerYear:2,
+    wholesale:{ base:25, large:30, over50k:2, over100k:5 },
+  };
+  const clone = o => JSON.parse(JSON.stringify(o));
+  let rules = clone(DEFAULT_RULES), rulesDraft = null;
+  // Retail operating cost lines mirror the company rules (selling expense rate).
+  const OPEX = [];
+  const syncOpex = () => OPEX.splice(0, OPEX.length, ...rules.retail.map(r => [r.key, r.zh, r.en, Number(r.pct) || 0]));
+  syncOpex();
+  const CLASS = { standard:['标准品', 'Standard product'], rd:['研发创新品', 'R&D / innovation product'], accessory:['不可替代配件', 'Non-substitutable accessory'] };
   const canDetail = () => ((ctx.state().actor?.grants || []).includes('product_cost_detail') || (srv.data?.canSeePricing === true)) && !ui.viewAsBasic;
   const bySku = sku => products.find(p => p.sku === sku);
 
@@ -167,6 +182,120 @@
       </tbody></table><ul class="pd-legend-inline"><li><i style="background:#9699a6"></i>${tr('最低成本', 'Lowest cost')}</li><li><i style="background:#fdab3d"></i>${tr('运营 / 费用', 'Opex / fees')}</li><li><i style="background:#00c875"></i>${tr('净利润', 'Net profit')}</li><li>${tr('利润率：绿 ≥20%，橙 8–20%，红 <8%', 'Margin: green ≥20%, orange 8–20%, red <8%')}</li></ul></section>`;
   }
 
+  /* ---------- price system: company pricing rules applied to one SKU ---------- */
+  const retailRate = () => rules.retail.reduce((n, r) => n + (Number(r.pct) || 0), 0);
+  function plan(p0) {
+    const p = eff(p0), c = cost(p0, 'msrp');
+    const cls = CLASS[p.priceClass] ? p.priceClass : (p.machine ? 'standard' : 'accessory');
+    const landedSet = p.landedUsd != null, landed = landedSet ? p.landedUsd : c.minCost;
+    const lastMile = p.lastMileUsd != null ? p.lastMileUsd : 0, custShip = p.shipFee || 0;
+    const delivered = landed != null ? landed + lastMile : null, netCost = delivered != null ? delivered - custShip : null;
+    const r = retailRate() / 100, w = (Number(rules.wholesalePct) || 0) / 100;
+    const priceAt = (cm, rate = r) => netCost != null && 1 - rate - cm / 100 > 0 ? netCost / (1 - rate - cm / 100) : null;
+    const cmAt = (price, rate = r) => price && delivered != null ? { usd:price * (1 - rate) + custShip - delivered, pct:(price * (1 - rate) + custShip - delivered) / price * 100 } : null;
+    const msrp = p.msrp || null, actual = p.actualPrice ?? msrp;
+    const T = rules.tiers;
+    const tiers = [
+      { key:'msrp', zh:'MSRP', en:'MSRP', range:[rules.classes[cls], rules.classes[cls]], rule:tr(`按产品类型：${CLASS[cls][0]}`, `By product class: ${CLASS[cls][1]}`) },
+      { key:'everyday', zh:'日常调整', en:'Everyday adjustment', range:T.everyday, rule:tr('运营与市场部根据竞争调整', 'Ops and Marketing adjust for competition') },
+      { key:'small', zh:'小促', en:'Small promotion', range:T.small, rule:tr('常规活动', 'Regular promotions') },
+      { key:'major', zh:'大促', en:'Major promotion', range:T.major, rule:tr(`黑五、准备淘汰的型号；每年 ${rules.majorPerYear} 次以内`, `Black Friday, phase-out models; up to ${rules.majorPerYear} times a year`) },
+      { key:'clearance', zh:'清货', en:'Clearance', range:T.clearance, rule:tr('清库存，需总裁批准', 'Inventory clearance; President approval') },
+    ].map(t => ({ ...t, lo:priceAt(t.range[0]), hi:priceAt(t.range[1]) }));
+    const tierOf = pct => pct == null ? null : pct >= rules.classes[cls] - 0.05 ? 'msrp' : ['everyday', 'small', 'major', 'clearance'].find(k => pct >= T[k][0] - 0.05) || 'loss';
+    const W = rules.wholesale, ws = [
+      [tr('普通经销商', 'Standard dealer'), W.base], [tr('普通经销商 · 单笔超 $5 万', 'Standard · order over $50k'), W.base + W.over50k],
+      [tr('大经销商 / 普通单笔超 $10 万', 'Large dealer / standard over $100k'), Math.max(W.large, W.base + W.over100k)],
+      [tr('大经销商 · 单笔超 $5 万', 'Large · order over $50k'), W.large + W.over50k], [tr('大经销商 · 单笔超 $10 万', 'Large · order over $100k'), W.large + W.over100k],
+    ].map(([label, d]) => { const price = msrp ? msrp * (1 - d / 100) : null, our = price != null && landed != null ? price * (1 - w) - landed : null;
+      const dealerAt = sell => sell && price != null ? sell + custShip - price - lastMile : null;
+      return { label, d, price, our, ourPct:our != null ? our / price * 100 : null, dealerActual:dealerAt(actual), dealerMsrp:dealerAt(msrp) }; });
+    const msrpCm = cmAt(msrp), actualCm = cmAt(actual), suggested = priceAt(rules.classes[cls]);
+    const missing = [landed == null && tr('到岸价', 'landed cost'), p.lastMileUsd == null && tr('尾程运费', 'last-mile shipping'), !msrp && 'MSRP'].filter(Boolean);
+    return { p, cls, landed, landedSet, lastMile, custShip, delivered, netCost, r, w, tiers, msrp, actual, msrpCm, actualCm, actualTier:tierOf(actualCm?.pct), msrpTier:tierOf(msrpCm?.pct), suggested, ws, missing, priceAt, cmAt,
+      platform:cmAt(actual, r + (Number(rules.platformExtraPct) || 0) / 100) };
+  }
+  const tierName = k => k === 'loss' ? tr('低于清货线', 'Below clearance') : (() => { const t = { msrp:['MSRP', 'MSRP'], everyday:['日常调整', 'Everyday'], small:['小促', 'Small promo'], major:['大促', 'Major promo'], clearance:['清货', 'Clearance'] }[k]; return t ? tr(t[0], t[1]) : '—'; })();
+  const cmTone = pct => pct == null ? '' : pct >= 25 ? 'good' : pct >= rules.floorPct ? 'mid' : 'bad';
+  const money0 = n => n == null ? '—' : '$' + Math.round(n).toLocaleString('en-US');
+  const cmCell = x => x ? `<span class="pd-margin ${cmTone(x.pct)}">${money0(x.usd)} · ${x.pct.toFixed(1)}%</span>` : '—';
+  function priceSystem(p0) {
+    const P = plan(p0);
+    const range = (lo, hi) => lo == null ? '—' : Math.abs(lo - hi) < 0.5 ? money0(lo) : `${money0(hi)} – ${money0(lo)}`;
+    const flags = [];
+    if (P.msrp && P.suggested && P.msrp < P.suggested - 0.5) flags.push(['warn', tr(`MSRP ${money0(P.msrp)} 低于规则建议 ${money0(P.suggested)}（${CLASS[P.cls][0]} ${rules.classes[P.cls]}%），贡献利润 ${P.msrpCm.pct.toFixed(1)}%。`, `MSRP ${money0(P.msrp)} is below the rule's ${money0(P.suggested)} (${CLASS[P.cls][1]} ${rules.classes[P.cls]}%); CM ${P.msrpCm.pct.toFixed(1)}%.`)]);
+    if (P.actualCm && P.actualCm.pct < rules.floorPct) flags.push(['bad', tr(`真实售价的贡献利润 ${P.actualCm.pct.toFixed(1)}% 低于 ${rules.floorPct}% 底线，属于${tierName(P.actualTier)}，需要总裁批准。`, `Actual price CM ${P.actualCm.pct.toFixed(1)}% is below the ${rules.floorPct}% floor (${tierName(P.actualTier)}); needs President approval.`)]);
+    else if (P.actualTier === 'major') flags.push(['warn', tr(`真实售价落在大促档（${rules.tiers.major.join('–')}%）。大促每年最多 ${rules.majorPerYear} 次，不宜作为长期售价。`, `Actual price sits in the major-promotion tier (${rules.tiers.major.join('–')}%), allowed up to ${rules.majorPerYear} times a year — not a long-term price.`)]);
+    if (P.missing.length) flags.push(['warn', tr(`请补齐：${P.missing.join('、')}。${P.landedSet ? '' : '到岸价暂按成本模型估算（产品 + 最便宜的头程）。'}`, `Please fill in: ${P.missing.join(', ')}.${P.landedSet ? '' : ' Landed cost is estimated by the cost model for now.'}`)]);
+    const kpi = (label, value, note, tone = '') => `<div class="pd-kpi"><span>${label}</span><strong class="${tone}">${value}</strong><em>${note}</em></div>`;
+    return `<section class="pd-card pd-cost-hero"><div class="pd-prod"><span class="pd-thumb big">${icon(P.p.icon)}</span><div><strong>${esc(L(P.p.name))}</strong><span>${esc(P.p.sku)} · ${esc(P.p.type || '')} · ${esc(tr(CLASS[P.cls][0], CLASS[P.cls][1]))}</span></div>${pill(P.p.status)}</div>
+      <div class="pd-kpis">
+        ${kpi(tr('送达成本', 'Delivered cost'), money0(P.delivered), tr(`到岸 ${money0(P.landed)} + 尾程 ${money0(P.lastMile)}`, `landed ${money0(P.landed)} + last mile ${money0(P.lastMile)}`))}
+        ${kpi('MSRP', money0(P.msrp), P.msrpCm ? tr(`贡献利润 ${P.msrpCm.pct.toFixed(1)}% · 规则建议 ${money0(P.suggested)}`, `CM ${P.msrpCm.pct.toFixed(1)}% · rule ${money0(P.suggested)}`) : '—', P.msrpCm && P.msrpCm.pct < rules.classes[P.cls] - 0.5 ? 'pd-warn-t' : '')}
+        ${kpi(tr('真实售价', 'Actual price'), money0(P.actual), P.actualCm ? tr(`贡献利润 ${money0(P.actualCm.usd)}（${P.actualCm.pct.toFixed(1)}%）· ${tierName(P.actualTier)}`, `CM ${money0(P.actualCm.usd)} (${P.actualCm.pct.toFixed(1)}%) · ${tierName(P.actualTier)}`) : '—', P.actualCm && P.actualCm.pct < rules.floorPct ? 'pd-bad' : '')}
+        ${kpi(tr(`批发起步（MSRP −${rules.wholesale.base}%）`, `Wholesale base (MSRP −${rules.wholesale.base}%)`), money0(P.ws[0].price), P.ws[0].our != null ? tr(`我们赚 ${money0(P.ws[0].our)}（${P.ws[0].ourPct.toFixed(1)}%）· 经销商付运费`, `we earn ${money0(P.ws[0].our)} (${P.ws[0].ourPct.toFixed(1)}%) · dealer pays freight`) : '—')}
+      </div>${flags.map(([t, m]) => `<div class="pd-flag ${t}">${icon(t === 'bad' ? 'warning-octagon' : 'warning')} ${esc(m)}</div>`).join('')}</section>
+    <section class="pd-card"><div class="pd-card-head"><h3>${icon('stairs')} ${tr('零售价格档位（按公司计价规则）', 'Retail price tiers (company pricing rules)')}</h3><span class="pd-hint">${tr(`售价 =（送达成本 − 顾客另付运费 ${money0(P.custShip)}）÷（1 − 销售费率 ${retailRate()}% − 目标贡献利润率）`, `Price = (delivered cost − customer-paid shipping ${money0(P.custShip)}) ÷ (1 − selling rate ${retailRate()}% − target CM)`)}</span></div>
+      <table class="pd-table" data-help-table="pd-tiers"><thead><tr><th>${tr('档位', 'Tier')}</th><th class="num">${tr('贡献利润率', 'CM %')}</th><th class="num">${tr('售价区间', 'Price range')}</th><th>${tr('规则', 'Rule')}</th></tr></thead><tbody>
+        ${P.tiers.map(t => `<tr class="${t.key === P.actualTier ? 'pd-on' : ''}"><td><strong>${tr(t.zh, t.en)}</strong>${t.key === P.actualTier ? `<span class="pd-tag">${tr('当前真实售价', 'Current actual price')}</span>` : ''}${t.key === P.msrpTier && P.msrpTier !== P.actualTier ? `<span class="pd-tag alt">${tr('当前 MSRP', 'Current MSRP')}</span>` : ''}</td><td class="num">${t.range[0] === t.range[1] ? t.range[0] + '%' : t.range.join('–') + '%'}</td><td class="num"><b>${range(t.lo, t.hi)}</b></td><td>${esc(t.rule)}</td></tr>`).join('')}
+      </tbody></table>
+      <p class="pd-hint">${tr(`Amazon / eBay 销售费率再加 ${rules.platformExtraPct}%：按真实售价卖，贡献利润为 `, `Amazon / eBay add ${rules.platformExtraPct}%: at the actual price CM would be `)}${P.platform ? `${money0(P.platform.usd)}（${P.platform.pct.toFixed(1)}%）` : '—'}。</p></section>
+    <section class="pd-card"><div class="pd-card-head"><h3>${icon('handshake')} ${tr('批发价（按 MSRP 打折，经销商付运费）', 'Wholesale (off MSRP, dealer pays freight)')}</h3><span class="pd-hint">${tr(`我们的贡献利润 = 批发价 ×（1 − ${rules.wholesalePct}%）− 到岸价；经销商利润 = 售价 + 顾客另付运费 − 批发价 − 尾程`, `Our CM = wholesale × (1 − ${rules.wholesalePct}%) − landed; dealer profit = selling price + customer shipping − wholesale − last mile`)}</span></div>
+      <table class="pd-table" data-help-table="pd-wholesale"><thead><tr><th>${tr('档位', 'Tier')}</th><th class="num">${tr('折扣', 'Discount')}</th><th class="num">${tr('批发价', 'Wholesale')}</th><th class="num">${tr('我们的贡献利润', 'Our CM')}</th><th class="num">${tr('经销商利润（按真实售价卖）', 'Dealer profit at actual price')}</th><th class="num">${tr('经销商利润（按 MSRP 卖）', 'Dealer profit at MSRP')}</th></tr></thead><tbody>
+        ${P.ws.map(x => `<tr><td>${esc(x.label)}</td><td class="num">${x.d}%</td><td class="num"><b>${money0(x.price)}</b></td><td class="num">${x.our != null ? `<span class="pd-margin ${cmTone(x.ourPct)}">${money0(x.our)} · ${x.ourPct.toFixed(1)}%</span>` : '—'}</td><td class="num ${x.dealerActual != null && x.dealerActual < 0 ? 'pd-bad' : ''}">${x.dealerActual != null ? `${money0(x.dealerActual)} · ${(x.dealerActual / P.actual * 100).toFixed(1)}%` : '—'}</td><td class="num">${x.dealerMsrp != null ? `${money0(x.dealerMsrp)} · ${(x.dealerMsrp / P.msrp * 100).toFixed(1)}%` : '—'}</td></tr>`).join('')}
+      </tbody></table>
+      <p class="pd-hint">${tr(`对比：官网按真实售价直销，每台贡献利润 ${P.actualCm ? money0(P.actualCm.usd) : '—'}。经销商以 ACH 或电汇付款；刷卡另加 3%。`, `For comparison, selling direct at the actual price earns ${P.actualCm ? money0(P.actualCm.usd) : '—'} per unit. Dealers pay by ACH or wire; cards add 3%.`)}</p></section>
+    ${planInputs(P)}`;
+  }
+  function planInputs(P) {
+    const live = !!srv.data?.items?.length && ctx.state().capabilities?.pricingRules === true;
+    const n = (k, label, v, ph, unit = '$') => `<label class="pd-field"><span>${label} <em>${unit}</em></span><input type="number" step="1" min="0" data-pd-plan="${k}" value="${v ?? ''}" placeholder="${ph ?? ''}"></label>`;
+    const p = P.p;
+    return `<section class="pd-card pd-settings"><div class="pd-card-head"><h3>${icon('sliders-horizontal')} ${tr('这个 SKU 的定价输入', 'Pricing inputs for this SKU')}</h3></div>
+      <form id="pd-plan" class="pd-grid3">
+        <label class="pd-field"><span>${tr('产品类型（决定 MSRP 目标）', 'Product class (sets the MSRP target)')}</span><select name="priceClass">${Object.keys(CLASS).map(k => `<option value="${k}" ${k === P.cls ? 'selected' : ''}>${tr(CLASS[k][0], CLASS[k][1])} · ${rules.classes[k]}%</option>`).join('')}</select></label>
+        ${n('landedUsd', tr('到岸价', 'Landed cost'), p.landedUsd, P.landedSet ? '' : (P.landed != null ? Math.round(P.landed) : ''))}
+        ${n('lastMileUsd', tr('尾程运费', 'Last-mile shipping'), p.lastMileUsd, '')}
+        ${n('actualPrice', tr('真实售价', 'Actual selling price'), p.actualPrice, p.msrp ?? '')}
+        <label class="pd-field"><span>MSRP <em>$</em></span><input value="${p.msrp ?? ''}" disabled title="${tr('MSRP 在产品资料里维护', 'MSRP is kept in the product catalog')}"></label>
+        <label class="pd-field"><span>${tr('顾客另付运费', 'Shipping the customer pays')} <em>$</em></span><input value="${p.shipFee ?? 0}" disabled title="${tr('结账运费在产品资料里维护', 'Checkout shipping is kept in the product catalog')}"></label>
+      </form>
+      <div class="pd-actions"><button class="pd-btn primary" data-pd="plan-save">${icon('floppy-disk')} ${live ? tr('保存定价输入', 'Save pricing inputs') : tr('应用（示例数据不保存）', 'Apply (sample data is not saved)')}</button></div>
+      <p class="pd-hint">${tr('到岸价 = 工厂价 + 头程运费 + 关税 + 清关杂费；留空时按成本模型估算。真实售价留空时按 MSRP 计算。', 'Landed = factory price + ocean freight + duties + clearance; left blank, the cost model estimates it. Actual price defaults to MSRP.')}</p></section>`;
+  }
+  function rulesPanel() {
+    const can = srv.data?.canEditRules === true || (!srv.data?.items?.length && ctx.state().actor?.isAdmin === true);
+    const R = rulesDraft || rules, dis = can ? '' : 'disabled';
+    const n = (path, v, step = .5) => `<input type="number" step="${step}" min="0" max="100" data-pd-rule="${path}" value="${v}" ${dis}>`;
+    const rows = (k, label, rule) => `<tr><td>${label}</td><td class="num">${n(`tiers.${k}.0`, R.tiers[k][0])} – ${n(`tiers.${k}.1`, R.tiers[k][1])} %</td><td class="num">${(1 / (1 - retailRateOf(R) / 100 - R.tiers[k][1] / 100)).toFixed(2)}–${(1 / (1 - retailRateOf(R) / 100 - R.tiers[k][0] / 100)).toFixed(2)}</td><td>${rule}</td></tr>`;
+    const upd = rules.updatedAt ? tr(`最近修改：${new Date(rules.updatedAt).toLocaleString('zh-CN')}`, `Last changed: ${new Date(rules.updatedAt).toLocaleString('en-US')}`) : tr('使用默认规则（2026-11-02 版）', 'Default rules (Nov 2, 2026)');
+    return `<section class="pd-card"><div class="pd-card-head"><h3>${icon('scales')} ${tr('销售费率', 'Selling expense rates')}</h3><span class="pd-hint">${upd}${can ? '' : ' · ' + tr('仅公司管理员可以修改', 'only company admins can edit')}</span></div>
+      <table class="pd-table"><thead><tr><th>${tr('项目', 'Item')}</th><th class="num">${tr('零售（占售价）', 'Retail (% of price)')}</th></tr></thead><tbody>
+      ${R.retail.map((x, i) => `<tr><td>${esc(tr(x.zh, x.en))}</td><td class="num">${n(`retail.${i}.pct`, x.pct)} %</td></tr>`).join('')}
+      <tr class="pd-subtotal"><td>${tr('零售合计', 'Retail total')}</td><td class="num"><b>${retailRateOf(R)}%</b></td></tr>
+      <tr><td>${tr('批发销售费率（品牌、提成、退换货及保修、管理费）', 'Wholesale rate (brand, commission, returns & warranty, management)')}</td><td class="num">${n('wholesalePct', R.wholesalePct)} %</td></tr>
+      <tr><td>${tr('Amazon / eBay 额外费率', 'Amazon / eBay extra')}</td><td class="num">${n('platformExtraPct', R.platformExtraPct)} %</td></tr></tbody></table></section>
+    <section class="pd-card"><div class="pd-card-head"><h3>${icon('stairs')} ${tr('零售计价规则（贡献利润率）', 'Retail pricing rules (contribution margin)')}</h3><span class="pd-hint">${tr('倍数 = 售价 ÷ 送达成本（不含顾客另付运费）', 'Multiplier = price ÷ delivered cost (before customer-paid shipping)')}</span></div>
+      <table class="pd-table"><thead><tr><th>${tr('档位', 'Tier')}</th><th class="num">${tr('贡献利润率', 'CM %')}</th><th class="num">${tr('售价 ≈ 送达成本 ×', 'Price ≈ delivered ×')}</th><th>${tr('规则', 'Rule')}</th></tr></thead><tbody>
+      ${Object.keys(CLASS).map(k => `<tr><td>MSRP · ${tr(CLASS[k][0], CLASS[k][1])}</td><td class="num">${n(`classes.${k}`, R.classes[k], 1)} %</td><td class="num">${(1 / (1 - retailRateOf(R) / 100 - R.classes[k] / 100)).toFixed(2)}</td><td>${k === 'standard' ? tr('其他所有产品，起步', 'All other products, minimum') : k === 'rd' ? tr('自主研发、创新产品', 'In-house R&D / innovation') : tr('机器专用、不可替代', 'Machine-specific, non-substitutable')}</td></tr>`).join('')}
+      ${rows('everyday', tr('日常调整', 'Everyday adjustment'), tr('运营与市场部根据竞争调整', 'Ops and Marketing adjust for competition'))}
+      ${rows('small', tr('小促', 'Small promotion'), tr('常规活动', 'Regular promotions'))}
+      ${rows('major', tr('大促', 'Major promotion'), `${tr('黑五、准备淘汰的型号；每年最多', 'Black Friday, phase-out models; up to')} ${n('majorPerYear', R.majorPerYear, 1)} ${tr('次', 'times a year')}`)}
+      ${rows('clearance', tr('清货', 'Clearance'), tr('清库存，需总裁批准', 'Inventory clearance; President approval'))}
+      <tr><td>${tr('常规底线', 'Standard floor')}</td><td class="num">${n('floorPct', R.floorPct, 1)} %</td><td></td><td>${tr('低于底线标红，需要总裁批准', 'Below the floor shows red and needs President approval')}</td></tr>
+      </tbody></table></section>
+    <section class="pd-card"><div class="pd-card-head"><h3>${icon('handshake')} ${tr('批发计价规则（按 MSRP 打折，运费由经销商承担）', 'Wholesale rules (off MSRP, dealer pays freight)')}</h3></div>
+      <table class="pd-table"><tbody>
+      <tr><td>${tr('普通经销商起步折扣', 'Standard dealer base discount')}</td><td class="num">${n('wholesale.base', R.wholesale.base, 1)} %</td></tr>
+      <tr><td>${tr('大经销商折扣', 'Large dealer discount')}</td><td class="num">${n('wholesale.large', R.wholesale.large, 1)} %</td></tr>
+      <tr><td>${tr('单笔订单超过 $50,000，再加', 'Order over $50,000, additional')}</td><td class="num">${n('wholesale.over50k', R.wholesale.over50k, 1)} ${tr('个点', 'points')}</td></tr>
+      <tr><td>${tr('单笔订单超过 $100,000，再加', 'Order over $100,000, additional')}</td><td class="num">${n('wholesale.over100k', R.wholesale.over100k, 1)} ${tr('个点', 'points')}</td></tr>
+      </tbody></table>
+      ${can ? `<div class="pd-actions"><button class="pd-btn primary" data-pd="rules-save" ${rulesDraft ? '' : 'disabled'}>${icon('floppy-disk')} ${tr('保存定价规则', 'Save pricing rules')}</button>${rulesDraft ? `<button class="pd-btn" data-pd="rules-cancel">${tr('放弃修改', 'Discard changes')}</button><span class="pd-unsaved">${tr('有未保存的修改', 'Unsaved changes')}</span>` : ''}</div>` : ''}
+      <p class="pd-hint">${tr('规则保存后，所有 SKU 的价格档位、批发价和利润会按新规则重算。', 'After saving, every SKU’s tiers, wholesale prices and margins recalculate.')}</p></section>`;
+  }
+  const retailRateOf = R => Math.round(R.retail.reduce((n, r) => n + (Number(r.pct) || 0), 0) * 100) / 100;
+
   /* ---------- supply chain rows: real inventory injected at runtime, else derived from the sample catalog ---------- */
   const INV = window.WORKOS_INVENTORY_DATA;
   const invSource = INV?.source || tr('示例库存', 'Sample inventory');
@@ -204,7 +333,7 @@
   /* ---------- shell ---------- */
   const PAGES = {
     catalog:['PRODUCT HUB · CATALOG', '产品管理', 'Product catalog', '查询产品，由产品经理补齐属性，建立公司完整的产品目录。', 'Look up products; PMs complete the attributes to build the full company catalog.'],
-    cost:['PRODUCT HUB · COST', '成本核算', 'Cost calculator', '输入 SKU 或名称，查看最低成本、分销价和最终售价。成本明细由总裁授权查看。', 'Enter a SKU or name to see the lowest cost, dealer price and retail price. Cost details are granted by the president.'],
+    cost:['PRODUCT HUB · COST', '成本核算', 'Cost calculator', '输入 SKU 或名称，按公司计价规则查看送达成本、各档售价、批发价和利润。成本明细由总裁授权查看。', 'Enter a SKU or name to see the delivered cost, price tiers, wholesale prices and margins under the company pricing rules. Cost details are granted by the president.'],
     supply:['PRODUCT HUB · SUPPLY CHAIN', '智能供应链', 'Smart supply chain', '用颜色一眼看出哪些 SKU 需要补货、库存超期或库存过多，并自动给出补货建议。', 'Colors show at a glance which SKUs need reordering, have aged stock or are overstocked, with automatic reorder suggestions.'],
   };
   function render(tab) {
@@ -218,7 +347,7 @@
       : ui.tab === 'cost' && d?.canImportPricing && !ui.viewAsBasic ? `<button class="pd-btn" data-pd="import" data-kind="pricing">${icon('upload-simple')} ${tr('导入成本数据', 'Import cost data')}</button>` : '';
     return `<div class="pd">
       <div class="page-heading"><div><div class="eyebrow">${eyebrow}</div><h1>${tr(zh, en)}</h1><p>${tr(dzh, den)}${last && ui.tab !== 'supply' ? `<br><small class="pd-hint">${tr(`最近导入：${new Date(last.at).toLocaleString('zh-CN')} · ${last.rows} 行`, `Last import: ${new Date(last.at).toLocaleString('en-US')} · ${last.rows} rows`)}</small>` : ''}</p></div>${actions ? `<div class="heading-actions">${actions}</div>` : ''}</div>
-      <div class="pd-banner">${icon('lock-simple')} ${live ? tr(`受限区域 · 数据来源：${source} · 页面上直接修改暂不保存，请用“导入”更新`, `Restricted · data: ${source} · edits on this page are not saved yet; update by import`) : tr(`受限区域 · 测试原型 · 数据来源：${source} · 修改不会保存${d && !d.failed && (d.canImportCatalog) ? ' · 点右上角“导入产品资料”换成真实数据' : ''}`, `Restricted · test prototype · data: ${source} · changes are not saved${d && !d.failed && d.canImportCatalog ? ' · use “Import catalog” to load real data' : ''}`)}</div>
+      <div class="pd-banner">${icon('lock-simple')} ${live ? (ui.tab === 'cost' && canDetail() ? tr(`受限区域 · 数据来源：${source} · 定价输入和定价规则可直接保存；产品资料和工厂成本请用“导入”更新`, `Restricted · data: ${source} · pricing inputs and rules save directly; update catalog and factory costs by import`) : tr(`受限区域 · 数据来源：${source} · 页面上直接修改暂不保存，请用“导入”更新`, `Restricted · data: ${source} · edits on this page are not saved yet; update by import`)) : tr(`受限区域 · 测试原型 · 数据来源：${source} · 修改不会保存${d && !d.failed && (d.canImportCatalog) ? ' · 点右上角“导入产品资料”换成真实数据' : ''}`, `Restricted · test prototype · data: ${source} · changes are not saved${d && !d.failed && d.canImportCatalog ? ' · use “Import catalog” to load real data' : ''}`)}</div>
       ${ui.tab === 'cost' ? costBoard() : ui.tab === 'supply' ? supplyBoard() : ui.product ? productEditor(bySku(ui.product)) : catalog()}
     </div>`;
   }
@@ -285,32 +414,22 @@
       ${p && !detail ? `<section class="pd-card pd-cost-hero basic"><div class="pd-prod"><span class="pd-thumb big">${icon(p.icon)}</span><div><strong>${esc(L(p.name))}</strong><span>${esc(p.type || '')}</span></div>${pill(p.status)}</div>
         <div class="pd-final"><span>SKU</span><strong class="mono">${esc(p.sku) || '—'}</strong></div>
         <div class="pd-final"><span>${tr('零售价', 'Retail price')}</span><strong>${p.msrp ? usd(p.msrp) : '—'}</strong></div></section>` : ''}
-      ${p && detail ? `<section class="pd-card pd-cost-hero"><div class="pd-prod"><span class="pd-thumb big">${icon(p.icon)}</span><div><strong>${esc(L(p.name))}</strong><span>${esc(p.sku)} · ${esc(p.type || '')}</span></div>${pill(p.status)}</div>
-        <div class="pd-kpis">
-          <div class="pd-kpi"><span>${tr('最低成本（到美国仓）', 'Lowest cost (to US warehouse)')}</span><strong>${c.minCost != null ? usd(c.minCost) : '—'}</strong><em>${tr('产品 + 最便宜的头程', 'product + cheapest freight')}</em></div>
-          <div class="pd-kpi"><span>${tr('分销价', 'Dealer price')}</span><strong>${c.dealer != null ? usd(c.dealer) : '—'}</strong><em class="${c.dealerMargin != null && c.dealerMargin < 10 ? 'pd-bad' : 'pd-good'}">${tr('零售价', 'MSRP')} −${assumptions.dealerDiscount}% · ${tr('分销利润', 'dealer profit')} ${c.dealerProfit != null ? usd(c.dealerProfit) : '—'} (${pct(c.dealerMargin)})</em></div>
-          <div class="pd-kpi"><span>${tr('最终售价 MSRP / 最低价', 'Retail MSRP / low price')}</span><strong>${p.msrp ? usd(p.msrp) : '—'}</strong><em>${tr('最低价', 'Low')} ${p.low ? usd(p.low) : '—'} · ${tr('结账运费', 'shipping fee')} ${usd(p.shipFee || 0)}</em></div>
-          <div class="pd-kpi"><span>${tr('直营净利润', 'Direct net profit')} · ${ui.scenario === 'low' ? tr('最低价', 'low price') : 'MSRP'}</span><strong class="${c.profit != null && c.profit < 0 ? 'pd-bad' : ''}">${c.profit != null ? usd(c.profit) : '—'}</strong><em class="${c.margin != null && c.margin < 15 ? 'pd-bad' : 'pd-good'}">${tr('净利率', 'Net margin')} ${pct(c.margin)} · ${tr('全成本', 'full cost')} ${c.total != null ? usd(c.total) : '—'}</em></div>
-        </div></section>` : ''}
+      ${detail ? `<div class="pd-seg pd-viewseg">${[['sku', tr('单个 SKU 定价', 'Price one SKU')], ['rules', tr('公司定价规则', 'Company pricing rules')]].map(([k, l]) => `<button class="${ui.costView === k ? 'active' : ''}" data-pd="cost-view" data-v="${k}">${l}</button>`).join('')}</div>` : ''}
+      ${detail && ui.costView === 'rules' ? rulesPanel() : `
+      ${p && detail ? priceSystem(p) : ''}
       ${p ? `
-        ${p && detail ? ladderTable(p) : ''}
-        ${detail && c.missing.length ? `<div class="pd-warn">${icon('warning')} ${tr('缺少数据，结果不完整：', 'Missing data, result incomplete: ')}${esc(c.missing.join('、'))}</div>` : ''}
-        ${detail ? `<div class="pd-cost-grid"><section class="pd-card"><div class="pd-card-head"><h3>${tr('成本构成（每台，USD）', 'Cost breakdown (per unit, USD)')}</h3>${scen}</div><table class="pd-table pd-breakdown"><tbody>
+        ${detail && c.missing.length && p.landedUsd == null ? `<div class="pd-warn">${icon('warning')} ${tr('缺少数据，结果不完整：', 'Missing data, result incomplete: ')}${esc(c.missing.join('、'))}</div>` : ''}
+        ${detail ? `<details class="pd-estimate" ${p.landedUsd == null ? 'open' : ''}><summary>${icon('calculator')} ${p.landedUsd == null ? tr('到岸价估算（按工厂价和头程计算，尚未填写到岸价）', 'Landed cost estimate (from factory price and freight; no landed cost entered yet)') : tr('到岸价估算（已填写到岸价，以下仅供参考）', 'Landed cost estimate (a landed cost is entered; for reference only)')}</summary><div class="pd-cost-grid"><section class="pd-card"><div class="pd-card-head"><h3>${tr('到岸价估算（每台，USD）', 'Landed cost estimate (per unit, USD)')}</h3></div><table class="pd-table pd-breakdown"><tbody>
             ${line(tr('产品成本', 'Product cost'), p.factoryUsd != null ? tr('工厂美元报价', 'factory USD quote') : p.factoryRmb != null ? `¥${int(p.factoryRmb)} × ${(1 + A.exportMarkup / 100).toFixed(2)} ÷ ${A.fx}` : '', c.productUsd)}
             ${line(`${tr('头程到仓', 'Freight to warehouse')} · ${c.mode === 'hybrid' ? 'Hybrid' : 'DDP'}`, c.mode === 'hybrid' ? `(${c.hybNote}) ÷ ${A.fx}` : `(${c.ddpNote}) ÷ ${A.fx}`, c.ship)}
-            ${line(tr('硬成本', 'Hard cost'), '', c.hard, 'pd-subtotal')}
-            ${c.opex.map(([k, label, v, pc]) => line(label, `${tr('售价', 'price')} × ${pc}%`, v)).join('')}
-            ${line(tr(`运营成本合计（${opexSum(p)}%）`, `Operating cost (${opexSum(p)}%)`), '', c.opexTotal, 'pd-subtotal')}
-            ${line(tr('最终成本', 'Final cost'), tr('硬成本 + 运营成本', 'hard + operating'), c.total, 'pd-total')}
-            ${line(tr('收入（售价 + 结账运费）', 'Revenue (price + shipping fee)'), '', c.revenue)}
-            ${line(tr('净利润', 'Net profit'), tr('收入 − 最终成本', 'revenue − final cost'), c.profit, 'pd-total')}
+            ${line(tr('到岸价估算', 'Estimated landed cost'), tr('产品 + 头程（填写到岸价后以填写为准）', 'product + freight (an entered landed cost takes priority)'), c.hard, 'pd-total')}
           </tbody></table>
           <div class="pd-ship-compare"><h4>${tr('发货方式对比（头程到仓，每台）', 'Shipping comparison (to warehouse, per unit)')}</h4>
             <div class="pd-compare-row ${c.mode === 'ddp' ? 'on' : ''}"><b>DDP</b><span>${esc(c.ddpNote || '—')}</span><strong>${c.ddp != null ? usd(c.ddp) : '—'}</strong></div>
             <div class="pd-compare-row ${c.mode === 'hybrid' ? 'on' : ''}"><b>Hybrid</b><span>${esc(c.hybNote || tr('无美国尾程报价', 'no US last-mile quote'))}</span><strong>${c.hybrid != null ? usd(c.hybrid) : '—'}</strong></div>
             <p class="pd-hint">${tr(`表格标注的最优方式：${p.best || '未标注'}。计费重量取毛重与体积重（长×宽×高÷6000）较大者：${c.billKg ? c.billKg.toFixed(1) + 'kg' : '—'}。`, `Sheet's best method: ${p.best || 'not set'}. Billable weight = max(gross, L×W×H÷6000): ${c.billKg ? c.billKg.toFixed(1) + 'kg' : '—'}.`)}</p></div></section>
-          ${costSettings(p, c)}</div>`
-        : `<div class="pd-locked">${icon('lock-simple')} ${tr('成本、分销价和利润仅限总裁授权的人员查看。你可以查询 SKU 和零售价。', 'Cost, dealer price and profit are visible only to people the president has authorized. You can look up SKUs and retail prices.')}</div>`}` : `<p class="pd-hint">${tr('输入 SKU 或名称开始查询。', 'Enter a SKU or name to start.')}</p>`}
+          ${costSettings(p, c)}</div></details>`
+        : `<div class="pd-locked">${icon('lock-simple')} ${tr('成本、分销价和利润仅限总裁授权的人员查看。你可以查询 SKU 和零售价。', 'Cost, dealer price and profit are visible only to people the president has authorized. You can look up SKUs and retail prices.')}</div>`}` : `<p class="pd-hint">${tr('输入 SKU 或名称开始查询。', 'Enter a SKU or name to start.')}</p>`}`}
     </div>`;
   }
 
@@ -320,15 +439,14 @@
     const num = (group, key, label, value, def, step = 1, unit = '') => { const changed = o[group][key] != null; return `<label class="pd-field ${changed ? 'changed' : ''}"><span>${label}${unit ? ` <em>${unit}</em>` : ''}</span><input type="number" step="${step}" data-pd-ov="${group}.${key}" value="${value ?? ''}" placeholder="${def ?? ''}">${changed ? `<small>${tr('表格原值', 'Sheet value')}：${def ?? '—'}</small>` : ''}</label>`; };
     const f = k => o.fields[k] ?? base[k], a = k => o.assume[k] ?? assumptions[k];
     const fx = `<div class="pd-fx">${icon('currency-circle-dollar')} <div><strong>USD/CNY ${A.fx}</strong><span>${fxState.live ? tr(`实时汇率 ${fxState.live}（${fxState.source}，${fxState.asOf || ''}）`, `Live rate ${fxState.live} (${fxState.source}, ${fxState.asOf || ''})`) : fxState.loading ? tr('正在获取实时汇率…', 'Fetching live rate…') : tr('未能获取实时汇率，使用默认值', 'Live rate unavailable; using default')}</span></div><label class="pd-check"><input type="checkbox" data-pd-fxlock ${fxState.locked ? 'checked' : ''}> ${tr('锁定汇率', 'Lock rate')}</label>${fxState.locked ? `<input type="number" step="0.01" class="pd-fx-in" data-pd-fx value="${assumptions.fx}">` : ''}</div>`;
-    return `<section class="pd-card pd-settings"><div class="pd-card-head"><h3>${icon('sliders-horizontal')} ${tr('成本参数（该 SKU，可修改并保存）', 'Cost settings for this SKU (edit & save)')}</h3>${dirty(p.sku) ? `<span class="pd-unsaved">${tr('有未保存的修改', 'Unsaved changes')}</span>` : ''}</div>
+    return `<section class="pd-card pd-settings"><div class="pd-card-head"><h3>${icon('sliders-horizontal')} ${tr('到岸价估算参数（该 SKU）', 'Landed-cost estimate settings (this SKU)')}</h3>${dirty(p.sku) ? `<span class="pd-unsaved">${tr('有未保存的修改', 'Unsaved changes')}</span>` : ''}</div>
       ${fx}<p class="pd-hint">${tr('汇率按实时汇率自动更新，所有价格档的利润随之重算；需要按固定汇率测算时可以锁定。', 'FX follows the live rate and every price point recalculates; lock it to test a fixed rate.')}</p>
       <h4>${tr('产品成本', 'Product cost')}</h4><div class="pd-grid3">${num('fields', 'factoryRmb', tr('工厂价（含税）', 'Factory price (incl. tax)'), f('factoryRmb'), base.factoryRmb, 10, '¥')}${num('assume', 'exportMarkup', tr('出口加价', 'Export markup'), a('exportMarkup'), assumptions.exportMarkup, .1, '%')}${num('fields', 'extraRmb', tr('其他成本（包装、配件、赠品）', 'Other cost (packing, accessories)'), f('extraRmb'), 0, 10, '¥')}</div>
       <h4>${tr('头程运费', 'Freight')}</h4><div class="pd-grid3">${num('fields', 'gross', tr('毛重', 'Gross weight'), f('gross'), base.gross, .1, 'kg')}${num('fields', 'ddpRate', tr('DDP 单价', 'DDP rate'), f('ddpRate'), base.ddpRate ?? assumptions.parcelRmbPerKg, .1, '¥/kg')}${num('assume', 'ddpFixedRmb', tr('DDP 固定费用', 'DDP fixed fees'), a('ddpFixedRmb'), assumptions.ddpFixedRmb, 10, '¥')}${num('assume', 'oceanRmbPerKg', tr('Hybrid 海运', 'Hybrid ocean'), a('oceanRmbPerKg'), assumptions.oceanRmbPerKg, .1, '¥/kg')}${num('assume', 'hybridFixedRmb', tr('Hybrid 固定费用', 'Hybrid fixed fees'), a('hybridFixedRmb'), assumptions.hybridFixedRmb, 10, '¥')}${num('fields', 'lastMileRmb', tr('美国尾程', 'US last mile'), f('lastMileRmb'), base.lastMileRmb, 10, '¥')}${num('assume', 'freightBuffer', tr('运费上浮', 'Freight buffer'), a('freightBuffer'), assumptions.freightBuffer, 1, '%')}</div>
-      <h4>${tr('售价', 'Prices')}</h4><div class="pd-grid3">${num('fields', 'msrp', 'MSRP', f('msrp'), base.msrp, 1, '$')}${num('fields', 'low', tr('最低价', 'Low price'), f('low'), base.low, 1, '$')}${num('fields', 'shipFee', tr('结账运费', 'Shipping fee charged'), f('shipFee'), base.shipFee, 1, '$')}${num('assume', 'disc1', tr('折扣力度 1', 'Discount 1'), a('disc1'), assumptions.disc1, 1, '%')}${num('assume', 'disc2', tr('折扣力度 2', 'Discount 2'), a('disc2'), assumptions.disc2, 1, '%')}${num('assume', 'disc3', tr('折扣力度 3', 'Discount 3'), a('disc3'), assumptions.disc3, 1, '%')}${num('assume', 'dealerDiscount', tr('经销商折扣', 'Dealer discount'), a('dealerDiscount'), assumptions.dealerDiscount, 1, '%')}${num('assume', 'dealerSupportPct', tr('分销支持费用', 'Dealer support'), a('dealerSupportPct'), assumptions.dealerSupportPct, .5, '%')}${num('assume', 'clearanceOpsPct', tr('清货交易与仓储费', 'Clearance fees'), a('clearanceOpsPct'), assumptions.clearanceOpsPct, .5, '%')}</div>
-      <h4>${tr(`运营成本（占售价，合计 ${opexSum(p)}%）`, `Operating cost (% of price, total ${opexSum(p)}%)`)}</h4><div class="pd-grid3">${OPEX.map(([k, zh, en, def]) => num('opex', k, tr(zh, en), opexPct(p, k), def, .5, '%')).join('')}</div>
+      <h4>${tr('售价', 'Prices')}</h4><div class="pd-grid3">${num('fields', 'msrp', 'MSRP', f('msrp'), base.msrp, 1, '$')}${num('fields', 'shipFee', tr('顾客另付运费', 'Shipping the customer pays'), f('shipFee'), base.shipFee, 1, '$')}</div>
       <label class="pd-field"><span>${tr('头程方式', 'Freight method')}</span><select data-pd-ov="assume.shipMode">${[['auto', tr('自动选更便宜的', 'Cheaper of the two')], ['ddp', 'DDP'], ['hybrid', 'Hybrid']].map(([k, l]) => `<option value="${k}" ${A.shipMode === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <div class="pd-actions"><button class="pd-btn primary" data-pd="ov-save" ${dirty(p.sku) ? '' : 'disabled'}>${icon('floppy-disk')} ${tr('保存这个 SKU 的成本设置', 'Save cost settings for this SKU')}</button><button class="pd-btn" data-pd="ov-reset">${icon('arrow-counter-clockwise')} ${tr('恢复表格默认值', 'Reset to sheet values')}</button></div>
-      <p class="pd-hint">${tr('修改后上面的成本构成和价格阶梯会马上重算；保存后下次打开仍然生效。测试版保存在本机浏览器，正式版会保存到服务器并记录修改人和时间。', 'Changes recalculate the breakdown and price ladder immediately; saved settings persist. The test build saves in this browser; the release saves to the server with who changed what and when.')}</p></section>`;
+      <p class="pd-hint">${tr('修改后到岸价估算和价格档位会马上重算；保存后下次打开仍然生效。测试版保存在本机浏览器，正式版会保存到服务器并记录修改人和时间。', 'Changes recalculate the estimate and the price tiers immediately; saved settings persist. The test build saves in this browser; the release saves to the server with who changed what and when.')}</p></section>`;
   }
 
   /* ---------- 3. supply chain panorama + replenishment ---------- */
@@ -573,6 +691,17 @@
     if (a === 'cost-for' || a === 'pick-cost') { ui.tab = 'cost'; ui.costSku = t.dataset.sku; ui.costQuery = ''; ui.product = null; return rerender(); }
     if (a === 'incomplete') { ui.incomplete = !ui.incomplete; return rerender(); }
     if (a === 'scenario') { ui.scenario = t.dataset.v; return rerender(); }
+    if (a === 'cost-view') { ui.costView = t.dataset.v; return rerender(); }
+    if (a === 'rules-cancel') { rulesDraft = null; return rerender(); }
+    if (a === 'rules-save') { const next = rulesDraft; if (!next) return; const body = clone(next); delete body.updatedAt; delete body.updatedBy;
+      if (!srv.data?.items?.length || ctx.state().capabilities?.pricingRules !== true) { rules = next; rulesDraft = null; syncOpex(); ctx.toast(tr('已应用（示例数据不保存到服务器）', 'Applied (sample data is not saved to the server)')); return rerender(); }
+      t.disabled = true; ctx.api.request('/products/pricing-rules', { method:'PUT', body }).then(r => { rules = { ...clone(DEFAULT_RULES), ...r.rules }; rulesDraft = null; syncOpex(); if (srv.data) srv.data.pricingRules = r.rules; ctx.toast(tr('定价规则已保存', 'Pricing rules saved')); }).catch(x => { ctx.toast(x.message || tr('保存失败', 'Save failed')); }).finally(rerender); return; }
+    if (a === 'plan-save') { const f = document.getElementById('pd-plan'), p = bySku(ui.costSku); if (!f || !p) return;
+      const val = k => { const v = f.querySelector(`[data-pd-plan="${k}"]`)?.value; return v === '' || v == null ? null : Number(v); };
+      const body = { priceClass:f.querySelector('[name="priceClass"]').value, landedUsd:val('landedUsd'), lastMileUsd:val('lastMileUsd'), actualPrice:val('actualPrice') };
+      if (Object.entries(body).some(([k, v]) => k !== 'priceClass' && v != null && !(v >= 0))) return ctx.toast(tr('请输入有效的金额', 'Enter valid amounts'));
+      if (!srv.data?.items?.length || ctx.state().capabilities?.pricingRules !== true) { Object.assign(p, body); ctx.toast(tr('已应用（示例数据不保存）', 'Applied (sample data is not saved)')); return rerender(); }
+      t.disabled = true; ctx.api.request(`/products/${encodeURIComponent(p.sku)}/pricing-plan`, { method:'PATCH', body }).then(r => { Object.assign(p, { priceClass:r.priceClass, landedUsd:r.landedUsd, lastMileUsd:r.lastMileUsd, actualPrice:r.actualPrice }); ctx.toast(tr('定价输入已保存', 'Pricing inputs saved')); }).catch(x => ctx.toast(x.message || tr('保存失败', 'Save failed'))).finally(rerender); return; }
     if (a === 'status-filter') { ui.statusFilter = ui.statusFilter === t.dataset.v ? '' : t.dataset.v; return rerender(); }
     if (a === 'sc-filter') { ui.scFilter = t.dataset.v; return rerender(); }
     if (a === 'ov-save') { saveOv(ui.costSku); ctx.toast(tr('已保存该 SKU 的成本设置', 'Cost settings saved')); return rerender(); }
@@ -584,6 +713,12 @@
   document.addEventListener('input', e => {
     if (!ctx) return;
     const el = e.target;
+    if (el.matches('input[data-pd-rule]')) {
+      const v = Number(el.value); if (el.value === '' || !Number.isFinite(v)) return;
+      const d = rulesDraft || (rulesDraft = clone(rules)), path = el.dataset.pdRule.split('.');
+      let o = d; for (const k of path.slice(0, -1)) o = o[k]; o[path[path.length - 1]] = v;
+      const sel = `[data-pd-rule="${el.dataset.pdRule}"]`; rerender(); requestAnimationFrame(() => { const n = document.querySelector(sel); if (n) n.focus(); }); return;
+    }
     if (el.matches('input[data-pd-ov]') || el.matches('[data-pd-fx]')) {
       const key = el.dataset.pdOv, v = el.value === '' ? null : Number(el.value);
       if (el.matches('[data-pd-fx]')) { if (v > 0) assumptions.fx = v; } else { const [g, k] = key.split('.'), o = ovOf(ui.costSku), def = g === 'opex' ? OPEX.find(x => x[0] === k)[3] : g === 'assume' ? assumptions[k] : bySku(ui.costSku)?.[k]; if (v == null || v === def) delete o[g][k]; else if (Number.isFinite(v)) o[g][k] = v; }
@@ -609,5 +744,5 @@
     if (el.closest('#pd-replen')) { const v = Math.max(0, Number(el.value) || 0); ui[el.name] = v; rerender(); }
   });
 
-  window.WorkOSProducts = { configure(next) { ctx = next; }, render, _data:{ products, assumptions, cost, supply, source, OPEX, ladder, ov, fxState }, _ui:ui };
+  window.WorkOSProducts = { configure(next) { ctx = next; }, render, _data:{ products, assumptions, cost, supply, source, OPEX, ladder, ov, fxState, plan, get rules() { return rules; } }, _ui:ui };
 })();
