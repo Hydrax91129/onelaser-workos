@@ -61,3 +61,30 @@ test('every new form field, column header and member control has a hover hint', 
   const loc = H.ruleFor(document.querySelector('[data-help-table="pp-org"] th:nth-child(3)'));
   assert.match(loc.data.zh.t, /工作地点/);
 });
+
+test('tasks, task details, projects and the inbox show user text through the translator; edit boxes keep the original', () => {
+  const board = read('task-board.js'), live = read('live-app.js'), proj = read('projects.js'), inbox = read('inbox.js');
+  for (const [name, src] of [['task-board', board], ['live-app', live], ['projects', proj], ['inbox', inbox]])
+    assert.match(src, /const tx ?= ?v[a-z]* ?=> ?window\.WorkOSTranslate ?\? ?window\.WorkOSTranslate\.html\(/, name + ' defines tx()');
+  assert.doesNotMatch(board, /data-mb="detail" data-id="\$\{esc\(t\.id\)\}">\$\{esc\(t\.title\)\}/, 'board titles are translated');
+  assert.match(board, /\$\{tx\(x\.body\)\}/, 'task updates are translated');
+  assert.match(board, /\$\{tx\(c\.result\)\}/, 'completion results are translated');
+  assert.match(live, /<p class="drawer-description">\$\{task\.description \? tx\(task\.description\)/, 'task description in the drawer');
+  assert.match(live, /<span>\$\{tx\(criterion\)\}<\/span>/, 'acceptance criteria');
+  assert.match(live, /value="\$\{esc\(task\.title\)\}"/, 'the edit form keeps the original title');
+  assert.match(live, />\$\{esc\(task\.description\)\}<\/textarea>/, 'the edit form keeps the original description');
+  assert.doesNotMatch(proj, /\$\{esc\(L\((t\.title|p\.name)\)\)\}/, 'project and task names are translated');
+  assert.match(proj, /\$\{esc\(L\(p\.desc\)\)\}<\/textarea>/, 'the project description editor keeps the original');
+  assert.match(inbox, /<strong>\$\{tx\(i\.title\)\}<\/strong>/);
+});
+
+test('text longer than the server limit is shown as written and never sent', async () => {
+  const { window } = boot(['translate.js']);
+  const posts = [];
+  window.WorkOSTranslate.configure({ lang:() => 'en', capabilities:() => ({ autoTranslate:true }), rerender() {}, api:{ post:async (p, b) => { posts.push(b); return { items:[] }; } } });
+  const long = '很长的任务描述'.repeat(700);
+  assert.equal(window.WorkOSTranslate.html(long), long);
+  window.WorkOSTranslate.html('完成黑五促销素材');
+  await new Promise(r => setTimeout(r, 120));
+  assert.equal(posts.length, 1); assert.equal(JSON.stringify(posts[0].texts), '["完成黑五促销素材"]');
+});
