@@ -31,7 +31,8 @@
   const erpAdmin = () => !!window.WorkOSErpAccess && state.capabilities?.erpAccess === true && (state.actor?.isAdmin === true || state.actor?.role === 'manager');
   const wmsAccess = () => !!window.WorkOSWms && state.capabilities?.wms === true && ((state.actor?.grants||[]).some(g => g === 'products' || g === 'warehouse') || state.actor?.role === 'manager' || state.actor?.isAdmin === true);
   const productAccess = () => !!window.WorkOSProducts && ((state.actor?.grants||[]).includes('products') || state.actor?.isAdmin === true);
-  const navVisible = id => ({ quality:!!window.WorkOSQuality, 'okr-analysis':!!window.WorkOSReports, projects:!!window.WorkOSProjects, 'project-analysis':!!window.WorkOSProjects, team:!!window.WorkOSPeople, settings:!!window.WorkOSPeople, orgchart:!!window.WorkOSPeople?.chart && state.capabilities?.orgProfiles===true, executive:!!state.actor?.executiveAccess, support:!!state.actor?.supportAccess?.read, products:productAccess()||wmsAccess(), 'product-cost':productAccess(), 'supply-chain':productAccess(), wms:wmsAccess(), 'erp-access':erpAdmin(), org:!!window.WorkOSPeople && state.actor?.isAdmin===true, feedback:!!window.WorkOSFeedback && state.capabilities?.feedback===true && state.actor?.isAdmin===true, changelog:!!window.WorkOSChangelog }[id] ?? true);
+  const factoryOnly = () => !!state.actor?.qualityFactory;
+  const navVisible = id => factoryOnly() ? id === 'quality' : ({ quality:!!window.WorkOSQuality, 'okr-analysis':!!window.WorkOSReports, projects:!!window.WorkOSProjects, 'project-analysis':!!window.WorkOSProjects, team:!!window.WorkOSPeople, settings:!!window.WorkOSPeople, orgchart:!!window.WorkOSPeople?.chart && state.capabilities?.orgProfiles===true, executive:!!state.actor?.executiveAccess, support:!!state.actor?.supportAccess?.read, products:productAccess()||wmsAccess(), 'product-cost':productAccess(), 'supply-chain':productAccess(), wms:wmsAccess(), 'erp-access':erpAdmin(), org:!!window.WorkOSPeople && state.actor?.isAdmin===true, feedback:!!window.WorkOSFeedback && state.capabilities?.feedback===true && state.actor?.isAdmin===true, changelog:!!window.WorkOSChangelog }[id] ?? true);
   const publicKnowledgeRoute = () => /^#knowledge(?:\/(?:search|downloads|family\/[a-z0-9-]+|article\/en-\d+)?)?(?:\?|$)/.test(window.location.hash||'');
   function routePage() {
     const candidate=(window.location.hash||'').replace(/^#/, '').split(/[/?]/)[0];
@@ -40,7 +41,8 @@
   state.page=routePage()||state.page;
   function applyRoute() {
     const page=routePage()||'overview';
-    state.page=page==='executive'&&!state.actor?.executiveAccess?'overview':page;
+    if(factoryOnly()&&page!=='quality')window.history.replaceState(null,'','#quality');
+    state.page=factoryOnly()?'quality':page==='executive'&&!state.actor?.executiveAccess?'overview':page;
     if(state.page==='support'&&state.actor&&!state.actor.supportAccess?.read)state.page='overview';
     if(state.page!=='tasks'&&window.WorkOSTaskBoard?.viewing?.()&&!window.WorkOSTaskBoard.viewing.leaving)window.WorkOSTaskBoard.viewAs('');
     state.menu=false;closeOverlay();render();
@@ -509,6 +511,7 @@
     window.WorkOSOkrBoard?.refreshed();
   }
   async function refreshData() {
+    if (factoryOnly()) { state.tasks = []; state.objectives = []; state.krs = []; state.directory = [state.actor]; state.reviewers = []; state.former = []; state.appraisals = {}; state.executive = null; return; }
     const [tasks, objectives, krs, directory] = await Promise.all([api.get('/tasks'),api.get('/objectives'),api.get('/key-results'),api.get('/directory')]);
     state.tasks = tasks.items || []; state.objectives = objectives.items || []; state.krs = krs.items || []; state.directory = directory.items || []; state.reviewers = directory.reviewers || []; state.former = directory.former || [];
     const reviewable=state.krs.filter(k=>k.department_id===state.actor.department_id&&(manager()||k.owner_id===state.actor.id));
@@ -526,7 +529,7 @@
   async function bootstrap() {
     closeOverlay(); state.loading = true; state.error = ''; render();
     if (/[?&]login_error=disabled\b/.test(window.location.search||'')) { window.history.replaceState(null,'',window.location.pathname+window.location.hash); loginUi.error=tr('您的账号已被管理员停用。如有疑问请联系公司管理员。','Your account has been disabled by an administrator.'); }
-    try { state.capabilities = await api.get('/capabilities'); try { state.actor = await api.get('/me'); } catch (error) { if (error.status !== 401) throw error; clearPrivateData(); } if (state.actor) { if(state.page==='executive'&&!state.actor.executiveAccess)state.page='overview'; await refreshData(); } }
+    try { state.capabilities = await api.get('/capabilities'); try { state.actor = await api.get('/me'); } catch (error) { if (error.status !== 401) throw error; clearPrivateData(); } if (state.actor) { if(state.page==='executive'&&!state.actor.executiveAccess)state.page='overview'; if(factoryOnly()){state.page='quality';if(routePage()!=='quality')window.history.replaceState(null,'','#quality');} await refreshData(); } }
     catch (error) { if (!handleAuthError(error)) state.error = explainError(error); }
     finally { state.loading = false; render(); }
   }
