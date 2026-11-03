@@ -45,12 +45,11 @@
     const selling = ['live', 'launch', 'clearance'].includes(status);
     const v = selling ? (machine ? (seeded(raw.sku || raw.name, 1) % 20) / 10 + 0.2 : (seeded(raw.sku || raw.name, 2) % 60) / 10 + 0.5) : 0;
     return { ...raw, sku:raw.sku || '', status, icon:iconFor(raw.type || ''), machine,
-      moq:machine ? 5 : 50, prodDays:machine ? 25 : 12, shipDays:/工作日/.test(raw.lead || '') ? 12 : 30,
+      moq:raw.moq ?? (machine ? 5 : 50), moqSet:raw.moq ?? null, prodDays:machine ? 25 : 12, shipDays:/工作日/.test(raw.lead || '') ? 12 : 30,
       wip:status === 'dev' ? 0 : seeded(raw.sku || raw.name, 3) % (machine ? 15 : 200), ready:seeded(raw.sku || raw.name, 4) % (machine ? 8 : 80), transit:seeded(raw.sku || raw.name, 5) % (machine ? 20 : 300), wh:selling ? seeded(raw.sku || raw.name, 6) % (machine ? 40 : 400) : 0,
       age:selling ? 15 + seeded(raw.sku || raw.name, 7) * 4 : 0, velocity:Math.round(v * 10) / 10 };
   };
   const products = (injected?.products || SAMPLE).map(buildProduct);
-  const CHANNELS = { shopify:'1laser.com', amazon:'Amazon', dealer:{ zh:'经销商', en:'Dealers' } };
   const buildShipments = () => [
     { id:'MSKU 482190-3', mode:{ zh:'海运整柜', en:'Ocean FCL' }, eta:addDays(9), from:{ zh:'深圳盐田', en:'Yantian, Shenzhen' }, to:'Lake Forest, CA', items:products.filter(p => p.machine && p.status !== 'dev').slice(0, 3).map(p => [p.sku, p.transit]) },
     { id:'CMAU 771045-8', mode:{ zh:'海运拼柜', en:'Ocean LCL' }, eta:addDays(21), from:{ zh:'青岛', en:'Qingdao' }, to:'Lake Forest, CA', items:products.filter(p => !p.machine && p.status === 'live').slice(0, 4).map(p => [p.sku, p.transit]) },
@@ -224,7 +223,11 @@
     const range = (lo, hi) => lo == null ? '—' : Math.abs(lo - hi) < 0.5 ? money0(lo) : `${money0(hi)} – ${money0(lo)}`;
     const flags = [];
     if (P.msrp && P.suggested && P.msrp < P.suggested - 0.5) flags.push(['warn', tr(`MSRP ${money0(P.msrp)} 低于规则建议 ${money0(P.suggested)}（${CLASS[P.cls][0]} ${rules.classes[P.cls]}%），贡献利润 ${P.msrpCm.pct.toFixed(1)}%。`, `MSRP ${money0(P.msrp)} is below the rule's ${money0(P.suggested)} (${CLASS[P.cls][1]} ${rules.classes[P.cls]}%); CM ${P.msrpCm.pct.toFixed(1)}%.`)]);
-    if (P.actualCm && P.actualCm.pct < rules.floorPct) flags.push(['bad', tr(`真实售价的贡献利润 ${P.actualCm.pct.toFixed(1)}% 低于 ${rules.floorPct}% 底线，属于${tierName(P.actualTier)}，需要总裁批准。`, `Actual price CM ${P.actualCm.pct.toFixed(1)}% is below the ${rules.floorPct}% floor (${tierName(P.actualTier)}); needs President approval.`)]);
+    // The latest applied change to the actual price tells whether this below-floor price was approved, and by whom.
+    const ok = hist[P.p.sku]?.data?.prices?.find(x => x.target === 'actual' && x.status === 'applied');
+    const approved = ok && ok.to === P.actual && ok.needs && ok.decidedBy ? ok : null;
+    if (P.actualCm && P.actualCm.pct < rules.floorPct) flags.push(approved ? ['warn', tr(`真实售价的贡献利润 ${P.actualCm.pct.toFixed(1)}% 低于 ${rules.floorPct}% 底线，属于${tierName(P.actualTier)}；已由 ${approved.decidedBy.name} 于 ${when(approved.decidedAt || approved.at)} 批准。`, `Actual price CM ${P.actualCm.pct.toFixed(1)}% is below the ${rules.floorPct}% floor (${tierName(P.actualTier)}); approved by ${approved.decidedBy.name} on ${when(approved.decidedAt || approved.at)}.`)]
+      : ['bad', tr(`真实售价的贡献利润 ${P.actualCm.pct.toFixed(1)}% 低于 ${rules.floorPct}% 底线，属于${tierName(P.actualTier)}，需要总裁批准。`, `Actual price CM ${P.actualCm.pct.toFixed(1)}% is below the ${rules.floorPct}% floor (${tierName(P.actualTier)}); needs President approval.`)]);
     else if (P.actualTier === 'major') flags.push(['warn', tr(`真实售价落在大促档（${rules.tiers.major.join('–')}%）。大促每年最多 ${rules.majorPerYear} 次，不宜作为长期售价。`, `Actual price sits in the major-promotion tier (${rules.tiers.major.join('–')}%), allowed up to ${rules.majorPerYear} times a year — not a long-term price.`)]);
     if (P.missing.length) flags.push(['warn', tr(`请补齐：${P.missing.join('、')}。${P.landedSet ? '' : '到岸价暂按成本模型估算（产品 + 最便宜的头程）。'}`, `Please fill in: ${P.missing.join(', ')}.${P.landedSet ? '' : ' Landed cost is estimated by the cost model for now.'}`)]);
     const kpi = (label, value, note, tone = '') => `<div class="pd-kpi"><span>${label}</span><strong class="${tone}">${value}</strong><em>${note}</em></div>`;
@@ -245,7 +248,49 @@
         ${P.ws.map(x => `<tr><td>${esc(x.label)}</td><td class="num">${x.d}%</td><td class="num"><b>${money0(x.price)}</b></td><td class="num">${x.our != null ? `<span class="pd-margin ${cmTone(x.ourPct)}">${money0(x.our)} · ${x.ourPct.toFixed(1)}%</span>` : '—'}</td><td class="num ${x.dealerActual != null && x.dealerActual < 0 ? 'pd-bad' : ''}">${x.dealerActual != null ? `${money0(x.dealerActual)} · ${(x.dealerActual / P.actual * 100).toFixed(1)}%` : '—'}</td><td class="num">${x.dealerMsrp != null ? `${money0(x.dealerMsrp)} · ${(x.dealerMsrp / P.msrp * 100).toFixed(1)}%` : '—'}</td></tr>`).join('')}
       </tbody></table>
       <p class="pd-hint">${tr(`对比：官网按真实售价直销，每台贡献利润 ${P.actualCm ? money0(P.actualCm.usd) : '—'}。经销商以 ACH 或电汇付款；刷卡另加 3%。`, `For comparison, selling direct at the actual price earns ${P.actualCm ? money0(P.actualCm.usd) : '—'} per unit. Dealers pay by ACH or wire; cards add 3%.`)}</p></section>
-    ${planInputs(P)}`;
+    ${channelPanel(P)}
+    ${planInputs(P)}
+    ${historyCard(P.p.sku, Object.keys(TARGET_LABEL), false)}`;
+  }
+  /* ---------- channel prices: one selling price per channel, checked against the rules like any other price ---------- */
+  const CH_KEYS = ['shopify', 'amazon', 'ebay', 'dealer'];
+  function channelPanel(P) {
+    if (!liveData() || !srv.data?.canSeeChannels) return '';
+    const can = srv.data.canEditChannels === true, ch = P.p.channels || {}, pend = P.p.pendingPrices || [];
+    const extra = (Number(rules.platformExtraPct) || 0) / 100, cmPctOf = (k, price) => {
+      if (!price) return null;
+      if (k === 'dealer') return P.landed != null ? (price * (1 - P.w) - P.landed) / price * 100 : null;
+      return P.cmAt(price, P.r + (k === 'amazon' || k === 'ebay' ? extra : 0))?.pct ?? null;
+    };
+    const suggest = k => k === 'dealer' ? P.ws[0].price : P.priceAt(rules.classes[P.cls], P.r + (k === 'amazon' || k === 'ebay' ? extra : 0));
+    return `<section class="pd-card"><div class="pd-card-head"><h3>${icon('storefront')} ${tr('渠道价格', 'Channel prices')}</h3><span class="pd-hint">${tr(`建议价按 ${CLASS[P.cls][0]} 的 MSRP 目标（${rules.classes[P.cls]}%）倒推；Amazon / eBay 销售费率多 ${rules.platformExtraPct}%；经销商按批发起步折扣。贡献利润低于 ${rules.floorPct}% 的调价需管理员批准。`, `Suggested prices back out the ${CLASS[P.cls][1]} MSRP target (${rules.classes[P.cls]}%); Amazon / eBay carry ${rules.platformExtraPct}% more fees; dealers use the base wholesale discount. Changes below ${rules.floorPct}% CM need admin approval.`)}</span></div>
+      <table class="pd-table" data-help-table="pd-channels"><thead><tr><th>${tr('渠道', 'Channel')}</th><th>${tr('在售', 'Listed')}</th><th class="num">${tr('当前价', 'Price')}</th><th class="num">${tr('建议价', 'Suggested')}</th><th class="num">${tr('贡献利润', 'CM')}</th><th></th></tr></thead><tbody>
+      ${CH_KEYS.map(k => { const cur = ch[k] || {}, pc = cmPctOf(k, cur.price), wait = pend.find(x => x.target === k), sg = suggest(k);
+        return `<tr><td><strong>${esc(tr(TARGET_LABEL[k][0], TARGET_LABEL[k][1]))}</strong>${wait ? `<span class="pd-tag">${tr(`待审批 ${usd(wait.price)}`, `Awaiting ${usd(wait.price)}`)}</span>` : ''}</td>
+          <td><input type="checkbox" data-pd-ch-listed="${k}" ${cur.listed === false ? '' : 'checked'} ${can ? '' : 'disabled'}></td>
+          <td class="num"><input class="pd-num-in" type="number" min="0" step="1" data-pd-ch-price="${k}" value="${cur.price ?? ''}" placeholder="${sg != null ? Math.round(sg) : ''}" ${can ? '' : 'disabled'}></td>
+          <td class="num">${money0(sg)}</td><td class="num">${pc != null ? `<span class="pd-margin ${cmTone(pc)}">${pc.toFixed(1)}%</span>` : '—'}</td>
+          <td>${can ? `<button class="pd-btn small" data-pd="channel-save" data-ch="${k}">${tr('保存', 'Save')}</button>` : ''}</td></tr>`; }).join('')}
+      </tbody></table>${can ? `<label class="pd-field"><span>${tr('调价原因（可选，审批人会看到）', 'Reason for the change (optional, shown to the approver)')}</span><input data-pd-ch-reason></label>` : ''}</section>`;
+  }
+  /* ---------- price approvals: admins decide; everyone else sees and can withdraw their own requests ---------- */
+  const approvals = { data:null, loading:false };
+  function loadApprovals() {
+    if (approvals.data || approvals.loading || !liveData()) return;
+    approvals.loading = true;
+    ctx.api.get('/products/price-changes').then(r => { approvals.data = r; }).catch(() => { approvals.data = { items:[] }; }).finally(() => { approvals.loading = false; ctx.rerender(); });
+  }
+  function approvalsPanel() {
+    loadApprovals();
+    const items = approvals.data?.items || [], canDecide = approvals.data?.canDecide === true, me = ctx.state().actor?.id;
+    if (!items.length) return '';
+    return `<section class="pd-card pd-approvals"><div class="pd-card-head"><h3>${icon('seal-check')} ${canDecide ? tr(`待审批调价（${items.length}）`, `Price changes awaiting approval (${items.length})`) : tr(`我提交的待审批调价（${items.length}）`, `My price changes awaiting approval (${items.length})`)}</h3></div>
+      <table class="pd-table"><thead><tr><th>${tr('产品', 'Product')}</th><th>${tr('价格', 'Price')}</th><th class="num">${tr('调整', 'Change')}</th><th class="num">${tr('贡献利润', 'CM')}</th><th>${tr('原因', 'Reason')}</th><th>${tr('申请人', 'Requested by')}</th><th></th></tr></thead><tbody>
+      ${items.map(x => `<tr><td><button class="pd-link" data-pd="pick-cost" data-sku="${esc(x.sku)}"><strong>${esc(x.sku)}</strong></button> ${esc(L(x.name || {}))}</td><td>${esc(tr(TARGET_LABEL[x.target][0], TARGET_LABEL[x.target][1]))}<span class="pd-sub">${x.needs ? esc(tr(NEEDS_LABEL[x.needs][0], NEEDS_LABEL[x.needs][1])) : ''}</span></td>
+        <td class="num">${x.from == null ? '—' : usd(x.from)} → <b>${x.to == null ? '—' : usd(x.to)}</b></td><td class="num">${x.cmPct != null ? `<span class="pd-margin ${cmTone(x.cmPct)}">${x.cmPct}%</span>` : '—'}</td>
+        <td>${esc(x.reason || '—')}</td><td>${esc(x.requestedBy?.name || '')}<span class="pd-sub">${esc(when(x.at))}</span></td>
+        <td class="pd-row-actions">${canDecide ? `<button class="pd-btn small primary" data-pd="pc-approve" data-id="${esc(x.id)}">${tr('批准', 'Approve')}</button><button class="pd-btn small" data-pd="pc-reject" data-id="${esc(x.id)}">${tr('驳回', 'Reject')}</button>` : ''}${x.requestedBy?.id === me ? `<button class="pd-btn small" data-pd="pc-withdraw" data-id="${esc(x.id)}">${tr('撤回', 'Withdraw')}</button>` : ''}</td></tr>`).join('')}
+      </tbody></table></section>`;
   }
   function planInputs(P) {
     const live = !!srv.data?.items?.length && ctx.state().capabilities?.pricingRules === true;
@@ -258,8 +303,10 @@
         ${n('lastMileUsd', tr('尾程运费', 'Last-mile shipping'), p.lastMileUsd, '')}
         ${n('actualPrice', tr('真实售价', 'Actual selling price'), p.actualPrice, p.msrp ?? '')}
         <label class="pd-field"><span>MSRP <em>$</em></span><input value="${p.msrp ?? ''}" disabled title="${tr('MSRP 在产品资料里维护', 'MSRP is kept in the product catalog')}"></label>
-        <label class="pd-field"><span>${tr('顾客另付运费', 'Shipping the customer pays')} <em>$</em></span><input value="${p.shipFee ?? 0}" disabled title="${tr('结账运费在产品资料里维护', 'Checkout shipping is kept in the product catalog')}"></label>
+        <label class="pd-field"><span>${tr('顾客另付运费', 'Shipping the customer pays')} <em>$</em></span><input type="number" step="1" min="0" data-pd-plan="shipFee" value="${p.shipFee ?? ''}" ${live && canEditPrice() ? '' : 'disabled'}></label>
+        ${live ? `<label class="pd-field"><span>${tr('调价原因（可选）', 'Reason for a price change (optional)')}</span><input name="reason"></label>` : ''}
       </form>
+      ${(p.pendingPrices || []).filter(x => x.target === 'actual').map(x => `<div class="pd-flag warn">${icon('hourglass-medium')} ${tr(`真实售价调整为 ${money0(x.price)} 的申请正在等待管理员审批。`, `A change of the actual price to ${money0(x.price)} is awaiting admin approval.`)}</div>`).join('')}
       <div class="pd-actions"><button class="pd-btn primary" data-pd="plan-save">${icon('floppy-disk')} ${live ? tr('保存定价输入', 'Save pricing inputs') : tr('应用（示例数据不保存）', 'Apply (sample data is not saved)')}</button></div>
       <p class="pd-hint">${tr('到岸价 = 工厂价 + 头程运费 + 关税 + 清关杂费；留空时按成本模型估算。真实售价留空时按 MSRP 计算。', 'Landed = factory price + ocean freight + duties + clearance; left blank, the cost model estimates it. Actual price defaults to MSRP.')}</p></section>`;
   }
@@ -347,8 +394,8 @@
       : ui.tab === 'cost' && d?.canImportPricing && !ui.viewAsBasic ? `<button class="pd-btn" data-pd="import" data-kind="pricing">${icon('upload-simple')} ${tr('导入成本数据', 'Import cost data')}</button>` : '';
     return `<div class="pd">
       <div class="page-heading"><div><div class="eyebrow">${eyebrow}</div><h1>${tr(zh, en)}</h1><p>${tr(dzh, den)}${last && ui.tab !== 'supply' ? `<br><small class="pd-hint">${tr(`最近导入：${new Date(last.at).toLocaleString('zh-CN')} · ${last.rows} 行`, `Last import: ${new Date(last.at).toLocaleString('en-US')} · ${last.rows} rows`)}</small>` : ''}</p></div>${actions ? `<div class="heading-actions">${actions}</div>` : ''}</div>
-      <div class="pd-banner">${icon('lock-simple')} ${live ? (ui.tab === 'cost' && canDetail() ? tr(`受限区域 · 数据来源：${source} · 定价输入和定价规则可直接保存；产品资料和工厂成本请用“导入”更新`, `Restricted · data: ${source} · pricing inputs and rules save directly; update catalog and factory costs by import`) : tr(`受限区域 · 数据来源：${source} · 页面上直接修改暂不保存，请用“导入”更新`, `Restricted · data: ${source} · edits on this page are not saved yet; update by import`)) : tr(`受限区域 · 测试原型 · 数据来源：${source} · 修改不会保存${d && !d.failed && (d.canImportCatalog) ? ' · 点右上角“导入产品资料”换成真实数据' : ''}`, `Restricted · test prototype · data: ${source} · changes are not saved${d && !d.failed && d.canImportCatalog ? ' · use “Import catalog” to load real data' : ''}`)}</div>
-      ${ui.tab === 'cost' ? costBoard() : ui.tab === 'supply' ? supplyBoard() : ui.product ? productEditor(bySku(ui.product)) : catalog()}
+      <div class="pd-banner">${icon('lock-simple')} ${live ? (ui.tab === 'cost' && canDetail() ? tr(`受限区域 · 数据来源：${source} · 定价输入、渠道价格和定价规则可直接保存，低于利润底线的调价需管理员批准；工厂成本请用“导入”更新`, `Restricted · data: ${source} · pricing inputs, channel prices and rules save directly; changes below the margin floor need admin approval; update factory costs by import`) : tr(`受限区域 · 数据来源：${source} · 产品资料可直接编辑保存，每次修改都有记录；也可以用“导入”批量更新`, `Restricted · data: ${source} · product details save directly and every change is recorded; bulk updates by import`)) : tr(`受限区域 · 测试原型 · 数据来源：${source} · 修改不会保存${d && !d.failed && (d.canImportCatalog) ? ' · 点右上角“导入产品资料”换成真实数据' : ''}`, `Restricted · test prototype · data: ${source} · changes are not saved${d && !d.failed && d.canImportCatalog ? ' · use “Import catalog” to load real data' : ''}`)}</div>
+      ${ui.tab === 'cost' ? costBoard() : ui.tab === 'supply' ? supplyBoard() : ui.product ? productEditor(ui.product === NEW ? NEW : bySku(ui.product)) : catalog()}
     </div>`;
   }
 
@@ -372,26 +419,74 @@
       ${list.map(p => `<tr data-pd="open-product" data-sku="${esc(p.sku)}" tabindex="0"><td><div class="pd-prod"><span class="pd-thumb">${icon(p.icon)}</span><div><strong>${esc(L(p.name))}</strong><span>${esc(p.sku) || tr('无 SKU', 'No SKU')}${p.note ? ` · ${esc(p.note)}` : ''}</span></div></div></td><td>${pill(p.status)}</td><td>${esc(p.type || '—')}</td><td class="num ${p.wh != null && p.wh < 5 && p.velocity ? 'pd-bad' : ''}">${p.wh == null ? '—' : p.wh}${p.transit ? `<small> · ${p.transit} ${tr('在途', 'inbound')}</small>` : ''}</td><td>${(() => { const c = completeness(p); return `<span class="pd-complete ${c === 100 ? 'ok' : c >= 75 ? 'mid' : 'low'}" title="${esc(missingAttrs(p).map(a => tr(a[1], a[2])).join('、'))}"><i style="--w:${c}%"></i><b>${c}%</b></span>`; })()}</td><td>${esc(p.best || '—')}</td><td class="num">${p.msrp ? usd(p.msrp) : '—'}</td></tr>`).join('') || `<tr><td colspan="7" class="pd-empty">${tr('没有匹配的产品', 'No matching products')}</td></tr>`}
       </tbody></table></section>`;
   }
-  function productEditor(p) {
+  /* ---------- product editor: saves to the server when real catalog data is loaded ---------- */
+  const NEW = '__new__';
+  const serverOn = () => !!srv.data && !srv.data.failed && ctx.state().capabilities?.productsData === true;
+  const liveData = () => !!srv.data?.items?.length;
+  const isAdmin = () => ctx.state().actor?.isAdmin === true;
+  const canEditCat = () => srv.data ? srv.data.canEditCatalog === true : isAdmin() || (ctx.state().actor?.grants || []).includes('products_manage');
+  const canEditPrice = () => srv.data ? srv.data.canEditMsrp === true : canEditCat();
+  const FIELD_LABEL = { name_zh:['中文名称', 'Chinese name'], name_en:['英文名称', 'English name'], type:['产品线', 'Product line'], status:['状态', 'Status'], gross:['毛重', 'Gross weight'], dims:['包装尺寸', 'Package size'], lead:['交期', 'Lead time'], moq:['MOQ', 'MOQ'], best:['最优发货方式', 'Best shipping'], note:['备注', 'Notes'] };
+  const TARGET_LABEL = { msrp:['MSRP', 'MSRP'], actual:['真实售价', 'Actual price'], shopify:['官网 1laser.com', '1laser.com'], amazon:['Amazon', 'Amazon'], ebay:['eBay', 'eBay'], dealer:['经销商', 'Dealers'] };
+  const NEEDS_LABEL = { floor:['低于贡献利润底线', 'Below the margin floor'], loss:['低于成本', 'Below cost'], dealer_discount:['超过最大批发折扣', 'Deeper than the largest dealer discount'] };
+  const PC_STATUS = { applied:['已生效', 'Applied'], pending:['待审批', 'Awaiting approval'], rejected:['已驳回', 'Rejected'], withdrawn:['已撤回', 'Withdrawn'], superseded:['已被新申请替代', 'Replaced'] };
+  const when = at => { const d = new Date(at); return isNaN(d) ? '' : d.toLocaleString(lang() === 'en' ? 'en-US' : 'zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }); };
+  const fmtVal = (field, v) => v == null || v === '' ? '—' : field === 'status' ? tr((STATUS[v] || STATUS.none)[0], (STATUS[v] || STATUS.none)[1]) : field === 'dims' && Array.isArray(v) ? v.join(' × ') : String(v);
+  const hist = {};
+  function loadHistory(sku) {
+    if (!liveData() || !sku || hist[sku]) return;
+    hist[sku] = { loading:true };
+    ctx.api.get(`/products/${encodeURIComponent(sku)}/history`).then(r => { hist[sku] = { data:r }; }).catch(e => { hist[sku] = { error:e.message || '' }; }).finally(() => ctx.rerender());
+  }
+  // targets: which price targets this card shows (the catalog editor shows MSRP only).
+  function historyCard(sku, targets, fields = true) {
+    if (!liveData()) return '';
+    loadHistory(sku);
+    const h = hist[sku];
+    if (!h || h.loading) return `<section class="pd-card"><h3>${icon('clock-counter-clockwise')} ${tr('变更记录', 'Change history')}</h3><p class="pd-hint">${tr('加载中…', 'Loading…')}</p></section>`;
+    if (h.error) return `<section class="pd-card"><h3>${icon('clock-counter-clockwise')} ${tr('变更记录', 'Change history')}</h3><p class="pd-hint">${esc(h.error)}</p></section>`;
+    const rows = [
+      ...(fields ? h.data.changes.filter(c => FIELD_LABEL[c.field]).map(c => ({ at:c.at, who:c.actor?.name, what:tr(FIELD_LABEL[c.field][0], FIELD_LABEL[c.field][1]), change:`${fmtVal(c.field, c.from)} → ${fmtVal(c.field, c.to)}`, note:c.note, tag:c.source === 'import' ? tr('导入', 'Import') : c.source === 'create' ? tr('新建', 'Created') : '' })) : []),
+      ...h.data.prices.filter(p => targets.includes(p.target)).map(p => ({ at:p.at, who:p.requestedBy?.name, what:tr(TARGET_LABEL[p.target][0], TARGET_LABEL[p.target][1]), change:`${p.from == null ? '—' : usd(p.from)} → ${p.to == null ? '—' : usd(p.to)}${p.cmPct != null ? tr(` · 贡献利润 ${p.cmPct}%`, ` · CM ${p.cmPct}%`) : ''}`,
+        note:[p.reason === 'import' ? tr('导入', 'Import') : p.reason, p.needs && tr(NEEDS_LABEL[p.needs][0], NEEDS_LABEL[p.needs][1]), p.decidedBy && p.status !== 'superseded' && p.status !== 'withdrawn' && tr(`${p.decidedBy.name} ${p.status === 'rejected' ? '驳回' : '批准'}${p.decisionNote ? `：${p.decisionNote}` : ''}`, `${p.status === 'rejected' ? 'rejected' : 'approved'} by ${p.decidedBy.name}${p.decisionNote ? `: ${p.decisionNote}` : ''}`)].filter(Boolean).join(' · '),
+        tag:p.status === 'applied' ? '' : tr(PC_STATUS[p.status][0], PC_STATUS[p.status][1]) })),
+    ].sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 30);
+    return `<section class="pd-card"><h3>${icon('clock-counter-clockwise')} ${tr('变更记录', 'Change history')}</h3>${rows.length ? `<ol class="pd-hist">${rows.map(r => `<li><div><strong>${esc(r.what)}</strong>${r.tag ? ` <span class="pd-tag">${esc(r.tag)}</span>` : ''}<span class="pd-hist-change">${esc(r.change)}</span></div>${r.note ? `<p>${esc(r.note)}</p>` : ''}<em>${esc(r.who || '')} · ${esc(when(r.at))}</em></li>`).join('')}</ol>` : `<p class="pd-hint">${tr('还没有变更记录。', 'No changes yet.')}</p>`}</section>`;
+  }
+  function productEditor(p0) {
+    const isNew = p0 === NEW;
+    const p = isNew ? { sku:'', name:{ zh:'', en:'' }, type:'', status:'dev', icon:'cube', dims:null } : p0;
     if (!p) return catalog();
-    const s = supply(p), detail = canDetail(), c = cost(p);
+    const s = isNew ? { lead:'' } : supply(p), c = isNew ? { vol:null } : cost(p), live = isNew ? serverOn() : liveData();
+    const ed = live && canEditCat(), edPrice = live && canEditPrice();
     const f = (label, value, attrs = '') => `<label class="pd-field"><span>${label}</span><input value="${esc(value ?? '')}" ${attrs}></label>`;
+    const fe = (key, label, value, extra = '', can = ed) => f(label, value, `data-pd-f="${key}" ${extra} ${can ? '' : 'disabled'}`);
+    const nm = k => p[k] ?? (typeof p.name === 'object' ? p.name[k === 'nameZh' ? 'zh' : 'en'] : p.name) ?? '';
+    const pend = (p.pendingPrices || []).filter(x => x.target === 'msrp');
+    const next = (srv.data?.statusNext || {})[p.status === 'none' ? '' : p.status] || [];
+    // Admins may move a product anywhere; the usual next steps are listed first so the default is a forward move.
+    const options = isAdmin() ? [...next, ...Object.keys(STATUS).filter(k => k !== 'none' && k !== p.status && !next.includes(k))] : next;
     return `<div class="pd-crumb"><button data-pd="back">${icon('caret-left')} ${tr('全部产品', 'All products')}</button></div>
-      <div class="pd-editor-head"><span class="pd-thumb big">${icon(p.icon)}</span><div><h2>${esc(L(p.name))}</h2><p>${esc(p.sku)} · ${esc(p.type || '')}</p></div>${pill(p.status)}<button class="pd-btn primary" data-pd="save-product">${tr('保存', 'Save')}</button></div>
-      ${missingAttrs(p).length ? `<div class="pd-warn">${icon('pencil-simple-line')} ${tr('待产品经理补齐：', 'For the PM to complete: ')}${esc(missingAttrs(p).map(a => tr(a[1], a[2])).join('、'))}</div>` : ''}
-      <div class="pd-editor">
+      <div class="pd-editor-head"><span class="pd-thumb big">${icon(p.icon)}</span><div><h2>${isNew ? tr('添加产品', 'Add product') : esc(L(p.name))}</h2><p>${isNew ? tr('新产品从“开发中”开始', 'New products start in development') : `${esc(p.sku)} · ${esc(p.type || '')}`}</p></div>${pill(p.status)}${ed || edPrice || !live ? `<button class="pd-btn primary" data-pd="save-product">${isNew ? tr('创建产品', 'Create product') : tr('保存', 'Save')}</button>` : ''}</div>
+      ${!isNew && missingAttrs(p).length ? `<div class="pd-warn">${icon('pencil-simple-line')} ${tr('待产品经理补齐：', 'For the PM to complete: ')}${esc(missingAttrs(p).map(a => tr(a[1], a[2])).join('、'))}</div>` : ''}
+      ${pend.length ? `<div class="pd-warn">${icon('hourglass-medium')} ${tr(`MSRP 调整为 ${usd(pend[0].price)} 的申请正在等待管理员审批，批准前仍按 ${p.msrp ? usd(p.msrp) : '—'} 销售。`, `A change of MSRP to ${usd(pend[0].price)} is awaiting admin approval; ${p.msrp ? usd(p.msrp) : '—'} applies until then.`)}</div>` : ''}
+      <div class="pd-editor" id="pd-product" data-sku="${esc(p.sku)}" data-new="${isNew ? '1' : ''}">
         <div class="pd-main">
-          <section class="pd-card"><h3>${tr('基本信息', 'Basics')}</h3><div class="pd-grid3">${f(tr('产品名称', 'Title'), L(p.name))}${f('SKU', p.sku)}${f(tr('产品线', 'Product line'), p.type)}</div>${f(tr('备注', 'Notes'), p.note)}</section>
-          <section class="pd-card"><h3>${tr('媒体', 'Media')}</h3><div class="pd-media">${[1, 2, 3].map(() => `<span class="pd-thumb big">${icon(p.icon)}</span>`).join('')}<button class="pd-media-add">${icon('upload-simple')}<span>${tr('上传图片 / 视频', 'Upload images / video')}</span></button></div></section>
-          <section class="pd-card"><h3>${tr('价格', 'Pricing')}</h3><div class="pd-grid3">${f(tr('零售价 MSRP (USD)', 'MSRP (USD)'), p.msrp, 'type="number"')}</div>
-            <p class="pd-hint">${icon('lock-simple')} ${tr('产品管理只维护零售价 MSRP。折扣价、经销价、成本等都在“成本核算”里，由授权人员查看。', 'The catalog keeps MSRP only. Discounts, dealer prices and costs live in the Cost calculator for authorized people.')}</p></section>
-          <section class="pd-card"><h3>${tr('物流参数', 'Shipping')}</h3><div class="pd-grid3">${f(tr('毛重 (kg)', 'Gross weight (kg)'), p.gross)}${f(tr('包装尺寸 长×宽×高 (cm)', 'Package L×W×H (cm)'), p.dims ? p.dims.join(' × ') : '')}${f(tr('体积重 (kg，÷6000)', 'Volumetric kg (÷6000)'), c.vol != null ? c.vol.toFixed(1) : '')}${f(tr('最优发货方式', 'Best shipping method'), p.best)}</div></section>
-          <section class="pd-card"><h3>${tr('采购与供应', 'Sourcing')}</h3><div class="pd-grid3">${f(tr('交期', 'Lead time'), p.lead)}${f(tr('最小起订量 (MOQ)', 'MOQ'), p.moq)}${f(tr('计算用总交期（天）', 'Lead time used (days)'), s.lead)}</div><p class="pd-hint">${icon('truck')} ${srv.data?.items?.length ? (p.stockKnown ? tr(`库存（来自库存管理）：美国仓 ${p.wh} 件 · 在途 ${p.transit} 件 · 工厂仓 ${p.ready} 件`, `Stock (from Inventory): US ${p.wh} · inbound ${p.transit} · factory ${p.ready}`) : tr('库存管理里还没有这个 SKU 的库存记录。', 'No stock record for this SKU in Inventory yet.')) : tr(`海外仓 ${p.wh} 件 · 在途 ${p.transit} 件 · 工厂待发 ${p.ready} 件 · 生产中 ${p.wip} 件${INV ? '' : '（库存为示例，待接入真实库存）'}`, `${p.wh} at warehouse · ${p.transit} inbound · ${p.ready} ready · ${p.wip} in production${INV ? '' : ' (sample stock until real inventory is connected)'}`)}</p></section>
+          <section class="pd-card"><h3>${tr('基本信息', 'Basics')}</h3><div class="pd-grid3">${fe('nameZh', tr('中文名称', 'Chinese name'), nm('nameZh'))}${fe('nameEn', tr('英文名称', 'English name'), nm('nameEn'))}${isNew ? fe('sku', 'SKU', '', 'placeholder="OCL-XXX-01"') : f('SKU', p.sku, 'disabled')}${fe('type', tr('产品线', 'Product line'), p.type, 'list="pd-types"')}</div><datalist id="pd-types">${typesOf().map(t => `<option value="${esc(t)}">`).join('')}</datalist>${fe('note', tr('备注', 'Notes'), p.note)}</section>
+          ${isNew ? '' : `<section class="pd-card"><h3>${tr('媒体', 'Media')}</h3><div class="pd-media">${[1, 2, 3].map(() => `<span class="pd-thumb big">${icon(p.icon)}</span>`).join('')}<button class="pd-media-add">${icon('upload-simple')}<span>${tr('上传图片 / 视频', 'Upload images / video')}</span></button></div></section>`}
+          <section class="pd-card"><h3>${tr('价格', 'Pricing')}</h3><div class="pd-grid3">${fe('msrp', tr('零售价 MSRP (USD)', 'MSRP (USD)'), p.msrp, 'type="number" min="0" step="1"', edPrice)}${edPrice && !isNew ? fe('reason', tr('修改原因（可选，记入变更记录）', 'Reason for the change (optional, kept in the history)'), '', '', true) : ''}</div>
+            <p class="pd-hint">${icon('lock-simple')} ${tr('产品管理只维护零售价 MSRP，每次调整都留有记录；贡献利润低于公司底线的调价需管理员批准。其他价格和成本在“成本核算”里，由授权人员查看。', 'The catalog keeps MSRP only; every change is recorded, and a change below the company margin floor needs admin approval. Other prices and costs live in the Cost calculator for authorized people.')}</p></section>
+          <section class="pd-card"><h3>${tr('物流参数', 'Shipping')}</h3><div class="pd-grid3">${fe('gross', tr('毛重 (kg)', 'Gross weight (kg)'), p.gross, 'type="number" min="0" step="0.1"')}${f(tr('体积重 (kg，÷6000)', 'Volumetric kg (÷6000)'), c.vol != null ? c.vol.toFixed(1) : '', 'disabled')}${fe('best', tr('最优发货方式', 'Best shipping method'), p.best)}</div>
+            <div class="pd-grid3">${[0, 1, 2].map(i => fe(`dims${i}`, [tr('包装 长 (cm)', 'Package L (cm)'), tr('宽 (cm)', 'W (cm)'), tr('高 (cm)', 'H (cm)')][i], p.dims?.[i], 'type="number" min="0" step="1"')).join('')}</div></section>
+          <section class="pd-card"><h3>${tr('采购与供应', 'Sourcing')}</h3><div class="pd-grid3">${fe('lead', tr('交期', 'Lead time'), p.lead, 'placeholder="30天左右"')}${fe('moq', tr('最小起订量 (MOQ)', 'MOQ'), live ? p.moqSet : p.moq, 'type="number" min="0" step="1"')}${isNew ? '' : f(tr('计算用总交期（天）', 'Lead time used (days)'), s.lead, 'disabled')}</div>${isNew ? '' : `<p class="pd-hint">${icon('truck')} ${srv.data?.items?.length ? (p.stockKnown ? tr(`库存（来自库存管理）：美国仓 ${p.wh} 件 · 在途 ${p.transit} 件 · 工厂仓 ${p.ready} 件`, `Stock (from Inventory): US ${p.wh} · inbound ${p.transit} · factory ${p.ready}`) : tr('库存管理里还没有这个 SKU 的库存记录。', 'No stock record for this SKU in Inventory yet.')) : tr(`海外仓 ${p.wh} 件 · 在途 ${p.transit} 件 · 工厂待发 ${p.ready} 件 · 生产中 ${p.wip} 件${INV ? '' : '（库存为示例，待接入真实库存）'}`, `${p.wh} at warehouse · ${p.transit} inbound · ${p.ready} ready · ${p.wip} in production${INV ? '' : ' (sample stock until real inventory is connected)'}`)}</p>`}</section>
         </div>
         <aside class="pd-side">
-          <section class="pd-card"><h3>${tr('供应链状态', 'Supply status')}</h3><select class="pd-select">${Object.keys(STATUS).filter(k => k !== 'none').map(k => `<option ${k === p.status ? 'selected' : ''}>${esc(tr(STATUS[k][0], STATUS[k][1]))}</option>`).join('')}</select>
-            <ol class="pd-life">${['dev', 'launch', 'live', 'clearance', 'eolPlanned', 'eol'].map((k, i, arr) => `<li class="${k === p.status ? 'on' : arr.indexOf(p.status) > i ? 'past' : ''}"><i style="--c:${STATUS[k][2]}"></i>${esc(tr(STATUS[k][0], STATUS[k][1]))}</li>`).join('')}</ol></section>
-          <section class="pd-card"><h3>${tr('销售渠道', 'Sales channels')}</h3>${Object.keys(CHANNELS).map(ch => `<label class="pd-check"><input type="checkbox" ${ch === 'shopify' && p.msrp ? 'checked' : ''}> ${esc(L(CHANNELS[ch]))}</label>`).join('')}</section>
+          <section class="pd-card"><h3>${tr('产品生命周期', 'Product lifecycle')}</h3>
+            <ol class="pd-life">${['dev', 'launch', 'live', 'clearance', 'eolPlanned', 'eol'].map((k, i, arr) => `<li class="${k === p.status ? 'on' : arr.indexOf(p.status) > i ? 'past' : ''}"><i style="--c:${STATUS[k][2]}"></i>${esc(tr(STATUS[k][0], STATUS[k][1]))}</li>`).join('')}</ol>
+            ${!isNew && ed ? (options.length ? `<div class="pd-status-form"><select class="pd-select" data-pd-status>${options.map(k => `<option value="${k}">${esc(tr(STATUS[k][0], STATUS[k][1]))}</option>`).join('')}</select>
+              <label class="pd-field"><span>${tr('原因（转清库存、计划停售、停售时必填）', 'Reason (required for clearance or leaving sale)')}</span><input data-pd-status-note></label>
+              <button class="pd-btn" data-pd="status-save">${icon('arrow-right')} ${tr('更改状态', 'Change status')}</button></div>` : `<p class="pd-hint">${tr('已停售。需要重新上架请联系管理员。', 'Discontinued. Ask an admin to bring it back.')}</p>`) : ''}</section>
+          ${isNew ? '' : historyCard(p.sku, ['msrp'])}
         </aside>
       </div>`;
   }
@@ -414,6 +509,7 @@
       ${p && !detail ? `<section class="pd-card pd-cost-hero basic"><div class="pd-prod"><span class="pd-thumb big">${icon(p.icon)}</span><div><strong>${esc(L(p.name))}</strong><span>${esc(p.type || '')}</span></div>${pill(p.status)}</div>
         <div class="pd-final"><span>SKU</span><strong class="mono">${esc(p.sku) || '—'}</strong></div>
         <div class="pd-final"><span>${tr('零售价', 'Retail price')}</span><strong>${p.msrp ? usd(p.msrp) : '—'}</strong></div></section>` : ''}
+      ${detail ? approvalsPanel() : ''}
       ${detail ? `<div class="pd-seg pd-viewseg">${[['sku', tr('单个 SKU 定价', 'Price one SKU')], ['rules', tr('公司定价规则', 'Company pricing rules')]].map(([k, l]) => `<button class="${ui.costView === k ? 'active' : ''}" data-pd="cost-view" data-v="${k}">${l}</button>`).join('')}</div>` : ''}
       ${detail && ui.costView === 'rules' ? rulesPanel() : `
       ${p && detail ? priceSystem(p) : ''}
@@ -674,6 +770,39 @@
     } catch (x) { err.textContent = x.message || tr('导入失败', 'Import failed'); if (btn) btn.disabled = false; }
   });
 
+  /* ---------- saving products and prices ---------- */
+  const refresh = sku => { if (sku) delete hist[sku]; approvals.data = null; srv.data = null; loadServer(); };
+  const priceNote = (ch, what) => ch?.status === 'pending' ? tr(`${what}的调整${ch.needs ? `${NEEDS_LABEL[ch.needs][0]}，` : ''}已提交管理员审批，批准后生效`, `${what}: ${ch.needs ? `${NEEDS_LABEL[ch.needs][1].toLowerCase()}; ` : ''}sent to an admin for approval`) : '';
+  function saveProduct(btn) {
+    const box = document.getElementById('pd-product'); if (!box) return;
+    const isNew = box.dataset.new === '1', p = isNew ? null : bySku(box.dataset.sku);
+    if (!isNew && !p) return;
+    if (!(isNew ? serverOn() : liveData())) { ctx.toast(tr('原型：已模拟保存（示例数据不保存）', 'Prototype: save simulated (sample data is not saved)')); return; }
+    const el = k => box.querySelector(`[data-pd-f="${k}"]`), txt = k => el(k) && !el(k).disabled ? el(k).value.trim() : undefined;
+    const numOf = k => { const x = txt(k); return x === undefined ? undefined : x === '' ? null : Number(x); };
+    const body = {};
+    for (const k of ['nameZh', 'nameEn', 'type', 'note', 'best', 'lead']) { const x = txt(k); if (x !== undefined) body[k] = x; }
+    for (const k of ['gross', 'moq', 'msrp']) { const x = numOf(k); if (x !== undefined) body[k] = x; }
+    if ([body.gross, body.moq, body.msrp].some(x => x != null && !(x >= 0))) return ctx.toast(tr('请输入有效的数字', 'Enter valid numbers'));
+    if (body.moq != null && !Number.isInteger(body.moq)) return ctx.toast(tr('MOQ 请填整数', 'MOQ must be a whole number'));
+    const d = [0, 1, 2].map(i => numOf(`dims${i}`));
+    if (d.every(x => x !== undefined)) { if (d.some(x => x != null && !(x >= 0))) return ctx.toast(tr('请输入有效的包装尺寸', 'Enter a valid package size'));
+      if (d.every(x => x == null)) body.dims = null; else if (d.some(x => x == null)) return ctx.toast(tr('包装尺寸请填齐长、宽、高', 'Fill in length, width and height')); else body.dims = d; }
+    const fail = x => { ctx.toast(x.message || tr('保存失败', 'Save failed')); btn.disabled = false; };
+    btn.disabled = true;
+    if (isNew) {
+      const sku = txt('sku'); if (!sku) { btn.disabled = false; return ctx.toast(tr('请填写 SKU', 'Enter a SKU')); }
+      Object.keys(body).forEach(k => { if (body[k] === '' || body[k] == null) delete body[k]; });
+      return ctx.api.post('/products', { sku, ...body }).then(r => { ctx.toast(tr(`已添加 ${r.sku}`, `${r.sku} added`)); ui.product = r.sku; refresh(r.sku); }).catch(fail);
+    }
+    // Only fields that changed are sent, so the change log and price history stay meaningful.
+    const before = { nameZh:p.nameZh ?? '', nameEn:p.nameEn ?? '', type:p.type ?? '', note:p.note ?? '', best:p.best ?? '', lead:p.lead ?? '', gross:p.gross ?? null, moq:p.moqSet ?? null, msrp:p.msrp ?? null, dims:p.dims ?? null };
+    Object.keys(body).forEach(k => { if (JSON.stringify(body[k]) === JSON.stringify(before[k])) delete body[k]; });
+    if (!Object.keys(body).length) { btn.disabled = false; return ctx.toast(tr('没有需要保存的修改', 'Nothing to save')); }
+    const reason = txt('reason'); if (reason) body.reason = reason;
+    ctx.api.request(`/products/${encodeURIComponent(p.sku)}`, { method:'PATCH', body }).then(r => { ctx.toast(priceNote(r.msrpChange, 'MSRP') || tr('已保存', 'Saved')); refresh(p.sku); }).catch(fail);
+  }
+
   /* ---------- events ---------- */
   const rerender = () => ctx.rerender();
   document.addEventListener('click', e => {
@@ -686,8 +815,19 @@
     if (a === 'back') { ui.product = null; return rerender(); }
     if (a === 'import') return importDialog(t.dataset.kind);
     if (a === 'import-template') return downloadTemplate(t.dataset.kind);
-    if (a === 'save-product') { ctx.toast(tr('原型：已模拟保存', 'Prototype: save simulated')); return; }
-    if (a === 'new-product') { ctx.toast(tr('原型：将打开新产品表单', 'Prototype: opens a new product form')); return; }
+    if (a === 'save-product') return saveProduct(t);
+    if (a === 'new-product') { if (!serverOn()) { ctx.toast(tr('原型：接入系统数据后可以添加产品', 'Prototype: adding products needs system data')); return; } ui.product = NEW; return rerender(); }
+    if (a === 'status-save') { const box = document.getElementById('pd-product'), sel = document.querySelector('[data-pd-status]'); if (!box || !sel) return;
+      const note = document.querySelector('[data-pd-status-note]')?.value.trim() || '';
+      t.disabled = true; ctx.api.post(`/products/${encodeURIComponent(box.dataset.sku)}/status`, { status:sel.value, note }).then(() => { ctx.toast(tr(`状态已改为：${STATUS[sel.value][0]}`, `Status changed to ${STATUS[sel.value][1]}`)); refresh(box.dataset.sku); }).catch(x => { ctx.toast(x.message || tr('保存失败', 'Save failed')); t.disabled = false; }); return; }
+    if (a === 'channel-save') { const k = t.dataset.ch, p = bySku(ui.costSku); if (!p) return;
+      const raw = document.querySelector(`[data-pd-ch-price="${k}"]`)?.value ?? '', price = raw === '' ? null : Number(raw);
+      if (price != null && !(price >= 0)) return ctx.toast(tr('请输入有效的金额', 'Enter a valid amount'));
+      const reason = document.querySelector('[data-pd-ch-reason]')?.value.trim(), body = { price, listed:!!document.querySelector(`[data-pd-ch-listed="${k}"]`)?.checked, ...(reason ? { reason } : {}) };
+      t.disabled = true; ctx.api.request(`/products/${encodeURIComponent(p.sku)}/channel-prices/${k}`, { method:'PUT', body }).then(r => { ctx.toast(priceNote(r.change, tr(TARGET_LABEL[k][0], TARGET_LABEL[k][1])) || tr('渠道价格已保存', 'Channel price saved')); refresh(p.sku); }).catch(x => { ctx.toast(x.message || tr('保存失败', 'Save failed')); t.disabled = false; }); return; }
+    if (a === 'pc-approve' || a === 'pc-reject' || a === 'pc-withdraw') { const id = t.dataset.id;
+      const go = a === 'pc-withdraw' ? ctx.api.post(`/products/price-changes/${encodeURIComponent(id)}/withdraw`, {}) : ctx.api.post(`/products/price-changes/${encodeURIComponent(id)}/decide`, { approve:a === 'pc-approve' });
+      t.disabled = true; go.then(() => { ctx.toast(a === 'pc-approve' ? tr('已批准，新价格已生效', 'Approved; the new price applies') : a === 'pc-reject' ? tr('已驳回', 'Rejected') : tr('已撤回', 'Withdrawn')); refresh(ui.costSku); }).catch(x => { ctx.toast(x.message || tr('操作失败', 'Action failed')); t.disabled = false; }); return; }
     if (a === 'cost-for' || a === 'pick-cost') { ui.tab = 'cost'; ui.costSku = t.dataset.sku; ui.costQuery = ''; ui.product = null; return rerender(); }
     if (a === 'incomplete') { ui.incomplete = !ui.incomplete; return rerender(); }
     if (a === 'scenario') { ui.scenario = t.dataset.v; return rerender(); }
@@ -699,9 +839,14 @@
     if (a === 'plan-save') { const f = document.getElementById('pd-plan'), p = bySku(ui.costSku); if (!f || !p) return;
       const val = k => { const v = f.querySelector(`[data-pd-plan="${k}"]`)?.value; return v === '' || v == null ? null : Number(v); };
       const body = { priceClass:f.querySelector('[name="priceClass"]').value, landedUsd:val('landedUsd'), lastMileUsd:val('lastMileUsd'), actualPrice:val('actualPrice') };
-      if (Object.entries(body).some(([k, v]) => k !== 'priceClass' && v != null && !(v >= 0))) return ctx.toast(tr('请输入有效的金额', 'Enter valid amounts'));
+      const shipEl = f.querySelector('[data-pd-plan="shipFee"]'), shipFee = shipEl && !shipEl.disabled ? val('shipFee') : undefined, reason = f.querySelector('[name="reason"]')?.value.trim();
+      if ([...Object.entries(body), ['shipFee', shipFee]].some(([k, v]) => k !== 'priceClass' && v != null && !(v >= 0))) return ctx.toast(tr('请输入有效的金额', 'Enter valid amounts'));
       if (!srv.data?.items?.length || ctx.state().capabilities?.pricingRules !== true) { Object.assign(p, body); ctx.toast(tr('已应用（示例数据不保存）', 'Applied (sample data is not saved)')); return rerender(); }
-      t.disabled = true; ctx.api.request(`/products/${encodeURIComponent(p.sku)}/pricing-plan`, { method:'PATCH', body }).then(r => { Object.assign(p, { priceClass:r.priceClass, landedUsd:r.landedUsd, lastMileUsd:r.lastMileUsd, actualPrice:r.actualPrice }); ctx.toast(tr('定价输入已保存', 'Pricing inputs saved')); }).catch(x => ctx.toast(x.message || tr('保存失败', 'Save failed'))).finally(rerender); return; }
+      if (reason) body.reason = reason;
+      t.disabled = true;
+      // Checkout shipping is a catalog field; it is saved first because the margin check of the actual price uses it.
+      const ship = shipFee !== undefined && shipFee !== (p.shipFee ?? null) ? ctx.api.request(`/products/${encodeURIComponent(p.sku)}`, { method:'PATCH', body:{ shipFee } }) : Promise.resolve();
+      ship.then(() => ctx.api.request(`/products/${encodeURIComponent(p.sku)}/pricing-plan`, { method:'PATCH', body })).then(r => { Object.assign(p, { priceClass:r.priceClass, landedUsd:r.landedUsd, lastMileUsd:r.lastMileUsd, actualPrice:r.actualPrice }); ctx.toast(priceNote(r.actualChange, tr('真实售价', 'Actual price')) || tr('定价输入已保存', 'Pricing inputs saved')); refresh(p.sku); }).catch(x => ctx.toast(x.message || tr('保存失败', 'Save failed'))).finally(rerender); return; }
     if (a === 'status-filter') { ui.statusFilter = ui.statusFilter === t.dataset.v ? '' : t.dataset.v; return rerender(); }
     if (a === 'sc-filter') { ui.scFilter = t.dataset.v; return rerender(); }
     if (a === 'ov-save') { saveOv(ui.costSku); ctx.toast(tr('已保存该 SKU 的成本设置', 'Cost settings saved')); return rerender(); }
