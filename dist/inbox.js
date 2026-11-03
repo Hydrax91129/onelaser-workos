@@ -14,6 +14,7 @@
     completion:['flag-checkered', '任务已完成', 'Task completed', '#00a86b'], nudge:['bell-ringing', '提醒', 'Reminder', '#fdab3d'], okr:['target', 'OKR 提醒', 'OKR reminder', '#fdab3d'],
     hr_reminder:['identification-card', '人事提醒', 'HR reminder', '#fdab3d'],
     it_reminder:['key', 'IT 提醒', 'IT reminder', '#579bfc'],
+    quality:['shield-warning', '品质问题', 'Quality issue', '#e2445c'],
   };
   const ago = iso => { const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
     if (m < 1) return tr('刚刚', 'just now'); if (m < 60) return tr(`${m} 分钟前`, `${m} min ago`); const h = Math.round(m / 60); if (h < 24) return tr(`${h} 小时前`, `${h} h ago`); return tr(`${Math.round(h / 24)} 天前`, `${Math.round(h / 24)} d ago`); };
@@ -60,6 +61,7 @@
     else if (it.kind === 'okr') { window.location.hash = '#okr'; }
     else if (it.kind === 'hr_reminder') { window.location.hash = '#hr'; }
     else if (it.kind === 'it_reminder') { window.location.hash = '#it'; }
+    else if (it.kind === 'quality') { window.location.hash = '#quality'; if (it.issueId) window.WorkOSQuality?.open(it.issueId); }
     else paint();
   });
   document.addEventListener('keydown', e => { if (open && e.key === 'Escape') { open = false; paint(); } });

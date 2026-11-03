@@ -22,6 +22,14 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.27', date:'2026-11-03T16:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('“产品质量追踪”接入真实数据：问题提交给工厂，工厂登录填方案，每一步都有日期和逾期提醒', 'Product quality tracking goes live: issues are sent to factories, factories sign in to plan the fix, every step is dated with overdue reminders'),
+      title:c('产品质量追踪（客服系统第一阶段）', 'Product quality tracking (customer-service phase 1)'),
+      changes:[c('“产品质量追踪”不再是示例数据：品质负责人建立问题，按两级缺陷分类（如 ELE-01 电源板故障），关联工单、退货和评价，并提交给东莞或济南工厂。', 'Product quality tracking now uses real data: quality leads register issues with a two-level defect code (e.g. ELE-01 power board), link tickets, returns and reviews, and send them to the Dongguan or Jinan factory.'),
+        c('工厂人员用钉钉登录后填写根本原因、纠正和预防措施及承诺落实日期；我们批准或退回，工厂落实后填写从哪个批次起生效，我们验证后关闭。', 'Factory staff sign in with DingTalk to write the root cause, corrective and preventive action and a committed date; we approve or return it, the factory reports the batch the fix applies from, and we verify before closing.'),
+        c('每一步都记录日期：提交工厂、工厂回复方案、批准、承诺落实、实际落实、验证关闭；自动算出工厂出方案和落实各用了几天，超期标红。', 'Every step is dated — sent, factory plan, approval, committed and actual implementation, verification — with the days each stage took and overdue items in red.'),
+        c('工厂账号只能看到提交给本厂的问题，看不到任务、OKR、产品价格等其他页面。', 'Factory accounts only see issues sent to their own factory and none of the other pages (tasks, OKRs, product prices…).'),
+        c('提醒：每一步自动通知下一步的人；方案或落实期限前一天提醒工厂，逾期第 1、3、7 天及之后每周提醒工厂和负责人（消息铃铛、钉钉和邮件）。', 'Reminders: each step notifies whoever acts next; the factory is reminded the day before a plan or implementation date, and the factory and owner on day 1, 3, 7 and weekly once overdue (inbox, DingTalk and email).')] },
     { version:'1.26', date:'2026-11-03T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('新增“IT 账号与订阅”：登记公司账号、邮箱和订阅，每季度确认，续费和离职自动提醒', 'New IT accounts & subscriptions: register company accounts, mailboxes and subscriptions, confirm them quarterly, get renewal and leaving alerts'),
       title:c('IT 账号与订阅（IT 资产第一阶段）', 'IT accounts & subscriptions (IT assets phase 1)'),
