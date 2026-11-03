@@ -30,7 +30,7 @@ test('sidebar sections follow the requested order, and restricted pages are gate
   assert.deepEqual(ids('other'), ['settings', 'orgchart', 'org', 'feedback', 'changelog']);
   assert.ok(ids('hidden').includes('executive') && ids('hidden').includes('integrations'), 'executive board removed; integrations moved into settings');
   assert.match(live, /const productAccess = \(\) => !!window\.WorkOSProducts && \(\(state\.actor\?\.grants\|\|\[\]\)\.includes\('products'\) \|\| state\.actor\?\.isAdmin === true\)/);
-  assert.match(live, /products:productAccess\(\)\|\|wmsAccess\(\), 'product-cost':productAccess\(\), 'supply-chain':productAccess\(\)/);
+  assert.match(live, /products:productAccess\(\)\|\|wmsAccess\(\)\|\|dealersAccess\(\), 'product-cost':productAccess\(\), 'supply-chain':productAccess\(\)/);
   assert.match(live, /org:!!window\.WorkOSPeople && state\.actor\?\.isAdmin===true/);
   for (const id of ['product-cost', 'supply-chain']) assert.match(live, new RegExp(`'?${id}'?: \\(\\) => productAccess\\(\\) \\?`), `direct URL for ${id} is gated too`);
   assert.match(live, /productAccess\(\) && \['catalog'[\s\S]*wmsAccess\(\) && \['stock'[\s\S]*if \(!tabs\.length\) return noAccess/, 'merged products & stock page shows only the tabs the person may see');

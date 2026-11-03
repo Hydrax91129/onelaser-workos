@@ -1,0 +1,18 @@
+/* Dealer orders (staff). Builds on the WMS page styles (wms.css). */
+.dealers .wms-kpis button.wms-kpi{cursor:pointer;text-align:left;font:inherit}
+.dealers tr.dl-row{cursor:pointer}
+.dealers tr.dl-row:hover,.dealers tr.dl-row:focus{background:var(--surface-soft)}
+.dealers .num,.dealers-detail .num{text-align:right;font-variant-numeric:tabular-nums}
+.dealers-detail h3{font-size:14px;margin:16px 0 6px}
+.dealers-detail p{margin:0}
+.dealers-detail .dl-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.dealers-detail .dl-grid,#dl-ship .dl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.dealers-detail .dl-grid .full{grid-column:1/-1}
+.dealers-detail label{display:flex;flex-direction:column;gap:4px;font-size:13px}
+.dealers-detail label.dl-check{flex-direction:row;align-items:center;gap:8px;margin-top:12px}
+.dealers-detail label.dl-check input{width:auto}
+.dealers-detail .dl-full{margin-top:12px}
+.dealers-detail .dl-events{list-style:none;padding:0;margin:0;font-size:13px}
+.dealers-detail .dl-events li{padding:4px 0;border-bottom:1px solid var(--border)}
+.dealers-detail table{margin-top:12px}
+@media (max-width:720px){.dealers-detail .dl-grid,#dl-ship .dl-grid{grid-template-columns:1fr}}
