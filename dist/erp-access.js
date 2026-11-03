@@ -22,7 +22,8 @@
     ['products', 'package', '产品', 'Products', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 新建 SKU、修改产品资料与规格', 'Manage = create SKUs and edit product specs'],
     ['pricing', 'currency-dollar', '价格构成', 'Price build-up', [['none', '无', 'None'], ['msrp', '查看 MSRP', 'MSRP only'], ['full', '价格组成 + 修改', 'Full build-up + edit']], '价格组成包含工厂成本、运费、关税和毛利，请谨慎开通', 'The full build-up shows factory cost, freight, duty and margin; grant with care'],
     ['supply', 'truck', '供应链', 'Supply chain', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 生成采购单草稿、调整补货参数', 'Manage = draft purchase orders and tune reorder settings'],
-    ['warehouse', 'warehouse', '仓库库存', 'Warehouse stock', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 入库、出库、调拨、盘点调整；只查看的人不能改数量', 'Manage = goods in, out, transfers and counts; view-only people cannot change quantities']
+    ['warehouse', 'warehouse', '仓库库存', 'Warehouse stock', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 入库、出库、调拨、盘点调整；只查看的人不能改数量', 'Manage = goods in, out, transfers and counts; view-only people cannot change quantities'],
+    ['dealers', 'storefront', '经销商', 'Dealers', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 审核经销商、发货并填写物流单号、取消未付款订单', 'Manage = approve dealers, ship with tracking, cancel unpaid orders']
   ];
 
   function configure(next) { ctx = next; }
