@@ -12,3 +12,12 @@ test('every versioned script and style carries the hash of its current content (
   for (const [, file, v] of refs) assert.equal(v, hashOf(file), `${file} changed without a new version`);
   assert.equal(stamp(html), html);
 });
+
+test('the dealer portal page versions its own script and style too', async () => {
+  const { pages } = await import('../tools/stamp-assets.mjs');
+  const dealer = readFileSync(pages[1], 'utf8'), dir = resolve(pages[1], '..');
+  const refs = [...dealer.matchAll(/(?:src|href)="\.\/([^"?]+\.(?:js|css))\?v=([^"]*)"/g)];
+  assert.deepEqual(refs.map(r => r[1]).sort(), ['dealer.css', 'dealer.js']);
+  for (const [, file, v] of refs) assert.equal(v, hashOf(file, dir), `dealer/${file} changed without a new version`);
+  assert.doesNotMatch(dealer, /live-app\.js|api-client\.js/, 'the dealer page loads no employee code');
+});

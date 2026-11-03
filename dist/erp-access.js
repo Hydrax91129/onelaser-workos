@@ -18,12 +18,13 @@
   const ui = { q:'', area:'' };
   const lang = () => ctx?.lang() === 'en' ? 'en' : 'zh';
   const tr = (zh, en) => lang() === 'en' ? en : zh;
-  const AREAS = [
+  const ALL_AREAS = [
     ['products', 'package', '产品', 'Products', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 新建 SKU、修改产品资料与规格', 'Manage = create SKUs and edit product specs'],
     ['pricing', 'currency-dollar', '价格构成', 'Price build-up', [['none', '无', 'None'], ['msrp', '查看 MSRP', 'MSRP only'], ['full', '价格组成 + 修改', 'Full build-up + edit']], '价格组成包含工厂成本、运费、关税和毛利，请谨慎开通', 'The full build-up shows factory cost, freight, duty and margin; grant with care'],
     ['supply', 'truck', '供应链', 'Supply chain', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 生成采购单草稿、调整补货参数', 'Manage = draft purchase orders and tune reorder settings'],
     ['warehouse', 'warehouse', '仓库库存', 'Warehouse stock', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 入库、出库、调拨、盘点调整；只查看的人不能改数量', 'Manage = goods in, out, transfers and counts; view-only people cannot change quantities'],
-    ['kol', 'users-three', 'KOL 管理', 'KOL management', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 新增和编辑 KOL、记录寄样和发布、从 UpPromote 同步；查看可以看到 KOL 的联系方式和佣金', 'Manage = add and edit KOLs, log samples and content, sync UpPromote; view shows KOL contact details and commission']
+    ['kol', 'users-three', 'KOL 管理', 'KOL management', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 新增和编辑 KOL、记录寄样和发布、从 UpPromote 同步；查看可以看到 KOL 的联系方式和佣金', 'Manage = add and edit KOLs, log samples and content, sync UpPromote; view shows KOL contact details and commission'],
+    ['dealers', 'storefront', '经销商', 'Dealers', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 审核经销商、发货并填写物流单号、取消未付款订单', 'Manage = approve dealers, ship with tracking, cancel unpaid orders']
   ];
 
   function configure(next) { ctx = next; }
@@ -39,6 +40,8 @@
   function render() {
     if (!data && !error) { load(); return `<div class="erpa"><p class="erpa-hint">${tr('正在读取…', 'Loading…')}</p></div>`; }
     if (error && !data) return `<div class="erpa"><div class="erpa-alert">${esc(error)}</div></div>`;
+    // Rows for modules the server does not offer yet (by capability) stay hidden.
+    const AREAS = ALL_AREAS.filter(([id]) => !ctx?.supports || ctx.supports(id));
     const q = ui.q.trim().toLowerCase();
     const people = data.people.filter(p => (!q || `${p.name} ${p.title || ''} ${p.location || ''}`.toLowerCase().includes(q)) && (!ui.area || (p.access[ui.area] || 'none') !== 'none'));
     const counts = AREAS.map(([id]) => data.people.filter(p => (p.access[id] || 'none') !== 'none').length);
