@@ -38,12 +38,6 @@ div.wms-kpi{cursor:default}
 .wms-state.done{background:#eef0f3;color:#5b6170}.wms-state.pending{background:#fff1cc;color:#8a6100}.wms-state.rejected{background:#ffe3e3;color:#c62828}
 .wms-reason{color:#5b6170;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wms-by{color:var(--muted,#9aa0b4);font-size:12px}
 .wms-form .field small{margin-top:2px}.wms-error{color:#d33;font-size:13px;min-height:1em}
-.wms-ops{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:2px;max-height:55vh;overflow:auto}
-.wms-ops li{display:flex;align-items:center;justify-content:space-between;padding:8px 4px;border-bottom:1px solid #f0f1f5}
-.wms-ops li small{display:block;color:var(--muted,#9aa0b4);font-size:11.5px}
-.wms-switch{position:relative;display:inline-block;width:38px;height:22px}.wms-switch input{opacity:0;width:0;height:0}
-.wms-switch i{position:absolute;inset:0;background:#d5d9e2;border-radius:999px;transition:.15s}.wms-switch i::after{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
-.wms-switch input:checked+i{background:#00b36b}.wms-switch input:checked+i::after{left:19px}
 @media (max-width:1100px){.wms-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.wms-pend-row{grid-template-columns:1fr 1fr;}}
 html[data-theme=dark] .wms-kpi,html[data-theme=dark] .wms-table-wrap,html[data-theme=dark] .wms-search{background:#1d1f27;border-color:#343745}
 html[data-theme=dark] .wms-table th{background:#23252f;color:#b8bccb}html[data-theme=dark] .wms-table td{border-color:#2a2d38}
