@@ -22,6 +22,15 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.26', date:'2026-11-03T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('新增“IT 账号与订阅”：登记公司账号、邮箱和订阅，每季度确认，续费和离职自动提醒', 'New IT accounts & subscriptions: register company accounts, mailboxes and subscriptions, confirm them quarterly, get renewal and leaving alerts'),
+      title:c('IT 账号与订阅（IT 资产第一阶段）', 'IT accounts & subscriptions (IT assets phase 1)'),
+      changes:[c('侧边栏“其他”里新增“IT 账号与订阅”：每个人登记自己负责和在用的公司账号、邮箱；主管能看到下属的账号；IT 管理全部，管理层可以查看全部和费用。', 'New “IT accounts” under Other: everyone registers the company accounts and mailboxes they own and use; managers see their reports’ accounts; IT manages everything and executives can view everything, including costs.'),
+        c('系统不保存任何密码：每个账号只贴公司密码管理器里那条记录的链接；备注里写了像密码或密钥的内容会被拦下；付款卡只记名称和后四位。', 'No passwords are stored: each account links to its item in the company password manager; text that looks like a password or key is refused; cards are recorded only by name and last 4 digits.'),
+        c('记录负责人、共用人、两步验证绑定在谁那里、状态，以及套餐、费用、付费周期、下次续费日（只有 IT 和管理层能看到费用）。', 'Records owner, users, who holds the 2FA, status, and plan, cost, billing cycle and next renewal (costs visible to IT and executives only).'),
+        c('每季度第一周，所有人会收到“请确认你的账号与设备”；没确认的第 7 天和第 14 天再提醒。员工可以随时点“反馈给 IT”。', 'In the first week of each quarter everyone is asked to confirm their accounts, with reminders on day 7 and 14. Anyone can “Tell IT” at any time.'),
+        c('续费前 30 天、7 天和当天提醒 IT 和负责人；负责人或两步验证绑定人进入“离职中”时提醒 IT 转交。', 'IT and the owner are reminded 30 and 7 days before a renewal and on the day; IT is alerted when an owner or 2FA holder is leaving.'),
+        c('IT 可以用 Excel 模板批量导入（先检查，有错整份不导入），也可以导出全部账号。', 'IT can bulk-import from an Excel template (checked first; nothing is imported if any row is wrong) and export everything.')] },
     { version:'1.25', date:'2026-11-02T23:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('新增“人事档案”：入职、合同、证件和履历；身份证号、银行卡和薪资加密保存', 'New HR records: hiring, contracts, documents and history; ID numbers, bank details and salary are encrypted'),
       title:c('人事档案（HRM 第一阶段）', 'HR records (HRM phase 1)'),
