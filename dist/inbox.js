@@ -12,6 +12,8 @@
     task_update:['chat-circle-text', '新进展', 'New update', '#00a86b'], submission:['upload-simple', '成果待验收', 'Awaiting review', '#a25ddc'],
     review_accept:['seal-check', '已验收', 'Accepted', '#00a86b'], review_revise:['arrow-u-up-left', '需要修改', 'Needs changes', '#e2445c'],
     completion:['flag-checkered', '任务已完成', 'Task completed', '#00a86b'], nudge:['bell-ringing', '提醒', 'Reminder', '#fdab3d'], okr:['target', 'OKR 提醒', 'OKR reminder', '#fdab3d'],
+    hr_reminder:['identification-card', '人事提醒', 'HR reminder', '#fdab3d'],
+    it_reminder:['key', 'IT 提醒', 'IT reminder', '#579bfc'],
     quality:['shield-warning', '品质问题', 'Quality issue', '#e2445c'],
   };
   const ago = iso => { const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -57,6 +59,8 @@
     markRead(data.items.filter(i => i.id === it.id || (it.taskId && i.taskId === it.taskId)).map(i => i.id));
     if (it.taskId) ctx.openTask?.(it.taskId);
     else if (it.kind === 'okr') { window.location.hash = '#okr'; }
+    else if (it.kind === 'hr_reminder') { window.location.hash = '#hr'; }
+    else if (it.kind === 'it_reminder') { window.location.hash = '#it'; }
     else if (it.kind === 'quality') { window.location.hash = '#quality'; if (it.issueId) window.WorkOSQuality?.open(it.issueId); }
     else paint();
   });
