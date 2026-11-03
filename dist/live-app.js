@@ -71,7 +71,7 @@
   function notice(text, style = '') { return `<div class="notice ${style}">${icon('shield')}<span>${text}</span></div>`; }
   function toast(text) { const target = document.getElementById('toast'); target.textContent = text; target.classList.add('show'); setTimeout(() => target.classList.remove('show'), 4000); }
   function explainError(error) { if (error?.code?.startsWith('BOT_')) return jobError(error.code); if (error?.status === 409) return tr('记录已被更新。请关闭当前表单、刷新记录后重新确认。','This record changed. Close the form, refresh it and confirm the current version.'); return error?.message || tr('请求未完成，请稍后重试。','The request could not be completed. Try again later.'); }
-  function clearPrivateData() { const hadActor=!!state.actor; window.CompanySupport?.reset(); window.WorkOSTaskBoard?.reset(); window.WorkOSOkrBoard?.reset(); window.WorkOSWms?.reset(); window.WorkOSRma?.reset(); window.WorkOSInbox?.reset(); window.WorkOSErpAccess?.reset(); window.WorkOSInsights?.reset(); if(hadActor)window.WikiAssistant?.reset(); state.actor = null; state.executive = null; state.tasks = []; state.objectives = []; state.okrOwner = null; state.krs = []; state.appraisals = {}; state.directory = []; state.audit = []; state.details.clear(); openTaskId = null; api?.clearSession(); closeOverlay(); }
+  function clearPrivateData() { const hadActor=!!state.actor; window.CompanySupport?.reset(); window.WorkOSTaskBoard?.reset(); window.WorkOSOkrBoard?.reset(); window.WorkOSWms?.reset(); window.WorkOSRma?.reset(); window.WorkOSQuality?.reset(); window.WorkOSInbox?.reset(); window.WorkOSErpAccess?.reset(); window.WorkOSInsights?.reset(); if(hadActor)window.WikiAssistant?.reset(); state.actor = null; state.executive = null; state.tasks = []; state.objectives = []; state.okrOwner = null; state.krs = []; state.appraisals = {}; state.directory = []; state.audit = []; state.details.clear(); openTaskId = null; api?.clearSession(); closeOverlay(); }
   function handleAuthError(error) { if (error?.status === 401) { clearPrivateData(); state.error = tr('登录已过期，请重新使用钉钉登录。','Your session expired. Sign in with DingTalk again.'); render(); return true; } return false; }
   // While sign-in and data are still loading, show the shape of the Work Center (not the sign-in / culture page).
   function renderBootSkeleton() {
@@ -211,7 +211,7 @@
     if(state.actor)window.WorkOSRma?.configure({api,state:()=>state,lang:()=>i18n.lang,rerender:render,toast,closeOverlay,modal});
     if(state.actor)window.WorkOSErpAccess?.configure({api,lang:()=>i18n.lang,rerender:render,toast});
     if(state.actor)window.WorkOSProjects?.configure({api,state:()=>state,lang:()=>i18n.lang,rerender:render,toast,overlay,closeOverlay,modal});
-    if(state.actor)window.WorkOSQuality?.configure({state:()=>state,lang:()=>i18n.lang,rerender:render,toast,overlay,closeOverlay,modal});
+    if(state.actor)window.WorkOSQuality?.configure({api,state:()=>state,lang:()=>i18n.lang,rerender:render,toast,overlay,closeOverlay,modal});
     if(state.actor)window.WorkOSTranslate?.configure({api,lang:()=>i18n.lang,capabilities:()=>state.capabilities,rerender:render});
     if(state.actor)window.WorkOSOkrBoard?.configure({api,state:()=>state,lang:()=>i18n.lang,rerender:render,refreshOkr,toast,explainError,overlay,closeOverlay,modal,openAppraisal,measurement,openObjectiveSource});
     if(state.actor)window.CompanySupport?.configure({api,actor:state.actor,language:i18n.lang,changed:render,showModal:modal,active:state.page==='knowledge',view:state.page});
