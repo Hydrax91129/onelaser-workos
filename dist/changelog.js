@@ -22,6 +22,14 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.27', date:'2026-11-03T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('新增“KOL 管理”：所有 KOL 资料、合作进度和带货业绩，自动同步 UpPromote', 'New KOL management: every KOL’s details, progress and sales, synced from UpPromote'),
+      title:c('KOL 管理（第一阶段）', 'KOL management (phase 1)'),
+      changes:[c('侧边栏新增“营销 → KOL 管理”：管理员和在“ERP 权限”里开通 KOL 权限的同事可以使用；“管理”权限可以编辑和同步，“查看”只能看。', 'New Marketing → KOL management for admins and people granted KOL in ERP permissions; Manage can edit and sync, View can only look.'),
+        c('每 30 分钟自动从 UpPromote 同步 KOL 的联系方式、社媒账号、联盟计划、优惠码、佣金和推荐订单，也可以随时点“立即同步”。', 'Contact details, social accounts, program, coupons, commission and referral orders sync from UpPromote every 30 minutes, or on Sync now.'),
+        c('在系统里维护合作阶段、等级、主平台、粉丝数、领域、负责人、合作产品、费用和备注；记录寄样、内容发布和付款，记录寄样或发布时阶段自动推进。', 'Keep stage, tier, platform, followers, niche, owner, products, fee and notes here, and log samples, published content and payments; logging moves the stage forward.'),
+        c('看板显示近 30 天和累计销售额、待付佣金和按月销售趋势；列表可以按阶段、等级、负责人筛选，按销售额或粉丝排序，并导出 CSV。', 'The page shows 30-day and total sales, commission owed and a monthly trend; filter by stage, tier and owner, sort by sales or followers, and export CSV.'),
+        c('还没加入 UpPromote 的 KOL 可以手动添加，加入后只要邮箱一致就会自动关联并带入订单。', 'Add KOLs not yet in UpPromote by hand; they link automatically by email once they join.')] },
     { version:'1.24', date:'2026-11-02T21:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('右上角新增消息铃铛：有新任务或新互动会出现红点，点进去直达对应任务', 'New inbox bell: a red dot for new tasks and interactions; click to open the task'),
       title:c('消息红点提醒', 'Inbox red dot'),
