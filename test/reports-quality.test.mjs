@@ -62,13 +62,33 @@ test('supply chain uses injected inventory: aged stock is purple, factory stock 
   assert.match(html, /ri-list/, 'AI/auto analysis card on the supply board');
 });
 
-test('quality tracking: factory submits a plan, we approve, then verify and close', () => {
-  const { window } = load(['reports.js', 'quality.js'], base());
-  const Q = window.WorkOSQuality, html = Q.render();
-  assert.match(html, /产品质量追踪/); assert.match(html, /按问题分类/); assert.match(html, /ri-list/);
-  const i = Q._data.issues.find(x => x.status === 'review');
-  assert.ok(i.plan.due && i.plan.root);
-  for (const code of Q._data.issues.map(x => x.code)) { const [c, n] = code.split('-'); assert.ok(Q._data.CATS[c][3][n], `code ${code} is in the taxonomy`); }
+test('quality tracking reads live issues; factory staff get the plan form, leads get approval', async () => {
+  const today = '2026-11-10';
+  const categories = { ELE:{ zh:'电气', en:'Electrical', defects:{ '01':['电源板故障', 'Power board failure'] } }, MEC:{ zh:'机械 / 运动', en:'Mechanics', defects:{ '03':['升降台卡滞', 'Z-table jam'] } } };
+  const factories = [{ id:'dg', zh:'东莞工厂', en:'Dongguan factory' }, { id:'jn', zh:'济南工厂', en:'Jinan factory' }];
+  const issue = (o = {}) => ({ id:'i1', number:'Q-2026-0001', title:'Hydra 电源板过热 <b>x</b>', description:'', category:'ELE', defect:'01', code:'ELE-01', model:'Hydra 13 Pro', sku:'', batch:'2026-09', severity:'S1', factory:'dg', status:'sent', resolution:null, affected:7, ownerId:'u1', ownerName:'KC', foundAt:'2026-11-01',
+    dates:{ sentAt:'2026-11-02', planDue:'2026-11-09', planAt:null, approvedAt:null, implDue:null, implementedAt:null, verifiedAt:null, closedAt:null }, effectiveBatch:'', durations:{ toSend:1, factoryReply:8, implementation:null, verification:null, total:9 }, overdue:'plan', linkCount:0, ...o });
+  const list = role => ({ items:[issue(), issue({ id:'i2', number:'Q-2026-0002', title:'Cobra 升降台', category:'MEC', defect:'03', code:'MEC-03', model:'Cobra', severity:'S3', factory:'jn', status:'closed', resolution:'fixed', overdue:null, affected:2, dates:{ ...issue().dates, planAt:'2026-11-03', approvedAt:'2026-11-03', implDue:'2026-11-06', implementedAt:'2026-11-05', verifiedAt:'2026-11-08', closedAt:'2026-11-08' }, durations:{ toSend:0, factoryReply:1, implementation:2, verification:3, total:7 } })],
+    role, factory:role === 'factory' ? 'dg' : null, canCreate:role === 'lead', leads:[{ id:'u1', name:'KC' }], today, categories, factories, statuses:[], severities:['S1', 'S2', 'S3'], linkKinds:[] });
+  const detail = (role, can) => ({ ...issue(), plans:[], links:[{ id:'l1', kind:'ticket', ref:'#8812', url:'javascript:alert(1)', note:'', byName:'KC', createdAt:'2026-11-02' }], events:[{ id:'e1', action:'sent', note:'', byName:'KC', at:'2026-11-02T08:00:00Z' }], role, can });
+  const run = async role => {
+    const { window } = load(['reports.js', 'quality.js'], base());
+    const Q = window.WorkOSQuality, calls = [];
+    Q.configure({ api:{ get:async p => { calls.push(p); return list(role); } }, state:() => base(), lang:() => 'zh', rerender:() => {}, toast:() => {}, overlay:() => {}, closeOverlay:() => {}, modal:() => {} });
+    assert.match(Q.render(), /正在读取/); await new Promise(r => setTimeout(r, 0));
+    return { Q, html:Q.render(), calls };
+  };
+  const lead = await run('lead');
+  assert.deepEqual(lead.calls, ['/quality']);
+  assert.match(lead.html, /新建问题/); assert.match(lead.html, /Q-2026-0001/); assert.match(lead.html, /逾期 1天/); assert.match(lead.html, /按问题分类/); assert.match(lead.html, /平均出方案天数/);
+  assert.doesNotMatch(lead.html, /<b>x<\/b>/, 'titles are escaped');
+  const factory = await run('factory');
+  assert.doesNotMatch(factory.html, /新建问题/); assert.match(factory.html, /东莞工厂：这里是 OneLaser 提交给你们的产品问题/); assert.doesNotMatch(factory.html, /data-v="new"/, 'factories never see the unsent tab');
+  const plan = factory.Q._detailHtml(detail('factory', { plan:true }));
+  assert.match(plan, /id="qa-plan"/); assert.doesNotMatch(plan, /id="qa-decide"|id="qa-edit"|id="qa-link"/);
+  assert.doesNotMatch(plan, /href="javascript:/, 'unsafe evidence links are not rendered as links');
+  const review = lead.Q._detailHtml(detail('lead', { decide:true, edit:true, link:true }));
+  assert.match(review, /id="qa-decide"/); assert.match(review, /批准方案/); assert.match(review, /退回修改/); assert.match(review, /id="qa-edit"/);
 });
 
 test('org chart shows name, title and location for everyone', () => {
