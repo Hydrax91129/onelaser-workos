@@ -22,6 +22,11 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.23', date:'2026-11-02T20:50:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('下达任务去掉"你会提供的支持"；完成任务去掉自我评价和字数要求', 'Assign Task drops "Support you will give"; completing a task drops the self-evaluation and minimum length'),
+      title:c('下达和完成任务更简洁', 'Simpler assigning and completing'),
+      changes:[c('下达任务弹窗去掉"你会提供的支持"，只需填写做什么、截止时间和交付标准。', 'The Assign Task dialog drops "Support you will give"; fill in what to do, the due time and the deliverable standard.'),
+        c('完成任务只需写完成结果并附上附件，不再要求自我评价，也不再有 30 字的最少字数。', 'Completing a task needs only the result and attachments; no self-evaluation and no 30-character minimum.')] },
     { version:'1.22', date:'2026-11-02T19:20:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('成本核算按公司计价规则：零售价格档位、批发价、每个 SKU 的定价输入', 'Cost calculator follows the company pricing rules: retail tiers, wholesale, per-SKU inputs'),
       title:c('公司计价规则进系统', 'Company pricing rules in the system'),
