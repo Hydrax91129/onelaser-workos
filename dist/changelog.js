@@ -22,6 +22,14 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.22', date:'2026-11-02T19:20:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('成本核算按公司计价规则：零售价格档位、批发价、每个 SKU 的定价输入', 'Cost calculator follows the company pricing rules: retail tiers, wholesale, per-SKU inputs'),
+      title:c('公司计价规则进系统', 'Company pricing rules in the system'),
+      changes:[
+        c('成本核算页新增"公司定价规则"：零售销售费率 17%（逐项列出）、批发 7%、Amazon/eBay 加 10%；MSRP 按产品类型 30% / 40% / 50%，日常调整、小促、大促、清货四档；批发按 MSRP 打折 25% / 30%，单笔超 $5 万再加 2 点、超 $10 万再加 5 点。只有公司管理员能修改。', 'New "Company pricing rules" on the cost page: retail selling rate 17% (itemized), wholesale 7%, Amazon/eBay +10%; MSRP by class 30% / 40% / 50%, everyday, small, major and clearance tiers; wholesale 25% / 30% off MSRP, +2 points over $50k, +5 over $100k. Only company admins can change them.'),
+        c('每个 SKU 显示送达成本、MSRP、真实售价、批发起步价和各自的贡献利润；零售五档售价区间；批发五档的我们利润和经销商利润（按真实售价、按 MSRP）。', 'Each SKU shows delivered cost, MSRP, actual price and wholesale base with their contribution margins, the five retail price ranges, and five wholesale tiers with our and the dealer’s profit.'),
+        c('MSRP 低于规则、真实售价落在大促档或低于 15% 底线时自动提醒。', 'Alerts when MSRP is below the rule, or the actual price sits in the major-promotion tier or below the 15% floor.'),
+        c('可直接保存每个 SKU 的产品类型、到岸价、尾程运费和真实售价；顾客另付的运费会抵扣尾程。', 'Save each SKU’s class, landed cost, last mile and actual price directly; shipping the customer pays offsets the last mile.')] },
     { version:'1.21', date:'2026-11-02T14:40:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('最终发布前，点击 O、KR 名称和 KR 目标值即可直接修改', 'Before publish, click an objective, KR name or KR target to edit it'),
       title:c('O 和 KR 点击即改', 'Click to edit objectives and KRs'),
