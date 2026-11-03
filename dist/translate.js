@@ -17,6 +17,7 @@
   const mainLang = s => { const c = cjk(s), l = latin(s); if (!c && l < 2) return null; if (c >= 2 && /[A-Za-z]{3,}/.test(s) && /[\u3400-\u9fff]{2,}/.test(s) && l >= 4) return null; return c * 3 >= l ? 'zh' : 'en'; };
   const enabled = () => ctx?.capabilities?.()?.autoTranslate === true;
   function want(text, target) {
+    if (text.length > 4000) return null; // the server translates up to 4000 characters per text; longer text stays as written
     const key = target + '|' + text;
     if (cache.has(key)) return cache.get(key);
     if (!queue.has(target)) queue.set(target, new Set());

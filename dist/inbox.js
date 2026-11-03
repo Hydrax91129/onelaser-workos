@@ -4,6 +4,8 @@
  * Polls /inbox every minute while the page is visible; opening a task clears its items. */
 (() => {
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  // Task titles and messages people wrote are shown in the interface language (translate.js).
+  const tx = v => window.WorkOSTranslate ? window.WorkOSTranslate.html(v) : esc(v);
   let ctx = null, data = { items:[], unread:0 }, open = false, loading = false, timer = null;
   const lang = () => ctx?.lang?.() === 'en' ? 'en' : 'zh';
   const tr = (zh, en) => lang() === 'en' ? en : zh;
@@ -27,7 +29,7 @@
   }
   function item(i) {
     const k = KIND[i.kind] || KIND.nudge, name = who(i);
-    return `<button class="inbox-item ${i.read ? '' : 'unread'}" data-inbox-open="${esc(i.id)}"><span class="inbox-ico" style="--c:${k[3]}"><i class="ph ph-${k[0]}" aria-hidden="true"></i></span><span class="inbox-text"><span class="inbox-line"><b>${tr(k[1], k[2])}</b>${name ? ` · ${esc(name)}` : ''}<em>${ago(i.createdAt)}</em></span>${i.title ? `<strong>${esc(i.title)}</strong>` : ''}${i.body ? `<span class="inbox-body">${esc(String(i.body).slice(0, 140))}</span>` : ''}</span>${i.read ? '' : '<span class="inbox-unread-dot" aria-hidden="true"></span>'}</button>`;
+    return `<button class="inbox-item ${i.read ? '' : 'unread'}" data-inbox-open="${esc(i.id)}"><span class="inbox-ico" style="--c:${k[3]}"><i class="ph ph-${k[0]}" aria-hidden="true"></i></span><span class="inbox-text"><span class="inbox-line"><b>${tr(k[1], k[2])}</b>${name ? ` · ${esc(name)}` : ''}<em>${ago(i.createdAt)}</em></span>${i.title ? `<strong>${tx(i.title)}</strong>` : ''}${i.body ? `<span class="inbox-body">${tx(String(i.body).slice(0, 140))}</span>` : ''}</span>${i.read ? '' : '<span class="inbox-unread-dot" aria-hidden="true"></span>'}</button>`;
   }
   function html() {
     if (!ctx?.state().actor) return '';
