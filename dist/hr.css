@@ -42,3 +42,17 @@ html[data-theme=dark] .hr-group{border-color:#2c3341}html[data-theme=dark] .hr-r
 .hr-export span{flex:1;min-width:240px;display:flex;flex-direction:column;gap:4px}.hr-export b{color:#a15c00}.hr-export small{color:#6b7280}
 .hr-sub{font-size:13px;margin:14px 0 6px}
 html[data-theme=dark] .hr-export{background:#2a2213;border-color:#6b5222}html[data-theme=dark] .hr-export b{color:#f2c06b}html[data-theme=dark] .hr-export small{color:#9aa4b5}
+
+/* Compact record: one section at a time behind tabs, three columns, rarely used fields under "More". */
+.hr-sec-tabs{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 14px;border-bottom:1px solid var(--border,#e4e7ef);position:sticky;top:-20px;background:var(--surface,#fff);z-index:2;padding-top:6px}
+.hr-sec-tabs button{border:0;background:none;padding:7px 11px;font:inherit;font-size:13px;font-weight:600;color:#4b5563;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;display:flex;align-items:center;gap:5px}
+.hr-sec-tabs button.on{color:#245bdb;border-bottom-color:#245bdb}
+.hr-detail .rma-sec[hidden]{display:none}
+.hr-detail .rma-sec>h3{display:none}
+.form-grid.hr-compact{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 14px}
+.form-grid.hr-compact .full{grid-column:1/-1}
+.hr-lastday[hidden]{display:none}.hr-lastday>.field{height:100%}
+.hr-more summary{cursor:pointer;font-size:13px;font-weight:600;color:#245bdb;display:flex;align-items:center;gap:6px;padding:4px 0}
+.hr-more summary b{font-weight:500;color:#6b7280}.hr-more[open] summary{margin-bottom:10px}
+@media(max-width:700px){.form-grid.hr-compact{grid-template-columns:1fr}.hr-sec-tabs{top:-18px}}
+html[data-theme=dark] .hr-sec-tabs{background:#171b24;border-color:#2c3341}html[data-theme=dark] .hr-sec-tabs button{color:#c3cad6}html[data-theme=dark] .hr-sec-tabs button.on,html[data-theme=dark] .hr-more summary{color:#8fb0ff}

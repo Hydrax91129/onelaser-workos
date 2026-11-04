@@ -24,9 +24,11 @@
   const RELEASES = [
     { version:'1.41', date:'2026-11-04T20:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('停用账号会自动把人事档案改为“已离职”', 'Disabling an account marks the HR record as left'),
-      title:c('离职人员自动归档', 'People who left are filed automatically'),
+      title:c('离职自动归档，人事档案更简洁', 'Leavers filed automatically; a simpler HR record'),
       changes:[c('在“组织与权限”里停用某人的账号后，TA 的人事档案会自动变为“已离职”，最后工作日取停用当天（HR 已填写的保留），档案历史里也会记一条“离职”。恢复账号会改回“在职”。', 'Disabling someone in Organization & permissions now marks their HR record as left, with the last day set to that day (a date HR already entered is kept) and a “left” entry in the history. Enabling the account again sets it back to active.'),
-        c('以前就停用的账号已经一并改为“已离职”，会出现在人事档案的“已离职”标签里。', 'Accounts disabled earlier are now marked left too and appear under the Left tab in HR records.')] },
+        c('以前就停用的账号已经一并改为“已离职”，会出现在人事档案的“已离职”标签里。', 'Accounts disabled earlier are now marked left too and appear under the Left tab in HR records.'),
+        c('人事档案改成页签：雇佣信息、基本资料、薪酬与税务、敏感资料、合同与证件、履历分开显示，一次只看一页，不用一直往下翻。', 'HR records now use tabs (employment, personal, pay & tax, sensitive, documents, history), one page at a time instead of one long scroll.'),
+        c('雇佣信息只留常用的 6 项（在职状态、入职日期、用工类型、职级、工作地点，离职时才出现最后工作日），试用期、合同、紧急联系人、银行、授权和备注收进“更多”。', 'Employment shows only the everyday fields (status, hire date, type, level, location, and the last day once someone is leaving); probation, contract, emergency contact, bank, consent and notes are under More.')] },
     { version:'1.40', date:'2026-11-04T19:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('系统统一改名为 WorkOS', 'The system is now called WorkOS everywhere'),
       title:c('统一叫 WorkOS', 'One name: WorkOS'),
