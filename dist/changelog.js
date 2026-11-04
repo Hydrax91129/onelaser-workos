@@ -22,7 +22,7 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
-    { version:'1.38', date:'2026-11-04T14:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+    { version:'1.39', date:'2026-11-04T14:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('人事档案分美国 / 中国 / 海外其他地区三个标签；美国区只有主管理员能看，可以导出给 CPA；中国和海外按人授权', 'HR records split into US / China / other countries; the US is owner-only with an export for the CPA; China and other countries are granted per person'),
       title:c('人事档案按地区管理', 'HR records by region'),
       changes:[c('人事档案分成“美国”“中国”“海外其他地区”三个标签，每个员工属于一个地区。主管理员在员工档案顶部设置地区，还没设置的人在“未分配”里。', 'HR records now have United States, China and Other countries tabs, and each person belongs to one region. The company owner sets it at the top of the record; people without one are under Not assigned.'),
