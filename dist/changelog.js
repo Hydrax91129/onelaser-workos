@@ -22,6 +22,12 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.30', date:'2026-11-04T00:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('邀请成员时可以设为“工厂对接人”：对方只能使用产品质量追踪，也不用参加 IT 季度账号确认', 'Invite someone as a factory contact: they only use product quality tracking and skip the IT quarterly account check'),
+      title:c('工厂对接人用邀请加入', 'Factory contacts join by invite'),
+      changes:[c('“组织与权限 → 邀请成员”新增“工厂对接人”选项（东莞工厂 / 济南工厂）：对方接受邀请后只能使用“产品质量追踪”，只看到提交给本工厂的问题，不需要放进钉钉。', 'Organization & permissions → Invite member has a new Factory contact option (Dongguan / Jinan): after accepting, the person only uses product quality tracking and sees only issues sent to their factory — no DingTalk needed.'),
+        c('已加入的成员也可以在成员列表的“角色”一栏改为工厂对接人或改回公司成员，名字旁边会显示所属工厂。', 'Existing members can be switched to or from factory contact in the Role column of the member list; their factory shows next to the name.'),
+        c('工厂对接人不参加 IT 季度账号确认，不会收到提醒，也不计入完成率。', 'Factory contacts take no part in the IT quarterly account check: no reminders, and they do not count towards its completion rate.')] },
     { version:'1.29', date:'2026-11-03T13:47:22-08:00', frontend:'0c90f372f186a92c4d3457c01ad401a80d1fba82', backend:'23c5d1dbc83c47b2055b1f7334c31e3214f255d8', author:KC, deployer:KC,
       short:c('任务、项目和消息也会跟随界面语言自动翻译，和 OKR 一样', 'Tasks, projects and inbox messages now follow the interface language, like OKRs'),
       title:c('任务、项目、消息自动中英翻译', 'Automatic translation for tasks, projects and the inbox'),
