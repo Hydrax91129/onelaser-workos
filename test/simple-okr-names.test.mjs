@@ -72,7 +72,7 @@ test('KR weights under an objective must add up to exactly 100%: no automatic sh
   const okr = read('okr-board.js');
   assert.match(okr, /const weightsOk = o =>/); assert.match(okr, /ready = kind !== 'kr' \|\| weightsOk\(o\)/);
   assert.doesNotMatch(okr, /平分剩余部分/); assert.doesNotMatch(okr, /Math\.max\(1, Math\.round\(\(100 - used\)/); assert.match(okr, /const companyMine = \(\) =>/); assert.match(okr, /function stageLegend/);
-  assert.match(okr, /\/kr-weights/); assert.match(okr, /合计 100% 即可/); assert.match(okr, /rebalance:true/); assert.match(okr, /合计 100% 后才能评分和最终发布/); assert.match(okr, /离 100% 还差/); assert.match(okr, /okb-w-edit \$\{wCls\}/, 'KR weights are always editable in place before publish');
+  assert.match(okr, /\/kr-weights/); assert.match(okr, /合计 100% 即可/); assert.doesNotMatch(okr, /rebalance:true/, 'points and weights are typed freely; nothing is rescaled automatically'); assert.match(okr, /合计 100% 后才能评分和最终发布/); assert.match(okr, /离 100% 还差/); assert.match(okr, /okb-w-edit \$\{wCls\}/, 'KR weights are always editable in place before publish');
 });
 
 test('final publish locks the OKR for its owner, leaders may still edit, team list shows three stages', () => {

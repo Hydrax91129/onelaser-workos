@@ -20,7 +20,7 @@
     ['off_track', '已延期', 'Off track'],
   ];
   let ctx = null;
-  const ui = { tab:'mine', person:null, cycle:null, search:'', editing:null, adding:null, menu:null, confirm:null, drawer:null, updates:new Map(), busy:false, collapsed:new Set(), weighting:null, wDraft:{} };
+  const ui = { tab:'mine', person:null, cycle:null, search:'', editing:null, adding:null, menu:null, confirm:null, drawer:null, updates:new Map(), busy:false, collapsed:new Set(), weighting:null, wDraft:{}, ai:{ text:'', busy:false, draft:null, error:'' } };
 
   const S = () => ctx.state();
   const lang = () => ctx.lang() === 'en' ? 'en' : 'zh';
@@ -271,7 +271,7 @@
       <span class="okb-o-tag">O</span>
       <input name="title" placeholder="${tr('输入目标，例如：Q4 销售额增长 20%', 'Objective, e.g. Grow Q4 sales 20%')}" required minlength="3" maxlength="300" data-okr-autofocus>
       ${simple() ? `<input name="description" class="okb-o-desc-input" maxlength="4000" placeholder="${tr('怎样算完成？（可选）例如：转化率从 2% 提升到 3%', 'What does done look like? (optional)')}">` : ''}
-      ${simple() ? (() => { const mine = objectivesOf(ownerId), used = mine.reduce((n, x) => n + (Number(x.planning?.weight) || 0), 0), left = Math.round((100 - used) * 100) / 100, def = left > 0 ? left : Math.round(100 / (mine.length + 1)); return `<label class="okb-mini"><span>${tr('分值（分）', 'Points')}</span><input name="weight" type="number" min="1" max="${mine.length ? 100 - mine.length : 100}" step="0.01" required value="${def}" data-okr-weight-preview="o" title="${tr('所有目标合计 100 分；超出时其他目标按比例自动调低', 'Objectives total 100; others are scaled down automatically')}"></label><span class="okb-form-tip" data-okr-preview>${mine.length && left <= 0 ? tr('其他目标会按比例自动调整，保持合计 100 分', 'Other objectives are scaled to keep the total at 100') : ''}</span>`; })() : ''}
+      ${simple() ? (() => { const mine = objectivesOf(ownerId), used = mine.reduce((n, x) => n + (Number(x.planning?.weight) || 0), 0), left = Math.round((100 - used) * 100) / 100, def = left > 0 ? left : Math.round(100 / (mine.length + 1)); return `<label class="okb-mini"><span>${tr('分值（分）', 'Points')}</span><input name="weight" type="number" min="0.01" max="100" step="0.01" required value="${def}" title="${tr('所有目标合计 100 分；不是 100 时显示红色，不能最终发布', 'Objectives total 100; anything else shows red and blocks final publish')}"></label><span class="okb-form-tip" data-okr-preview>${mine.length && left <= 0 ? tr('现有目标已满 100 分，添加后合计会超出，再把红色的分值改回 100 即可', 'Existing objectives already total 100; after adding, fix the red total') : ''}</span>`; })() : ''}
       ${simple() ? `<details class="okb-more-fields"><summary>${tr('更多设置（可不填）', 'More settings (optional)')}</summary>` : ''}
       ${simple() ? '' : `<label class="okb-mini"><span>${tr('权重 %', 'Weight %')}</span><input name="weight" type="number" min="0.01" max="100" step="0.01" required></label>`}
       ${isManager() ? `<label class="okb-mini"><span>${tr('负责人', 'Owner')}</span><select name="ownerId">${owners.map(u => `<option value="${esc(u.id)}" ${u.id === ownerId ? 'selected' : ''}>${esc(u.display_name)}</option>`).join('')}</select></label>
@@ -419,13 +419,102 @@
     const problems = readiness(objs);
     return `<div class="okb-pub ${problems.length ? 'pending' : 'ready'}">${icon(problems.length ? 'list-checks' : 'seal-check')}<b>${problems.length ? tr('还不能发布', 'Not ready to publish') : tr('可以最终发布', 'Ready to publish')}</b><span>${problems.length ? esc(problems.join('；')) : tr('发布后 OKR 将锁定，不能再修改，只有你的领导可以调整；每条 KR 会自动变成你的任务。', 'After publishing the OKR is locked; only your leader can change it. Each KR becomes a task for you.')}</span>${ui.confirm?.kind === 'publish' ? `<span class="okb-pub-confirm">${tr('确认发布？发布后不能撤回。', 'Publish now? This cannot be undone.')}<button type="button" class="okb-btn primary small" data-okr="publish-confirm">${tr('确认发布', 'Publish')}</button><button type="button" class="okb-btn small" data-okr="cancel-confirm">${tr('取消', 'Cancel')}</button></span>` : `<button type="button" class="okb-btn primary small" data-okr="publish" ${problems.length ? 'disabled' : ''}>${icon('paper-plane-tilt')} ${tr('最终发布', 'Publish')}</button>`}</div>`;
   }
+  /* Objective points are typed freely like KR weights: green at exactly 100, red with how far off. */
+  function pointsLine(objs) {
+    const t = Math.round(objs.reduce((s, o) => s + (Number(o.planning?.weight) > 0 ? Number(o.planning.weight) : 0), 0) * 100) / 100, d = Math.round((100 - t) * 100) / 100;
+    if (Math.abs(d) < 0.01) return `<span class="okb-w-ok">${icon('check-circle')} ${tr('目标分值合计 100 分', 'Objective points total 100')}</span>`;
+    return `<span class="okb-w-bad">${icon('warning')} ${tr(`目标分值合计 ${num(t)} 分，${d > 0 ? `还差 ${num(d)} 分` : `超出 ${num(-d)} 分`}`, `Objective points total ${num(t)}: ${d > 0 ? `${num(d)} short of 100` : `${num(-d)} over 100`}`)}</span><em class="okb-w-note">${tr('合计 100 分后才能最终发布', 'Final publish needs exactly 100')}</em>`;
+  }
+
+  /* ---------- AI 帮我写 OKR ----------
+   * The person describes the month in their own words; the server returns a draft (nothing is
+   * saved). They tick and edit what to keep, then "add" creates it through the normal endpoints. */
+  const aiCompany = id => id === me()?.id && companyMine();
+  const aiAllowed = id => S().capabilities?.okrAiDraft === true && id === me()?.id && canCreateFor(id) && !publication(id, ui.cycle);
+  function aiBox(id) {
+    const a = ui.ai, d = a.draft;
+    const company = S().objectives.filter(o => o.level === 'company' && periodOf(o) === (ui.cycle || nowPeriod()));
+    const alignName = oid => { const i = company.findIndex(c => c.id === oid); return i < 0 ? '' : `${tr('对齐公司', 'Aligns to company')} O${i + 1}`; };
+    const draftHtml = !d ? '' : `<div class="okb-ai-draft">
+      ${d.objectives.map((o, i) => `<div class="okb-ai-o ${o.pick ? '' : 'off'}">
+        <label class="okb-ai-row"><input type="checkbox" data-okr-ai-pick="o:${i}" ${o.pick ? 'checked' : ''}><span class="okb-o-tag">O${i + 1}</span>
+          <input class="okb-ai-title" data-okr-ai-field="o:${i}:title" value="${esc(String(o.title))}" title="${tr('AI 草稿，可直接修改', 'AI draft, edit freely')}" maxlength="300">
+          <span class="okb-ai-num"><input type="number" min="0" max="100" step="1" data-okr-ai-field="o:${i}:points" value="${esc(o.points)}">${tr('分', 'pts')}</span>
+          ${o.alignTo && !aiCompany(id) ? `<span class="okb-ai-align">${esc(alignName(o.alignTo))}</span>` : ''}</label>
+        ${o.keyResults.map((k, j) => `<label class="okb-ai-row okb-ai-kr ${k.pick ? '' : 'off'}"><input type="checkbox" data-okr-ai-pick="k:${i}:${j}" ${k.pick ? 'checked' : ''}><span class="okb-ai-krtag">KR${j + 1}</span>
+          <input class="okb-ai-title" data-okr-ai-field="k:${i}:${j}:title" value="${esc(k.title)}" maxlength="300">
+          <input class="okb-ai-target" data-okr-ai-field="k:${i}:${j}:target" value="${esc(k.target)}" maxlength="120" title="${tr('目标值', 'Target')}">
+          <span class="okb-ai-num"><input type="number" min="0" max="100" step="1" data-okr-ai-field="k:${i}:${j}:weight" value="${esc(k.weight)}">%</span></label>`).join('')}
+      </div>`).join('')}
+      <p class="okb-hint">${tr('勾选要保留的内容，可以先改字和数字。点「添加选中的」之前不会保存任何内容；添加后照常编辑，合计不是 100 会标红。', 'Tick what to keep and edit it first. Nothing is saved until you add it; afterwards edit as usual, and totals other than 100 show red.')}</p>
+      <div class="okb-form-actions"><button type="button" class="okb-btn primary small" data-okr="ai-add" ${a.busy ? 'disabled' : ''}>${icon('plus')} ${tr('添加选中的', 'Add selected')}</button><button type="button" class="okb-btn small" data-okr="ai-generate" ${a.busy ? 'disabled' : ''}>${icon('arrows-clockwise')} ${tr('重新生成', 'Regenerate')}</button><button type="button" class="okb-btn small" data-okr="ai-discard">${tr('放弃', 'Discard')}</button></div>
+    </div>`;
+    return `<div class="okb-ai">
+      <div class="okb-ai-head">${icon('sparkle')}<b>${tr('AI 帮我写 OKR', 'Draft my OKR with AI')}</b><span>${tr(aiCompany(id) ? '写下这个月公司想做成什么，AI 会整理成目标和关键结果。' : '写下这个月你想做成什么，AI 会参考公司目标整理成你的 OKR。', aiCompany(id) ? 'Describe what the company should achieve this month; AI turns it into objectives and key results.' : 'Describe what you want to achieve this month; AI turns it into your OKR, aligned to company objectives.')}</span></div>
+      <textarea id="okr-ai-text" rows="3" maxlength="3000" placeholder="${esc(tr('例：11 月做到 40 万销售，其中广告 25 万（预算 2 万）、线下 15 万；12 月前把 XRF Gen2 和 Galvo Flex 的上市准备做完……', 'e.g. Reach $400k sales in November: $250k from ads (budget $20k) and $150k offline; get XRF Gen2 and Galvo Flex launch-ready before December…'))}">${esc(a.text)}</textarea>
+      <div class="okb-form-actions">${d ? '' : `<button type="button" class="okb-btn primary small" data-okr="ai-generate" ${a.busy ? 'disabled' : ''}>${icon('sparkle')} ${a.busy ? tr('正在生成…', 'Drafting…') : tr('生成草稿', 'Draft OKR')}</button>`}${a.error ? `<span class="okb-form-error" role="alert">${esc(a.error)}</span>` : ''}</div>
+      ${draftHtml}
+    </div>`;
+  }
+  async function aiGenerate() {
+    const text = (document.getElementById('okr-ai-text')?.value || '').trim();
+    ui.ai.text = text;
+    if (text.length < 4) { ui.ai.error = tr('请先写几句这个月想做的事。', 'Write a few words about this month first.'); return rerender(); }
+    ui.ai.busy = true; ui.ai.error = ''; rerender();
+    try {
+      const r = await ctx.api.post('/okr/ai-draft', { text, period:ui.cycle || nowPeriod(), lang:lang(), company:aiCompany(me()?.id) });
+      ui.ai.draft = { objectives:(r.objectives || []).map(o => ({ ...o, pick:true, keyResults:(o.keyResults || []).map(k => ({ ...k, pick:true })) })) };
+    } catch (e) { ui.ai.error = ctx.explainError(e); }
+    finally { ui.ai.busy = false; rerender(); }
+  }
+  async function aiAdd() {
+    const d = ui.ai.draft; if (!d || ui.ai.busy) return;
+    const period = ui.cycle || nowPeriod(), asCompany = aiCompany(me()?.id), keep = d.objectives.filter(o => o.pick && String(o.title).trim().length >= 3);
+    if (!keep.length) { ui.ai.error = tr('请至少勾选一个目标。', 'Tick at least one objective.'); return rerender(); }
+    ui.ai.busy = true; ui.ai.error = ''; rerender();
+    let added = 0;
+    try {
+      for (const o of keep) {
+        const body = { title:String(o.title).trim(), level:asCompany ? 'company' : 'personal', ...(asCompany ? {} : { ownerId:me().id }), planning:{ period, weight:Math.max(0.01, Number(o.points) || 0.01), location:'', description:String(o.description || '').trim(), type:'mandatory', bonusIncluded:false, scoringDueDate:dueDateFor(period) }, ...(collab() && !asCompany && o.alignTo ? { parentObjectiveId:o.alignTo } : {}) };
+        const created = await ctx.api.post('/objectives', body);
+        for (const k of o.keyResults.filter(k => k.pick && String(k.title).trim().length >= 2)) {
+          const text = String(k.target || '').trim() || tr('完成', 'Done'), m = /^\$?([0-9][0-9,]*(?:\.[0-9]+)?)\s*(.*)$/.exec(text), n = m ? Number(m[1].replace(/,/g, '')) : 0;
+          const planning = { weight:Math.max(0.01, Number(k.weight) || 0.01), description:'', targetText:text };
+          await ctx.api.post('/objectives/' + encodeURIComponent(created.id) + '/key-results', n > 0 ? { title:String(k.title).trim(), baseline:0, target:n, direction:'increase', unit:((text.startsWith('$') ? 'USD ' : '') + (m[2] || '')).trim().slice(0, 30) || tr('项', 'units'), planning } : { title:String(k.title).trim(), baseline:0, target:1, direction:'increase', unit:'完成', planning });
+        }
+        added++;
+      }
+      ui.ai = { text:'', busy:false, draft:null, error:'' };
+      await ctx.refreshOkr(); ctx.toast(tr(`已添加 ${added} 个目标；检查分值和权重，合计 100 后即可最终发布`, `Added ${added} objectives; check the totals, then publish`));
+    } catch (e) {
+      ui.ai.busy = false; ui.ai.error = (added ? tr(`已添加 ${added} 个目标，其余失败：`, `Added ${added}; the rest failed: `) : '') + ctx.explainError(e);
+      if (added) { d.objectives = d.objectives.filter(o => !keep.slice(0, added).includes(o)); await ctx.refreshOkr(); }
+    }
+    rerender();
+  }
+  document.addEventListener('input', e => {
+    const el = e.target, f = el.dataset?.okrAiField; if (!f || !ui.ai.draft) return;
+    const [kind, i, j, key] = f.split(':'), o = ui.ai.draft.objectives[Number(i)]; if (!o) return;
+    if (kind === 'o') o[j] = j === 'points' ? Number(el.value) : el.value;
+    else { const k = o.keyResults[Number(j)]; if (k) k[key] = key === 'weight' ? Number(el.value) : el.value; }
+  });
+  document.addEventListener('change', e => {
+    const el = e.target, p = el.dataset?.okrAiPick; if (!p || !ui.ai.draft) return;
+    const [kind, i, j] = p.split(':'), o = ui.ai.draft.objectives[Number(i)]; if (!o) return;
+    if (kind === 'o') o.pick = el.checked; else if (o.keyResults[Number(j)]) o.keyResults[Number(j)].pick = el.checked;
+    el.closest(kind === 'o' ? '.okb-ai-o' : '.okb-ai-kr')?.classList.toggle('off', !el.checked);
+  });
+  document.addEventListener('input', e => { if (e.target.id === 'okr-ai-text') ui.ai.text = e.target.value; });
+
   function personView(id) {
     const objs = objectivesOf(id), pct = averagePct(objs), company = id === '__company';
     const total = objs.reduce((s, o) => s + (Number.isFinite(o.planning?.weight) ? o.planning.weight : 0), 0);
     const addable = !company && canCreateFor(id);
     return `<section class="okb-person">
       <header class="okb-person-head">${company ? `<span class="okb-avatar okb-company">${icon('buildings')}</span>` : avatar(id, 44)}<div><h2>${esc(company ? tr('公司目标', 'Company objectives') : nameOf(id))}${id === me()?.id ? ` <span class="okb-me">${tr('我', 'Me')}</span>` : ''}</h2><p>${esc(periodLabel(ui.cycle))} · ${objs.length} ${tr('个目标', objs.length === 1 ? 'objective' : 'objectives')}${objs.length ? (simple() ? ` · ${tr('目标分值合计', 'Objective points')} ${total} ${tr('分', 'pts')}${Math.abs(total - 100) > 0.01 ? ` <span class="okb-warn-inline">${tr('应为 100 分', 'should be 100')}</span>` : ''}` : ` · ${tr('目标权重合计', 'Objective weights')} ${total}%`) : ''}</p></div>${simple() ? totalScore(objs) : ring(pct, 52)}</header>${simple() && !company ? publishBar(id, objs) : ''}${simple() ? scoreHelp(objs) : ''}
+      ${simple() && aiAllowed(id) ? aiBox(id) : ''}
       ${objs.map(objectiveCard).join('') || `<div class="okb-empty"><div class="okb-empty-icon">${icon('target')}</div><h3>${tr('这个周期还没有目标', 'No objectives in this cycle')}</h3><p>${addable ? tr('目标（O）写“想达成什么”，关键结果（KR）写“怎样算达成”。先创建一个目标吧。', 'An objective (O) says what you want to achieve; key results (KR) say how you’ll know. Start with one objective.') : tr('负责人还没有为这个周期设置目标。', 'No objectives have been set for this cycle yet.')}</p></div>`}
+      ${simple() && objs.length ? `<div class="okb-w-line okb-o-total">${pointsLine(objs)}</div>` : ''}
       ${addable ? (ui.adding && ui.adding.kind === 'o' ? newObjectiveForm(id) : `<button type="button" class="okb-add-row okb-add-o" data-okr="add-o">${icon('plus')} ${tr('添加目标', 'Add objective')}</button>`) : ''}
     </section>`;
   }
@@ -580,6 +669,9 @@
       case 'weights-even': { const ks = krsOf(objectiveById(id)), base = Math.floor(10000 / ks.length) / 100; ks.forEach((k, i) => { ui.wDraft[k.id] = i === 0 ? Math.round((100 - base * (ks.length - 1)) * 100) / 100 : base; }); return rerender(); }
       case 'weights-save': { const o = objectiveById(id), ks = krsOf(o); if (!wReady(ks)) return; const ok = await mutate(() => ctx.api.post('/objectives/' + encodeURIComponent(o.id) + '/kr-weights', { weights:ks.map(k => ({ id:k.id, weight:Number(ui.wDraft[k.id]) })) }), tr('KR 权重已保存', 'KR weights saved')); if (ok) { ui.weighting = null; ui.wDraft = {}; } return rerender(); }
       case 'add-o': ui.adding = { kind:'o' }; ui.editing = null; return rerender();
+      case 'ai-generate': return aiGenerate();
+      case 'ai-add': return aiAdd();
+      case 'ai-discard': ui.ai = { text:ui.ai.text, busy:false, draft:null, error:'' }; return rerender();
       case 'cancel-add': ui.adding = null; return rerender();
       case 'score': ui.scoring = { id, kind:t.dataset.target || 'o', who:t.dataset.kind }; return rerender();
       case 'score-help': ui.scoreHelp = !ui.scoreHelp; return rerender();
@@ -639,12 +731,11 @@
       if (!raw) return;
       let ok = false;
       if (kind === 'o-title') { const o = objectiveById(id); if (raw === o.title) ok = true; else ok = await mutate(() => patchO(o, { title:raw }), tr('已保存', 'Saved')); }
-      if (kind === 'o-weight') ok = await mutate(() => patchO(objectiveById(id), { weight:Number(raw), ...(simple() ? { rebalance:true } : {}) }), simple() ? tr('已保存，其他目标已按比例调整', 'Saved; other objectives rescaled') : tr('已保存', 'Saved'));
+      if (kind === 'o-weight') ok = await mutate(() => patchO(objectiveById(id), { weight:Number(raw) }), tr('已保存', 'Saved'));
       if (kind === 'kr-target') { const k = findKr(id), m = /^([0-9]+(?:\.[0-9]+)?)\s*(.*)$/.exec(raw); if (raw === (k.planning?.targetText || '')) ok = true; else ok = await mutate(() => patchKr(k, { targetText:raw.slice(0, 120), ...(m && Number(m[1]) > 0 && Number(m[1]) !== Number(k.target) ? { metric:{ expectedVersion:k.version, baseline:Number(k.baseline) || 0, target:Number(m[1]), direction:'increase', unit:(m[2] || '').trim().slice(0, 30) || k.unit || tr('项', 'units') } } : {}) }), tr('目标值已保存', 'Target saved')); }
       if (kind === 'kr-title') { const k = findKr(id); if (raw === k.title) ok = true; else ok = await mutate(() => patchKr(k, { title:raw }), tr('已保存', 'Saved')); }
       if (kind === 'kr-weight') { const k = findKr(id), o = objectiveById(k.objective_id), w = Number(raw), n = krsOf(o).length - 1;
-        if (n && w > 100 - n) { ctx.toast?.(tr(`其他 KR 每条至少保留 1%，这条最多 ${100 - n}%。`, `Leave at least 1% for each other KR; at most ${100 - n}%.`)); return; }
-        ok = await mutate(() => patchKr(k, { weight:w, ...(simple() ? { rebalance:true } : {}) }), n ? tr('已保存，其他 KR 已按比例调整', 'Saved; other KRs rescaled') : tr('已保存', 'Saved')); }
+        ok = await mutate(() => patchKr(k, { weight:w }), tr('已保存', 'Saved')); }
       if (ok) ui.editing = null;
       return rerender();
     }
@@ -687,7 +778,7 @@
       const period = ui.cycle || nowPeriod();
       const owner = v.ownerId || me().id, used = S().objectives.filter(x => x.owner_id === owner && x.planning?.period === period && x.level !== 'company').reduce((n, x) => n + (Number(x.planning?.weight) || 0), 0), autoWeight = Math.round((100 - used) * 100) / 100;
       const asCompany = simple() && companyMine() && owner === me().id;
-      const body = { title:v.title.trim(), level:asCompany ? 'company' : (v.level || 'personal'), ...(asCompany ? {} : { ownerId:owner }), planning:{ period, weight:v.weight ? Number(v.weight) : Math.min(100, autoWeight), location:'', description:String(v.description || '').trim(), type:'mandatory', bonusIncluded:false, scoringDueDate:dueDateFor(period) }, ...(simple() ? { rebalance:true } : {}), ...(collab() && v.parentObjectiveId ? { parentObjectiveId:v.parentObjectiveId } : {}) };
+      const body = { title:v.title.trim(), level:asCompany ? 'company' : (v.level || 'personal'), ...(asCompany ? {} : { ownerId:owner }), planning:{ period, weight:v.weight ? Number(v.weight) : Math.min(100, autoWeight), location:'', description:String(v.description || '').trim(), type:'mandatory', bonusIncluded:false, scoringDueDate:dueDateFor(period) }, ...(collab() && v.parentObjectiveId ? { parentObjectiveId:v.parentObjectiveId } : {}) };
       let createdId = null;
       const ok = await mutate(async () => { const r = await ctx.api.post('/objectives', body); createdId = r?.id; }, simple() ? tr('目标已创建，接着添加关键结果（目标值可以写“完成”或明确数字）', 'Objective created — add key results (target: “done” or a number)') : tr('目标已创建，接着添加关键结果吧', 'Objective created — now add its key results'));
       if (ok) { ui.adding = createdId ? { kind:'kr', id:createdId } : null; if (ui.tab === 'team') ui.person = body.ownerId; ui.cycle = period; }
