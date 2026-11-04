@@ -1,0 +1,59 @@
+name: Pin this frontend in the API repo
+
+# After a change lands on main, open (or update) one pull request in
+# Yonge6/onelaser-workos-api that sets deploy/frontend-revision.txt to this commit,
+# and turn on auto-merge. The API repo's own CI runs on that PR; when it passes the
+# PR merges, and Render deploys main once checks pass. Nobody pins or deploys by hand.
+#
+# Needs the repository secret API_REPO_TOKEN: a fine-grained token limited to
+# Yonge6/onelaser-workos-api with Contents and Pull requests set to Read and write.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dist/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pin-frontend
+  cancel-in-progress: true
+
+jobs:
+  pin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open or update the pin pull request
+        env:
+          GH_TOKEN: ${{ secrets.API_REPO_TOKEN }}
+          SHA: ${{ github.sha }}
+          REPO: Yonge6/onelaser-workos-api
+          BRANCH: auto/pin-frontend
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "::warning::API_REPO_TOKEN is not set, so the API repo was not updated. Add the secret to turn this on."
+            exit 0
+          fi
+          git clone --quiet --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" api
+          cd api
+          git config user.name "craftos-pin-bot"
+          git config user.email "craftos-pin-bot@users.noreply.github.com"
+          if [ "$(tr -d '[:space:]' < deploy/frontend-revision.txt)" = "${SHA}" ]; then
+            echo "main already pins ${SHA}"; exit 0
+          fi
+          git checkout -q -b "${BRANCH}"
+          echo "${SHA}" > deploy/frontend-revision.txt
+          git commit -q -am "Pin frontend ${SHA::7}" -m "Opened automatically after ${SHA} landed on the frontend main branch."
+          git push --quiet --force origin "${BRANCH}"
+          title="Pin frontend ${SHA::7}"
+          body="Automatic: sets deploy/frontend-revision.txt to https://github.com/Yonge6/onelaser-workos/commit/${SHA}. Merges by itself once CI passes; Render then deploys main."
+          pr=$(gh pr list --repo "${REPO}" --head "${BRANCH}" --state open --json number --jq '.[0].number // empty')
+          if [ -z "${pr}" ]; then
+            gh pr create --repo "${REPO}" --base main --head "${BRANCH}" --title "${title}" --body "${body}"
+          else
+            gh pr edit "${pr}" --repo "${REPO}" --title "${title}" --body "${body}"
+          fi
+          gh pr merge "${BRANCH}" --repo "${REPO}" --auto --squash || echo "::warning::Could not turn on auto-merge; enable 'Allow auto-merge' in the API repo settings."
