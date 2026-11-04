@@ -47,13 +47,13 @@
    只有"默认指派给谁"（新任务的默认验收人、需要谁去做的提醒）仍按第一领导，避免重复。`user.dottedOwnerIds` 只是界面上区分"虚线汇报给我"用。
 5. **通知统一走一处**：站内红点用 `pushInbox()`；钉钉和邮件用 app.ts 里的 `notify`。
 6. 成本和利润只给有 `product_cost_detail` 权限的人和主管理员（部署配置 `WORKOS_EXECUTIVE_USER_IDS`）；在系统里勾选的管理员**不会**自动看到产品、成本、价格、库存、经销商数据，也要单独授权。功能权限（grants）只有主管理员能改，任何人都不能改自己的。薪资只给 HR 权限对应分区的人。后端新模块判断敏感数据时用 `isExecutive`，不要用 `isAdmin`。
-   人事档案按地区：美国区只有主管理员（`WORKOS_EXECUTIVE_USER_IDS`）能看能改，没有授权项；中国、海外其他地区用 grants 里的
-   `hr_cn_view` / `hr_cn_manage`、`hr_intl_view` / `hr_intl_manage`（只读 / 可管理）逐人授权，只有主管理员能分配。`WORKOS_HR_USER_IDS` 不再给任何权限。
-   员工所属地区只有主管理员能改。有权限的人看到完整资料（数据库里加密保存）。员工自助填写个人资料是第二期。
-   婚姻、子女、受抚养人和 EEO 只放在加密字段里，只能用于 payroll、福利和合规统计，不能用于聘用决定。
    产品资料库的可见级别（product-spec.ts 的 `viewerOf`，服务器端过滤所有接口、文件下载、修改记录和导出模板）：
    全员 = 所有登录员工（工厂对接人除外）；产品与供应链 = `products`；仅成本权限、敏感 · 仅编辑者 = `product_cost_detail`；仅管理员 = 主管理员。
    修改：产品字段要 `products_manage`，成本/敏感字段和文件要 `product_cost_detail`，MSRP/MAP/促销底价沿用 MSRP 规则；价格参数只有主管理员能改。
+   人事档案按地区：美国区只有主管理员（`WORKOS_EXECUTIVE_USER_IDS`）能看能改，没有授权项；中国、海外其他地区用 grants 里的
+   `hr_cn_view` / `hr_cn_manage`、`hr_intl_view` / `hr_intl_manage`（只读 / 可管理）逐人授权，只有主管理员能分配。`WORKOS_HR_USER_IDS` 不再给任何权限。
+   员工所属地区只有主管理员能改。有权限的人看到完整资料（数据库里加密保存）。员工本人只看自己的基本雇佣信息，自助填写个人资料是第二期。
+   婚姻、子女、受抚养人和 EEO 只放在加密字段里，只能用于 payroll、福利和合规统计，不能用于聘用决定。
 7. **工厂对接人**：`users.quality_factory` 非空（邀请时选“工厂对接人”，或管理员在成员列表里改）的账号只能用质量追踪，后端会拦截其他接口。
    面向全公司的流程（季度确认、全员提醒、统计人数等）要用 quality.ts 的 `factoryUserIds()` 把他们排除。
 8. **任务删除是软删除**：`tasks.archived_at` 非空表示已删除（批量删除/撤销在 task-board.ts 的 `/tasks/batch-archive`、`/tasks/batch-restore`）。任何模块读 tasks 做列表、统计、提醒、排行榜都要加 `archived_at IS NULL`；按 id 取单条任务用 `visibleTask()`，它已把已删除任务当作不存在。
