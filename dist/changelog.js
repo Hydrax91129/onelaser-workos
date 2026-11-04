@@ -22,6 +22,14 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.33', date:'2026-11-04T09:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('新增经销商下单门户：经销商注册、审核后看价下单、ACH 付款、查看物流；公司内“经销商订单”审核和发货', 'New dealer ordering portal: dealers register, see prices once approved, order, pay by ACH and track shipments; staff review and ship under Dealer orders'),
+      title:c('经销商下单门户', 'Dealer ordering portal'),
+      changes:[c('经销商在 /dealer/ 用邮箱或 Google 账号注册，公司审核通过后才能看到经销商价格和库存，并直接下单。', 'Dealers register at /dealer/ with email or Google; only after we approve them do they see dealer prices and stock and can place orders.'),
+        c('下单后用美国银行账户（ACH，通过 Stripe）付款；页面显示“付款处理中 → 已付款 → 已发货”，并有邮件通知。', 'Orders are paid from a US bank account (ACH via Stripe); the order shows processing → paid → shipped, with email updates.'),
+        c('“产品与库存 → 经销商订单”：审核经销商、查看订单和付款状态、填写物流单号发货；发货时自动从 WMS 扣减库存。默认款项到账才能发货，管理员可对信任的经销商开放“ACH 处理中即可发货”。', 'Products & stock → Dealer orders: approve dealers, see orders and payment status, and ship with a tracking number; shipping deducts WMS stock automatically. By default an order ships only once paid; admins can let trusted dealers ship while ACH is still clearing.'),
+        c('价格取产品资料里的经销商渠道价；订单金额只含货款，不含运费和销售税。', 'Prices come from the dealer channel price in the catalog; order totals cover goods only, without shipping or sales tax.'),
+        c('需要“经销商”功能权限才能看到经销商订单。门户在服务器配置好公司和 Stripe 之前保持关闭。', 'Dealer orders need the dealers feature grant. The portal stays closed until the company and Stripe are configured on the server.')] },
     { version:'1.32', date:'2026-11-04T00:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('成本、价格、库存、经销商数据只按授权开放；只有公司负责人能修改功能权限', 'Costs, prices, stock and dealer data follow grants only; only the company owner changes feature access'),
       title:c('敏感数据只按授权开放', 'Sensitive data follows grants only'),
