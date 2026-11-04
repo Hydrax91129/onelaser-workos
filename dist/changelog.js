@@ -22,6 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.29', date:'2026-11-03T13:47:22-08:00', frontend:'0c90f372f186a92c4d3457c01ad401a80d1fba82', backend:'23c5d1dbc83c47b2055b1f7334c31e3214f255d8', author:KC, deployer:KC,
+      short:c('任务、项目和消息也会跟随界面语言自动翻译，和 OKR 一样', 'Tasks, projects and inbox messages now follow the interface language, like OKRs'),
+      title:c('任务、项目、消息自动中英翻译', 'Automatic translation for tasks, projects and the inbox'),
+      changes:[c('切换中英文时，任务标题、描述、验收标准、进展更新、完成结果、提交的成果和评审意见都会显示成当前语言；旁边的“译 / Tr”标记点一下可以看原文。', 'When you switch language, task titles, descriptions, acceptance criteria, progress updates, results, submissions and review notes show in that language; click the 译 / Tr badge to see the original.'),
+        c('项目名称、描述、分组、里程碑、状态更新和评论，以及消息铃铛里的任务标题和内容，也一样自动翻译。', 'Project names, descriptions, groups, milestones, status updates and comments, and inbox titles and messages, are translated the same way.'),
+        c('编辑框里始终是你写的原文，保存时不会把译文存回去。同一段文字只翻译一次，之后直接读取，不再花费。', 'Edit boxes always keep what you wrote, so a translation is never saved back. Each text is translated once and reused after that.'),
+        c('需要在服务器上配置 AI 翻译模型后才会生效；没有配置时显示原文。', 'Takes effect once an AI translation model is configured on the server; until then the original text is shown.')] },
     { version:'1.28', date:'2026-11-03T18:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('新增“KOL 管理”：所有 KOL 资料、合作进度和带货业绩，自动同步 UpPromote', 'New KOL management: every KOL’s details, progress and sales, synced from UpPromote'),
       title:c('KOL 管理（第一阶段）', 'KOL management (phase 1)'),
