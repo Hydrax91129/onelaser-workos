@@ -27,7 +27,7 @@ function setup(people = PEOPLE, detail = DETAIL) {
   const calls = [];
   const api = {
     get:async p => { calls.push(['GET', p]); if (p === '/hr/people') return people; if (p === '/hr/reminders') return { items:[{ kind:'contract_end', userId:'m2', name:'陈一', date:'2026-11-20', days:18 }] }; return structuredClone(detail); },
-    post:async (p, b) => { calls.push(['POST', p, b]); return p.endsWith('/reveal') ? { field:b.field, value:b.field === 'salary' ? [{ id:'s1', effectiveDate:'2026-01-01', base:12000, allowance:800, currency:'CNY', period:'month', reason:'年度调薪', byName:'周明' }] : '110101199001011234' } : {}; },
+    post:async (p, b) => { calls.push(['POST', p, b]); return p.endsWith('/reveal') ? { field:b.field, value:b.field === 'salary' ? [{ id:'s1', effectiveDate:'2026-01-01', base:12000, allowance:800, currency:'CNY', period:'month', reason:'年度调薪', byName:'周明' }] : 'TEST-0000-0000-1234' } : {}; },
     request:async (p, o) => { calls.push([o.method, p, o.body]); return {}; },
     delete:async p => { calls.push(['DELETE', p]); return {}; },
   };
@@ -72,17 +72,17 @@ test('HR detail: masked values, reveal needs a reason and stays only in the open
   click(window, document.querySelector('[data-hr="open"][data-id="m2"]')); await tick();
   const modal = () => document.getElementById('overlay-root');
   assert.match(modal().textContent, /\*\*\*\*1234/);
-  assert.ok(!modal().textContent.includes('110101'), 'full value is not in the page before View');
+  assert.ok(!modal().textContent.includes('TEST-0000'), 'full value is not in the page before View');
   click(window, modal().querySelector('[data-hr="reveal"][data-field="idNumber"]')); await tick();
   assert.ok(!calls.some(c => c[1]?.endsWith('/reveal')), 'no request without a reason');
   assert.match(modal().querySelector('[data-hr-reveal-error]').textContent, /原因/);
   modal().querySelector('[data-hr-reason="idNumber"]').value = '办理社保';
   click(window, modal().querySelector('[data-hr="reveal"][data-field="idNumber"]')); await tick();
   assert.deepEqual(plain(calls.find(c => c[1]?.endsWith('/reveal')).slice(1)), ['/hr/people/m2/reveal', { field:'idNumber', reason:'办理社保' }]);
-  assert.match(modal().textContent, /110101199001011234/);
-  assert.ok(!document.getElementById('app').textContent.includes('110101'), 'never shown in the list');
+  assert.match(modal().textContent, /TEST-0000-0000-1234/);
+  assert.ok(!document.getElementById('app').textContent.includes('TEST-0000'), 'never shown in the list');
   click(window, modal().querySelector('[data-hr="hide"][data-field="idNumber"]')); await tick();
-  assert.ok(!modal().textContent.includes('110101'));
+  assert.ok(!modal().textContent.includes('TEST-0000'));
   modal().querySelector('[data-hr-reason="salary"]').value = '核对工资单';
   click(window, modal().querySelector('[data-hr="reveal"][data-field="salary"]')); await tick();
   assert.ok(!modal().textContent.includes('[object Object]'), 'salary history is a table, not one value');
