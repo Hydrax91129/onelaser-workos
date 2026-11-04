@@ -22,6 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.36', date:'2026-11-04T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('个人任务支持批量编辑和删除：勾选任务后底部出现操作栏，删除后 10 秒内可撤销', 'My tasks: bulk edit and delete — tick tasks and use the bar at the bottom; deletes can be undone for 10 seconds'),
+      title:c('任务批量编辑与删除', 'Bulk edit and delete tasks'),
+      changes:[c('勾选一项或多项任务后，屏幕底部固定出现批量操作栏（列表很长时也看得到）：设置状态、移至分组、设置优先级、调整负责人（负责人可用）、截止日期、删除、清除。每个分组标题旁新增“全选本组”。', 'Tick one or more tasks and a bulk bar stays at the bottom of the screen, even on a long list: set status, move to group, set priority, set owner (managers), due date, delete and clear. Each group header has Select all.'),
+        c('删除后显示“已删除 N 项 · 撤销”，10 秒内点撤销即可恢复。删除的任务不再出现在任何列表、报表和排行榜里。', 'After deleting, “Deleted N items · Undo” shows for 10 seconds. Deleted tasks leave every list, report and leaderboard.'),
+        c('只能删除自己创建或下达的任务，别人下达给你的任务请让下达人或管理员删除；来自 OKR 的任务请在 OKR 里删除对应 KR。无权操作的任务会被跳过并说明原因（例如“3 项无权删除，已跳过”），其余照常完成。', 'You can delete tasks you created or assigned; ask whoever gave you a task, or an admin, to delete it. Tasks from an OKR are removed by deleting their key result. Rows you may not change are skipped with the reason (e.g. “3 skipped: not yours to delete”); the rest go through.'),
+        c('批量设置状态不提供“完成”：完成仍需逐项填写成果。', 'Bulk status does not offer Done: completing still needs a written result per task.')] },
     { version:'1.35', date:'2026-11-04T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('完成即上榜；完成后 24 小时内由验收人或下达人评分，没人评分则由 AI 自动评分', 'Done counts right away; the reviewer or assigner scores within 24 hours, otherwise the AI does'),
       title:c('排行榜按完成计数，评分改为先人工、后 AI', 'Leaderboard counts completions; people score first, AI after 24 hours'),
