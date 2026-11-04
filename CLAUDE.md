@@ -26,7 +26,7 @@
 | 退货维修 RMA | rma.ts | rma.js | rma_cases（翻新机入库走 WMS） |
 | 经销商下单 portal | dealer.ts, dealer-admin.ts | dealers.js | dealer_accounts、dealer_orders（价格读 product_channel_prices 的 dealer 渠道，发货走 WMS 出库） |
 | 客服 | support.ts, shopify.ts | company-support.js | 工单、客服回复 |
-| HRM | hr.ts | hr.js | hr_profiles、hr_salary、hr_documents（美国/中国分区权限） |
+| HRM | hr.ts | hr.js | hr_profiles（含所属地区 region：us / cn / intl，地区资料 details）、hr_secrets（SSN、身份证号、银行账号、当地税号、薪酬与税务，均加密）、hr_salary、hr_documents、hr_events。按地区授权，见第 3 节第 6 条 |
 | IT 账号与资产 | it-accounts.ts | it.js | it_accounts |
 | 质量追踪 | quality.ts | quality.js | quality_issues、quality_plans |
 | KOL ROI | — | kol.js | （待补充） |
@@ -47,6 +47,9 @@
    只有"默认指派给谁"（新任务的默认验收人、需要谁去做的提醒）仍按第一领导，避免重复。`user.dottedOwnerIds` 只是界面上区分"虚线汇报给我"用。
 5. **通知统一走一处**：站内红点用 `pushInbox()`；钉钉和邮件用 app.ts 里的 `notify`。
 6. 成本和利润只给有 `product_cost_detail` 权限的人和主管理员（部署配置 `WORKOS_EXECUTIVE_USER_IDS`）；在系统里勾选的管理员**不会**自动看到产品、成本、价格、库存、经销商数据，也要单独授权。功能权限（grants）只有主管理员能改，任何人都不能改自己的。薪资只给 HR 权限对应分区的人。后端新模块判断敏感数据时用 `isExecutive`，不要用 `isAdmin`。
+   人事档案按地区授权：grants 里的 `hr_us_view` / `hr_us_manage`、`hr_cn_*`、`hr_intl_*`（只读 / 可管理），同样只有主管理员能分配；
+   主管理员和 `WORKOS_HR_USER_IDS` 管理全部地区，也只有他们能改员工所属地区。只读不能修改，也看不到银行信息。
+   婚姻、子女、受抚养人只放在加密的薪酬与税务里，只能用于 payroll 和福利，不能用于聘用决定。
 7. **工厂对接人**：`users.quality_factory` 非空（邀请时选“工厂对接人”，或管理员在成员列表里改）的账号只能用质量追踪，后端会拦截其他接口。
    面向全公司的流程（季度确认、全员提醒、统计人数等）要用 quality.ts 的 `factoryUserIds()` 把他们排除。
 8. **任务删除是软删除**：`tasks.archived_at` 非空表示已删除（批量删除/撤销在 task-board.ts 的 `/tasks/batch-archive`、`/tasks/batch-restore`）。任何模块读 tasks 做列表、统计、提醒、排行榜都要加 `archived_at IS NULL`；按 id 取单条任务用 `visibleTask()`，它已把已删除任务当作不存在。
@@ -59,6 +62,8 @@
 - 改公共文件（live-app.js、changelog.js、index.html、app.ts、db.ts、i18n.ts）要小步修改，不要整段重写。
 - 前端改完运行 `node tools/stamp-assets.mjs`（更新资源版本号，CI 会检查），再 `npm test`；后端 `npm test`（约 8 分钟）。
 - 后端所有报错文案都要在 i18n.ts 里有中文（有测试检查）。
+- 上传文件统一用前端的 `dist/upload-zone.js`（`window.WorkOSUpload`）：一个框同时支持粘贴、拖拽、点击选择和“上传”按钮，
+  只负责收文件和检查类型、大小，存储和权限仍由各模块自己的接口负责。新功能不要再自己写一套上传。
 - 版本号：在 dist/changelog.js 的 RELEASES 最前面加一条，号码 = 当前最新版本 + 0.1。合并前再 pull 一次确认没撞号；撞号就改成下一个号。
 - 只用虚构的示例数据写测试和种子数据。
 

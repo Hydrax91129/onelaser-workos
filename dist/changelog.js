@@ -22,6 +22,16 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.38', date:'2026-11-04T14:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('人事档案分美国 / 中国 / 海外其他地区三个标签，按地区分配只读或可管理权限，可以填完整的 payroll 资料', 'HR records split into US / China / other countries, with read-only or manage access per region and full payroll profiles'),
+      title:c('人事档案按地区管理', 'HR records by region'),
+      changes:[c('人事档案分成“美国”“中国”“海外其他地区”三个标签，每个员工属于一个地区。主管理员在员工档案顶部设置地区，还没设置的人在“未分配”里。', 'HR records now have United States, China and Other countries tabs, and each person belongs to one region. The company owner sets it at the top of the record; people without one are under Not assigned.'),
+        c('“组织与权限”成员列表新增“人事档案”一栏：每个地区可以给“无 / 只读 / 可管理”。只有主管理员能分配，工厂对接人不能开通。', 'Organization & permissions has a new HR records column: none, read-only or manage, per region. Only the company owner assigns it; factory contacts cannot get it.'),
+        c('美国：法定姓名、住址、I-9 和有效期、计薪方式、FLSA、发薪周期、提成方案、奖金、福利（医疗 / 牙科 / 视力 / 401(k) / PTO）、婚姻和受抚养人、联邦 W-4（2020 及以后版本）和加州 DE 4。', 'US: legal name, address, I-9 and expiry, pay type, FLSA, pay frequency, commission plan, bonus, benefits (medical, dental, vision, 401(k), PTO), marital status and dependents, federal W-4 (2020+) and California DE 4.'),
+        c('中国：户籍地和户口性质、现住址、劳动合同类型、社保五险个人和单位比例、公积金、个税专项附加扣除、学历、婚育情况。海外：国家、雇员 / 承包商 / EOR、当地税号、币种。', 'China: hukou, current address, contract type, the five social insurance rates (employee and employer), housing fund, special additional deductions, education, marital status and children. Other countries: country, employee / contractor / EOR, local tax ID, currency.'),
+        c('SSN、身份证号、银行账号、当地税号和薪酬与税务都加密保存，默认只显示后 4 位，点“显示”要填原因，每次查看都有记录。只读权限看不到银行信息。', 'SSNs, ID numbers, bank accounts, local tax IDs and the pay & tax block are encrypted and shown masked; Show needs a reason and every view is recorded. Read-only access never sees bank details.'),
+        c('附件按类型分类（简历、身份证 / 护照、签字的 W-4 / DE 4、I-9、劳动合同等）。新的上传框同时支持粘贴截图、拖进来、点击选择和“上传”按钮。', 'Attachments are sorted by type (resume, ID / passport, signed W-4 / DE 4, I-9, contract…). The new upload box takes a pasted screenshot, a dragged file, a click or the Upload button.'),
+        c('婚姻、子女、受抚养人只用于 payroll 和福利，不能用于聘用、晋升或解雇等决定。', 'Marital status, children and dependents are for payroll and benefits only, never for hiring, promotion or termination decisions.')] },
     { version:'1.37', date:'2026-11-04T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('每个人可以再设一位“第二领导”（虚线汇报），权限和第一领导相同；组织架构图上用虚线连接', 'Each person can have a second leader (dotted line) with the same rights as the first leader; the org chart links them with a dashed line'),
       title:c('第二领导（虚线汇报）', 'Second leader (dotted line)'),

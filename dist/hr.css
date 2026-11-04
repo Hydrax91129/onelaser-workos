@@ -30,7 +30,8 @@ html[data-theme=dark] .hr-reason{background:#11151d;border-color:#323a49;color:i
 .hr-group{border:1px solid var(--border,#e4e7ef);border-radius:8px;padding:10px 12px;margin:0 0 10px}
 fieldset.hr-group{margin:0}.hr-group legend,.hr-group h4{font-size:13px;font-weight:700;padding:0 4px;margin:0 0 6px}
 .hr-group .wms-hint{margin:0 0 8px}
-.hr-check{flex-direction:row!important;align-items:center;gap:8px}.hr-check input{width:auto}
+.field.hr-check{display:flex!important;flex-direction:row!important;align-items:center;gap:8px;align-self:end;min-height:38px}.field.hr-check input{width:auto;margin:0}.field.hr-check span{order:2}
+[data-upload-scope] .up-zone{margin-top:8px}
 .hr-locked{display:flex;align-items:center;flex-wrap:wrap;gap:10px;font-size:14px}.hr-locked small{color:#6b7280}
 html[data-theme=dark] .hr-regions{border-color:#2c3341}html[data-theme=dark] .hr-regions button{color:#c2cad8}
 html[data-theme=dark] .hr-regions button b,html[data-theme=dark] .hr-region{background:#232a37;color:#c2cad8}
