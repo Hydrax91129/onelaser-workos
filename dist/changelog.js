@@ -22,6 +22,10 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.40', date:'2026-11-04T19:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('系统统一改名为 WorkOS', 'The system is now called WorkOS everywhere'),
+      title:c('统一叫 WorkOS', 'One name: WorkOS'),
+      changes:[c('使用说明、经销商申请通知邮件和反馈邮件里的 CraftOS 都改成了 WorkOS。网址还是 craftos.app，不用改书签。', 'The user guide, dealer application emails and feedback emails now say WorkOS instead of CraftOS. The address is still craftos.app, so bookmarks keep working.')] },
     { version:'1.39', date:'2026-11-04T18:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('人事档案分美国 / 中国 / 海外其他地区三个标签；美国区只有主管理员能看，可以导出给 CPA；中国和海外按人授权', 'HR records split into US / China / other countries; the US is owner-only with an export for the CPA; China and other countries are granted per person'),
       title:c('人事档案按地区管理', 'HR records by region'),

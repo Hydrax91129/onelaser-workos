@@ -39,8 +39,8 @@ jobs:
           fi
           git clone --quiet --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" api
           cd api
-          git config user.name "craftos-pin-bot"
-          git config user.email "craftos-pin-bot@users.noreply.github.com"
+          git config user.name "workos-pin-bot"
+          git config user.email "workos-pin-bot@users.noreply.github.com"
           if [ "$(tr -d '[:space:]' < deploy/frontend-revision.txt)" = "${SHA}" ]; then
             echo "main already pins ${SHA}"; exit 0
           fi
