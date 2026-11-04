@@ -22,6 +22,11 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.32', date:'2026-11-04T00:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('成本、价格、库存、经销商数据只按授权开放；只有公司负责人能修改功能权限', 'Costs, prices, stock and dealer data follow grants only; only the company owner changes feature access'),
+      title:c('敏感数据只按授权开放', 'Sensitive data follows grants only'),
+      changes:[c('在系统里勾选的管理员不再自动看到产品成本、计价、库存管理、维修价格和经销商数据，需要单独授权；部署配置里的公司负责人不受影响。', 'Admins ticked in the app no longer see product costs, pricing, stock management, repair prices or dealer data automatically; they need grants. The company owner set in deployment config is unaffected.'),
+        c('功能权限（产品、成本、价格、库存、经销商）只有公司负责人可以授予或修改，包括邀请新成员时附带的权限；任何人都不能修改自己的权限。', 'Only the company owner can grant or change feature access (products, costs, prices, stock, dealers), including grants attached to invites; nobody can change their own.')] },
     { version:'1.31', date:'2026-11-03T22:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('OKR 新增“AI 帮我写 OKR”；目标分值改为自由填写，合计不是 100 分会标红', 'OKR: draft your OKR with AI; objective points are typed freely and show red until they total 100'),
       title:c('AI 帮我写 OKR，目标分值自由填写', 'Draft OKRs with AI; free objective points'),

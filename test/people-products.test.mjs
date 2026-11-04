@@ -32,7 +32,7 @@ test('sidebar sections follow the requested order, and restricted pages are gate
   assert.match(live, /it:!!window\.WorkOSIt && state\.capabilities\?\.itAssets===true/, 'IT accounts appear only when the server offers them');
   assert.match(live, /hr:!!window\.WorkOSHr && state\.capabilities\?\.hr===true/, 'HR records appear only when the server offers them');
   assert.ok(ids('hidden').includes('executive') && ids('hidden').includes('integrations'), 'executive board removed; integrations moved into settings');
-  assert.match(live, /const productAccess = \(\) => !!window\.WorkOSProducts && \(\(state\.actor\?\.grants\|\|\[\]\)\.includes\('products'\) \|\| state\.actor\?\.isAdmin === true\)/);
+  assert.match(live, /const productAccess = \(\) => !!window\.WorkOSProducts && \(\(state\.actor\?\.grants\|\|\[\]\)\.includes\('products'\) \|\| state\.actor\?\.executiveAccess === true\)/, 'products follow grants; only the deployment-configured owner bypasses them');
   assert.match(live, /products:productAccess\(\)\|\|wmsAccess\(\)\|\|dealersAccess\(\), 'product-cost':productAccess\(\), 'supply-chain':productAccess\(\)/);
   assert.match(live, /org:!!window\.WorkOSPeople && state\.actor\?\.isAdmin===true/);
   for (const id of ['product-cost', 'supply-chain']) assert.match(live, new RegExp(`'?${id}'?: \\(\\) => productAccess\\(\\) \\?`), `direct URL for ${id} is gated too`);
