@@ -19,7 +19,7 @@
 
   const SECTIONS = [
     ['start', 'ph-compass', '快速上手', 'Getting started', () => `
-      <p>${tr('CraftOS 把每个人的工作放在一个地方：别人下达给你的任务、你的 OKR、你参与的项目，都会自动出现在你的个人任务。', 'CraftOS keeps everyone’s work in one place: tasks assigned to you, your OKRs and the projects you join all land in your Task Center automatically.')}</p>
+      <p>${tr('WorkOS 把每个人的工作放在一个地方：别人下达给你的任务、你的 OKR、你参与的项目，都会自动出现在你的个人任务。', 'WorkOS keeps everyone’s work in one place: tasks assigned to you, your OKRs and the projects you join all land in your Task Center automatically.')}</p>
       <table class="ug-table"><tbody>
         <tr><th>${tr('工作中心', 'Work Center')}</th><td>${tr('每天打开先看这里：谁给你下达了任务、哪些快到期、系统和 AI 的催办提醒。', 'Start each day here: who assigned you work, what is due soon, and reminders from the system and AI.')}</td></tr>
         <tr><th>${tr('个人任务', 'Task Center')}</th><td>${tr('你所有的任务：更新进度、改状态、提交完成结果。', 'All your tasks: post progress, set status, submit results.')}</td></tr>

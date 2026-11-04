@@ -1,4 +1,4 @@
-# CraftOS QA Remediation Implementation Plan
+# WorkOS QA Remediation Implementation Plan
 
 > **For Claude:** Execute the steps below in the existing isolated frontend/API worktrees, preserving the historical QA evidence. This is the implementation already authorized by the user.
 
