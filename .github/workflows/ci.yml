@@ -1,0 +1,29 @@
+name: Frontend checks
+
+# Runs on every pull request and on main. Branch protection on main requires the
+# "test" job below, so nothing reaches main without passing tests.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Tests
+        run: npm test
+      - name: Asset versions are stamped (node tools/stamp-assets.mjs)
+        run: |
+          node tools/stamp-assets.mjs
+          git diff --exit-code -- dist/index.html dist/dealer/index.html || { echo "::error::Run node tools/stamp-assets.mjs and commit dist/index.html"; exit 1; }
