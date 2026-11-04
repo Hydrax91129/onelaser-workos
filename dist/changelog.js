@@ -22,6 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.33', date:'2026-11-04T00:53:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('OKR 输入的内容自动保存，刷新或崩溃也不会丢；AI 草稿直接保存，只需最后“最终发布”一次', 'OKR edits save automatically and survive a reload or crash; AI drafts are saved at once, and Publish is the only confirmation'),
+      title:c('OKR 自动保存，只需确认一次', 'OKR autosave, one confirmation'),
+      changes:[c('目标标题、KR 标题、目标值、目标分值、KR 权重和目标描述都会自动保存：停止输入约 0.8 秒或点到别处就保存，不用按回车或“保存”。页面上方显示“保存中… / 已保存 / 保存失败（点击重试）”，断网时会在网络恢复后自动重试。', 'Objective titles, KR titles, targets, objective points, KR weights and objective descriptions save on their own about 0.8 seconds after you stop typing or when you click elsewhere; no Enter or Save. A status line shows Saving… / Saved / Save failed (click to retry), and failed saves retry when the network returns.'),
+        c('还没保存到服务器的内容（AI 输入框、正在修改的字段、新目标和新 KR 表单）会先存在本机浏览器里；刷新或页面崩溃后重新打开会自动恢复并继续保存，并提示“已恢复未保存的内容”。', 'Anything not yet confirmed by the server (the AI text box, fields being edited, new objective and KR forms) is kept in this browser; after a reload or crash it comes back, keeps saving, and says “Restored your unsaved changes”.'),
+        c('“AI 帮我写 OKR”生成后直接保存为未发布的草稿，出现在下面的 OKR 列表里，不再需要逐个勾选、再点“添加选中的”。不需要的目标或 KR 点 × 删除，几秒内可以“撤销”，不再弹确认框。', '“Draft my OKR with AI” now saves the result straight away as unpublished draft objectives and KRs in the normal list; no ticking each item and no “Add selected”. Remove what you don’t want with ×, with a few seconds to undo instead of a confirm dialog.'),
+        c('“最终发布”仍是唯一的确认：发布前会先把所有未保存的修改保存好；目标合计 100 分、KR 权重合计 100% 的检查不变。', 'Publish stays the only confirmation: it first saves anything still pending; the 100-point and 100% KR weight checks are unchanged.')] },
     { version:'1.32', date:'2026-11-04T00:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('成本、价格、库存、经销商数据只按授权开放；只有公司负责人能修改功能权限', 'Costs, prices, stock and dealer data follow grants only; only the company owner changes feature access'),
       title:c('敏感数据只按授权开放', 'Sensitive data follows grants only'),
