@@ -22,6 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.33', date:'2026-11-04T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('完成即上榜；完成后 24 小时内由验收人或下达人评分，没人评分则由 AI 自动评分', 'Done counts right away; the reviewer or assigner scores within 24 hours, otherwise the AI does'),
+      title:c('排行榜按完成计数，评分改为先人工、后 AI', 'Leaderboard counts completions; people score first, AI after 24 hours'),
+      changes:[c('负责人点“完成”并写好结果后，任务马上计入“完成冠军”，不用再等 AI 评分。', 'As soon as the owner marks a task done with a written result, it counts towards Most completed — no waiting for an AI score.'),
+        c('完成后 24 小时内，验收人、下达人、负责人的直属上级或管理员可以在任务讨论里给 0–10 分，这就是最终分；24 小时后仍没人评分，系统自动让 AI 评分。每项成果只有一个最终分，保存后不能修改。', 'Within 24 hours of completion the reviewer, the assigner, the owner’s manager or an administrator can give a 0–10 score in the task thread, and that is the final score. If nobody scores it within 24 hours, the AI scores it automatically. Each result has one final score, which cannot be changed once saved.'),
+        c('“质量之星”按最终分取平均；任务、排行榜和讨论里都会标明是“人工评分”还是“AI 评分”。', 'Quality stars average the final scores; tasks, the leaderboard and the thread show whether a score came from a person or from AI.'),
+        c('之前因为 AI 没配置或评分失败而一直没有分数的完成任务，在配置好 AI 评分模型后会被自动补评分。', 'Earlier completions left without a score because AI scoring was not configured or failed are scored automatically once a scoring model is configured.')] },
     { version:'1.32', date:'2026-11-04T00:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('成本、价格、库存、经销商数据只按授权开放；只有公司负责人能修改功能权限', 'Costs, prices, stock and dealer data follow grants only; only the company owner changes feature access'),
       title:c('敏感数据只按授权开放', 'Sensitive data follows grants only'),

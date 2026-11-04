@@ -53,11 +53,26 @@ test('missing model saves completion honestly and never promises a background sc
  assert.match(h.document.querySelector('.mb-complete-rule').textContent,/not configured/);assert.match(h.document.querySelector('[data-mb-complete-form] button.mb-new').textContent,/Save completion result/);
  for(const [field,value]of [['result','Synthetic result with a concrete explanation of what was delivered and checked.']]){const input=h.document.querySelector(`[data-mb-complete-field=${field}]`);input.value=value;await h.emit('input',input);}
  await h.emit('submit',h.document.querySelector('[data-mb-complete-form]'));
- assert.match(h.document.querySelector('[data-task-id=t1] [data-field=status]').textContent,/AI not configured/);assert.doesNotMatch(h.document.querySelector('[data-task-id=t1]').textContent,/awaiting AI score|AI scoring…/);
+ assert.match(h.document.querySelector('[data-task-id=t1] [data-field=status]').textContent,/AI scoring not configured/);assert.doesNotMatch(h.document.querySelector('[data-task-id=t1]').textContent,/awaiting AI score|AI scoring…|AI will score/);
 });
 test('locked unscored results can be read and retried without rewriting the result',async()=>{
  const c={id:'completion-fixture',result:'Synthetic saved result <script>literal</script>',self_review:'Synthetic self review',ai_status:'failed',created_at:'2026-01-01T00:00:00Z'};
  const h=await harness({scoring:true,completion:c});await h.click('[data-task-id=t1] [data-mb=updates]');
  assert.match(h.document.querySelector('.mb-saved-completion').textContent,/Synthetic saved result/);assert.equal(h.document.querySelector('.mb-saved-completion script'),null);assert.match(h.document.querySelector('.mb-saved-completion').textContent,/result is locked/);
  await h.click('[data-mb=retry-score]');assert.equal(h.calls[0].path,'/tasks/t1/completion/rescore');assert.deepEqual(h.calls[0].payload,{completionId:'completion-fixture'});assert.match(h.document.querySelector('.mb-saved-completion').textContent,/8.5\/10/);assert.equal(h.document.querySelector('[data-mb=retry-score]'),null);
+});
+
+test('labels: a final score shows where it came from; within 24 h the task waits for the reviewer or assigner',async()=>{const h=await harness({scoring:true});const t=h.ui.inspect().data.items.find(t=>t.id==='t1');t.board_status='done';
+ t.completion={ai_status:'pending',human_score:7,final_score:7,score_source:'human'};assert.match(h.ui.render(),/7\.0\/10 · scored by a person/);
+ t.completion={ai_status:'scored',ai_score:8.5,final_score:8.5,score_source:'ai'};assert.match(h.ui.render(),/8\.5\/10 · scored by AI/);
+ t.completion={ai_status:'pending',final_score:null,score_source:null,score_due_at:new Date(Date.now()+3600000).toISOString()};assert.match(h.ui.render(),/Awaiting a score · reviewer or assigner within 24 h/);
+ t.completion={ai_status:'pending',final_score:null,score_source:null,score_due_at:new Date(Date.now()-3600000).toISOString()};assert.match(h.ui.render(),/AI will score it shortly/);
+});
+test('the reviewer can save a 0–10 human score from the task thread; it goes to the human score endpoint',async()=>{
+ const c={id:'completion-fixture',result:'Synthetic saved result',self_review:'',ai_status:'pending',final_score:null,score_source:null,created_at:new Date().toISOString(),score_due_at:new Date(Date.now()+20*3600000).toISOString()};
+ const h=await harness({scoring:true,completion:c});h.options.api.get=(orig=>async p=>p.endsWith('/completion')?{completion:structuredClone(c),locked:false,canHumanScore:true,canRetryScore:false}:orig(p))(h.options.api.get);
+ await h.click('[data-task-id=t1] [data-mb=updates]');const box=h.document.querySelector('[data-mb-human-score]');assert.ok(box,'score form is shown');assert.equal(h.document.querySelector('[data-mb=retry-score]'),null,'no AI retry inside the 24-hour window');
+ assert.match(box.textContent,/after that the AI scores it/);
+ const input=box.querySelector('[name=score]');input.value='8.5';await h.emit('input',input);await h.click('[data-mb=human-score-submit]');
+ const call=h.calls.find(x=>x.path==='/tasks/t1/completion/score');assert.ok(call,'posts the human score');assert.deepEqual(call.payload,{completionId:'completion-fixture',score:8.5,note:''});
 });
