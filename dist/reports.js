@@ -201,7 +201,11 @@
       .catch(() => { assign = assign || { toMe:[], byMe:[], nudges:[], unread:0 }; assignAt = Date.now(); }).finally(() => { assignLoading = false; ctx.rerender(); });
   }
   const isDone = t => t.status === 'accepted' || t.board_status === 'done';
-  const dueTag = t => { const d = new Date(t.due_at).getTime(), days = Math.ceil((d - Date.now()) / 864e5); if (isDone(t)) return `<em class="ri-due done">${tr('已完成', 'Done')}${t.completion?.ai_score != null ? ' ' + t.completion.ai_score + '/10' : ''}</em>`; if (days < 0) return `<em class="ri-due over">${tr(`逾期 ${-days} 天`, `${-days}d overdue`)}</em>`; if (days <= 3) return `<em class="ri-due soon">${tr(`剩 ${days} 天`, `${days}d left`)}</em>`; return `<em class="ri-due">${new Date(t.due_at).toLocaleDateString(lang() === 'en' ? 'en-US' : 'zh-CN', { month:'short', day:'numeric' })}</em>`; };
+  // One final score per completion: a person's score if given, otherwise the AI's (older API rows only carry ai_score).
+  const finalScore = c => c?.final_score != null ? Number(c.final_score) : c?.ai_status === 'scored' && c.ai_score != null ? Number(c.ai_score) : null;
+  const scoreSource = c => c?.score_source || (c?.ai_status === 'scored' ? 'ai' : null);
+  const scoreTag = c => { const v = finalScore(c); return v == null ? '' : ` ${v}/10 · ${scoreSource(c) === 'human' ? tr('人工评分', 'by a person') : tr('AI 评分', 'by AI')}`; };
+  const dueTag = t => { const d = new Date(t.due_at).getTime(), days = Math.ceil((d - Date.now()) / 864e5); if (isDone(t)) return `<em class="ri-due done">${tr('已完成', 'Done')}${scoreTag(t.completion)}</em>`; if (days < 0) return `<em class="ri-due over">${tr(`逾期 ${-days} 天`, `${-days}d overdue`)}</em>`; if (days <= 3) return `<em class="ri-due soon">${tr(`剩 ${days} 天`, `${days}d left`)}</em>`; return `<em class="ri-due">${new Date(t.due_at).toLocaleDateString(lang() === 'en' ? 'en-US' : 'zh-CN', { month:'short', day:'numeric' })}</em>`; };
   // Titles and AI messages follow the interface language (translate.js); names come from the localized directory.
   const tx = v => window.WorkOSTranslate ? window.WorkOSTranslate.html(v) : esc(v);
   const who = (id, fallback, names) => (id && (S().directory || []).find(u => u.id === id)?.display_name) || (names && (lang() === 'en' ? names.en || names.zh : names.zh || names.en)) || fallback || '';
@@ -242,10 +246,10 @@
     ctx.api.get('/reports/leaderboard').then(r => { board = r.items || []; }).catch(() => { board = 'fallback'; }).finally(() => { boardLoading = false; ctx.rerender(); });
   }
   function boardRows() {
-    if (Array.isArray(board)) return board.map(x => ({ id:x.id, name:x.display_name, avatar_version:x.avatar_version, total:x.total, done:x.scored_done, score:x.avg_score, overdue:x.overdue }));
-    const ids = [...new Set(S().tasks.map(t => t.owner_id))], now = Date.now();
-    return ids.map(id => { const ts = S().tasks.filter(t => t.owner_id === id), sc = ts.filter(t => t.completion?.ai_status === 'scored');
-      return { id, name:nameOf(id), total:ts.length, done:sc.length, score:sc.length ? Math.round(sc.reduce((n, t) => n + Number(t.completion.ai_score), 0) / sc.length * 10) / 10 : null, overdue:ts.filter(t => t.status !== 'accepted' && t.board_status !== 'done' && new Date(t.due_at).getTime() < now).length }; });
+    if (Array.isArray(board)) return board.map(x => ({ id:x.id, name:x.display_name, avatar_version:x.avatar_version, total:x.total, done:x.done ?? x.scored_done, scored:x.scored_done, human:x.human_scored || 0, ai:x.ai_scored || 0, score:x.avg_score, overdue:x.overdue }));
+    const ids = [...new Set(S().tasks.map(t => t.owner_id))], now = Date.now(), month = new Date(); month.setDate(1); month.setHours(0, 0, 0, 0);
+    return ids.map(id => { const ts = S().tasks.filter(t => t.owner_id === id), dn = ts.filter(t => t.board_status === 'done' && t.board_done_at && new Date(t.board_done_at) >= month), sc = dn.filter(t => finalScore(t.completion) != null);
+      return { id, name:nameOf(id), total:ts.length, done:dn.length, scored:sc.length, human:sc.filter(t => scoreSource(t.completion) === 'human').length, ai:sc.filter(t => scoreSource(t.completion) === 'ai').length, score:sc.length ? Math.round(sc.reduce((n, t) => n + finalScore(t.completion), 0) / sc.length * 10) / 10 : null, overdue:ts.filter(t => t.status !== 'accepted' && t.board_status !== 'done' && new Date(t.due_at).getTime() < now).length }; });
   }
   function leaderboards() {
     loadBoard();
@@ -253,11 +257,11 @@
     const card = (ic, title, sub, color, list, val, empty) => `<section class="ri-lb" style="--c:${color}"><h3>${icon(ic)} ${title}</h3><p>${sub}</p><ol>${list.slice(0, 5).map((x, i) => `<li class="${x.id === me().id ? 'me' : ''}"><span class="ri-medal">${medal(i)}</span>${avatar({ id:x.id, display_name:x.name, avatar_version:x.avatar_version }, 26)}<span class="ri-lb-n">${esc(x.name)}${x.id === me().id ? ` <em>${tr('我', 'me')}</em>` : ''}</span><strong>${val(x)}</strong></li>`).join('') || `<li class="ri-hint">${empty}</li>`}</ol></section>`;
     const by = (f, filter = () => true) => rows.filter(filter).sort((a, b) => f(b) - f(a));
     const mine = rows.find(x => x.id === me().id);
-    return `<h2 class="ri-h2">${icon('trophy')} ${tr('本月团队排行榜', 'Team leaderboard this month')}<span class="ri-hint">${tr('只统计 AI 已评分的完成任务；每月 1 日重新开始', 'Only AI-scored completions count; resets on the 1st')}</span></h2>
-      ${mine ? `<div class="ri-cheer">${icon('hand-heart')} ${mine.done ? tr(`你本月已完成 ${mine.done} 项${mine.score ? `，平均 AI 评分 ${mine.score}` : ''}，继续加油！`, `You have completed ${mine.done} this month${mine.score ? `, average AI score ${mine.score}` : ''} — keep going!`) : tr('本月还没有 AI 评分的完成任务，完成一项并写清楚结果，就能上榜！', 'No AI-scored completions yet this month — finish one with a clear result to get on the board!')}</div>` : ''}
+    return `<h2 class="ri-h2">${icon('trophy')} ${tr('本月团队排行榜', 'Team leaderboard this month')}<span class="ri-hint">${tr('完成即上榜；完成后 24 小时内由验收人或下达人评分，没人评分则由 AI 自动评分；每月 1 日重新开始', 'A task counts as soon as it is marked done; the reviewer or assigner scores it within 24 hours, otherwise the AI scores it; resets on the 1st')}</span></h2>
+      ${mine ? `<div class="ri-cheer">${icon('hand-heart')} ${mine.done ? tr(`你本月已完成 ${mine.done} 项${mine.score != null ? `，平均评分 ${mine.score}（人工 ${mine.human} 项 · AI ${mine.ai} 项）` : ''}${mine.done > (mine.scored || 0) ? `，${mine.done - (mine.scored || 0)} 项等待评分` : ''}，继续加油！`, `You have completed ${mine.done} this month${mine.score != null ? `, average score ${mine.score} (${mine.human} by a person · ${mine.ai} by AI)` : ''}${mine.done > (mine.scored || 0) ? `, ${mine.done - (mine.scored || 0)} awaiting a score` : ''} — keep going!`) : tr('本月还没有完成的任务，完成一项并写清楚结果，就能上榜！', 'Nothing completed yet this month — finish one with a clear result to get on the board!')}</div>` : ''}
       <div class="ri-lbs">
-        ${card('star', tr('质量之星', 'Quality stars'), tr('完成结果写得最清楚、AI 平均分最高', 'Highest average AI score'), '#fdab3d', by(x => x.score ?? -1, x => x.score != null), x => `${x.score.toFixed(1)}<small>/10</small>`, tr('完成任务并获得 AI 评分后上榜', 'Appears after AI-scored completions'))}
-        ${card('check-circle', tr('完成冠军', 'Most completed'), tr('本月 AI 评分通过的完成数量', 'AI-scored completions this month'), '#00c875', by(x => x.done, x => x.done > 0), x => `${x.done}<small>${tr('项', '')}</small>`, tr('还没有人完成，先下手为强！', 'Nobody yet — be the first!'))}
+        ${card('star', tr('质量之星', 'Quality stars'), tr('本月完成任务的平均评分最高（人工评分优先，没人评分则用 AI 评分）', 'Highest average score this month (a person’s score first, otherwise the AI’s)'), '#fdab3d', by(x => x.score ?? -1, x => x.score != null), x => `${x.score.toFixed(1)}<small>/10</small>`, tr('完成任务并获得评分后上榜', 'Appears once a completion is scored'))}
+        ${card('check-circle', tr('完成冠军', 'Most completed'), tr('本月完成的任务数量', 'Tasks completed this month'), '#00c875', by(x => x.done, x => x.done > 0), x => `${x.done}<small>${tr('项', '')}</small>`, tr('还没有人完成，先下手为强！', 'Nobody yet — be the first!'))}
         ${card('barbell', tr('劳苦功高', 'Hardest workers'), tr('本月承担的任务最多', 'Most tasks this month'), '#579bfc', by(x => x.total, x => x.total > 0), x => `${x.total}<small>${tr('项', '')}</small>`, tr('暂无任务', 'No tasks yet'))}
         ${card('alarm', tr('逾期大王', 'Overdue kings'), tr('逾期最多，需要大家帮一把', 'Most overdue — give them a hand'), '#e2445c', by(x => x.overdue, x => x.overdue > 0), x => `${x.overdue}<small>${tr('项', '')}</small>`, tr('没有人逾期，太棒了！🎉', 'Nobody is overdue — great! 🎉'))}
       </div>`;
