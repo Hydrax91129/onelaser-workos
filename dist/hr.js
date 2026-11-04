@@ -300,7 +300,7 @@
       ${t('bankName', tr('开户银行', 'Bank'), p.bankName, 80, tr('例如：示例银行', 'e.g. Example Bank'))}
       ${d('consentDate', tr('个人信息授权日期', 'Consent date'), p.consentDate)}${t('consentVersion', tr('授权书版本', 'Consent notice version'), p.consentVersion, 40, '2026-01')}
       <label class="field full"><span>${tr('人事内部备注（员工本人看不到）', 'Internal HR notes (not shown to the employee)')}</span><textarea name="notes" rows="2" maxlength="4000">${esc(p.notes || '')}</textarea></label>
-      <div class="full rma-actions"><button class="btn primary" type="submit">${tr('保存', 'Save')}</button><span class="wms-hint">${tr('状态改为“已离职”不会自动停用账号，请在“组织与权限”里单独处理。', 'Marking someone as left does not disable their account; do that in Organization & permissions.')}</span></div>
+      <div class="full rma-actions"><button class="btn primary" type="submit">${tr('保存', 'Save')}</button><span class="wms-hint">${tr('在“组织与权限”里停用账号，会自动把这里改为“已离职”；反过来，这里改为“已离职”不会停用账号。', 'Disabling the account in Organization & permissions marks this record as left automatically; marking someone as left here does not disable their account.')}</span></div>
       <p class="wms-error" role="alert"></p></form>`;
   }
 

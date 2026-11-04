@@ -22,6 +22,11 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.41', date:'2026-11-04T20:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('停用账号会自动把人事档案改为“已离职”', 'Disabling an account marks the HR record as left'),
+      title:c('离职人员自动归档', 'People who left are filed automatically'),
+      changes:[c('在“组织与权限”里停用某人的账号后，TA 的人事档案会自动变为“已离职”，最后工作日取停用当天（HR 已填写的保留），档案历史里也会记一条“离职”。恢复账号会改回“在职”。', 'Disabling someone in Organization & permissions now marks their HR record as left, with the last day set to that day (a date HR already entered is kept) and a “left” entry in the history. Enabling the account again sets it back to active.'),
+        c('以前就停用的账号已经一并改为“已离职”，会出现在人事档案的“已离职”标签里。', 'Accounts disabled earlier are now marked left too and appear under the Left tab in HR records.')] },
     { version:'1.40', date:'2026-11-04T19:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('系统统一改名为 WorkOS', 'The system is now called WorkOS everywhere'),
       title:c('统一叫 WorkOS', 'One name: WorkOS'),
