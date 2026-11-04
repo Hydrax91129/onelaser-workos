@@ -49,6 +49,7 @@ td.mb-color-cell[style]>button{background:var(--cell-bg)}
 
 .mb-saved-completion{border-bottom:1px solid var(--mb-line);padding:18px 0;margin-bottom:16px}
 .mb-saved-completion h3{font-size:16px;margin:0 0 10px}.mb-saved-completion h4{font-size:13px;margin:14px 0 6px}
+.mb-human-score{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end;margin:12px 0}.mb-human-score h4,.mb-human-score .mb-help{flex-basis:100%;margin:0}.mb-human-score label{display:flex;flex-direction:column;gap:4px;font-size:13px}.mb-human-score input[type=number]{width:90px}.mb-human-score input[type=text]{width:min(260px,100%)}
 .mb-result-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
 
 .mb-table td.mb-color-cell>button{height:auto;min-height:36px;white-space:normal}

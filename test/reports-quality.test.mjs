@@ -97,3 +97,40 @@ test('org chart shows name, title and location for everyone', () => {
   const html = window.WorkOSPeople.chart();
   assert.match(html, /President[\s\S]*Irvine, CA/); assert.match(html, /东莞/); assert.doesNotMatch(html, /<i>x<\/i>/);
 });
+
+test('team leaderboard counts every completion this month, scored or not, and labels where scores come from', async () => {
+  const st = base();
+  const { window } = load(['reports.js'], st);
+  const r = window.WorkOSReports;
+  // Replace the leaderboard API answer: u2 finished 3 tasks this month, only 1 scored (by a person).
+  r.configure({ api:{ get:async p => p === '/reports/leaderboard' ? { items:[
+      { id:'u1', display_name:'KC', total:2, done:2, scored_done:0, human_scored:0, ai_scored:0, avg_score:null, overdue:0 },
+      { id:'u2', display_name:'Amy', total:4, done:3, scored_done:1, human_scored:1, ai_scored:0, avg_score:8, overdue:0 }] } : { items:[] }, request:async () => ({ sentences:['a', 'b', 'c'] }) },
+    state:() => st, lang:() => 'zh', rerender:() => {}, toast:() => {} });
+  r.home(); await new Promise(res => setTimeout(res, 0));
+  const html = r.home();
+  assert.match(html, /本月完成的任务数量/);
+  assert.match(html, /完成即上榜；完成后 24 小时内由验收人或下达人评分，没人评分则由 AI 自动评分/);
+  assert.doesNotMatch(html, /AI 评分通过|只统计 AI 已评分|还没有 AI 评分的完成任务/);
+  assert.doesNotMatch(html, /还没有人完成/, 'completions count without a score');
+  assert.match(html, /你本月已完成 2 项，2 项等待评分/);
+  const champion = html.slice(html.indexOf('完成冠军'), html.indexOf('劳苦功高'));
+  assert.match(champion, /Amy[\s\S]*3<small>项/); assert.match(champion, /KC[\s\S]*2<small>项/);
+  const stars = html.slice(html.indexOf('质量之星'), html.indexOf('完成冠军'));
+  assert.match(stars, /人工评分优先/); assert.match(stars, /Amy[\s\S]*8\.0/);
+});
+
+test('without the leaderboard API the fallback counts done tasks this month and uses final scores', async () => {
+  const now = new Date().toISOString();
+  const st = base({ tasks:[
+    { id:'a', title:'Done unscored', owner_id:'u1', reviewer_id:'u2', status:'planned', board_status:'done', board_done_at:now, due_at:'2099-01-01T00:00:00Z', completion:{ ai_status:'pending' } },
+    { id:'b', title:'Done human', owner_id:'u1', reviewer_id:'u2', status:'planned', board_status:'done', board_done_at:now, due_at:'2099-01-01T00:00:00Z', completion:{ ai_status:'pending', human_score:6, final_score:6, score_source:'human' } },
+  ] });
+  const { window } = load(['reports.js'], st);
+  const r = window.WorkOSReports;
+  r.configure({ api:{ get:async () => { throw new Error('offline'); }, request:async () => ({ sentences:['a', 'b', 'c'] }) }, state:() => st, lang:() => 'en', rerender:() => {}, toast:() => {} });
+  r.home(); await new Promise(res => setTimeout(res, 0));
+  const html = r.home();
+  assert.match(html, /You have completed 2 this month, average score 6 \(1 by a person · 0 by AI\), 1 awaiting a score/);
+  assert.match(html, /Tasks completed this month/);
+});
