@@ -22,6 +22,12 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.35', date:'2026-11-04T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('每个人可以再设一位“第二领导”（虚线汇报）：可以查看 TA 的 OKR、任务和项目，组织架构图上用虚线连接', 'Each person can have a second leader (dotted line) who views their OKRs, tasks and projects; the org chart links them with a dashed line'),
+      title:c('第二领导（虚线汇报）', 'Second leader (dotted line)'),
+      changes:[c('“组织与权限”成员列表新增“第二领导（虚线汇报）”一栏。第一领导不方便时（例如时差），由第二领导日常查看和指导；审批、验收和 OKR 领导评分仍由第一领导负责。', 'Organization & permissions has a new “Second leader (dotted line)” column. When the first leader is unavailable (for example across time zones), the second leader follows and guides day to day; approvals, reviews and OKR leader scores stay with the first leader.'),
+        c('第二领导可以只读查看对方的 OKR（含进展和自评/领导评分）、任务（含进展、提交、验收记录和附件）、所在的项目，并在“任务分析”的“虚线汇报给我”里看到 TA；看不到薪资、证件等 HR 敏感信息和 IT 成本，也不能修改或评分。', 'The second leader can view, read-only, the person’s OKRs (progress and self/leader scores), tasks (updates, submissions, reviews and files) and projects, and sees them under “Dotted-line reports to me” in Task analysis. They never see salary, ID or other sensitive HR data or IT costs, and cannot change or score anything.'),
+        c('组织架构图用虚线曲线把第二领导和员工连起来，图上方有“实线 = 第一领导，虚线 = 第二领导”的说明；员工卡片上也写着第二领导是谁，下属收起时第二领导卡片上会列出被收起的虚线下属。', 'The org chart joins the second leader and the person with a dashed curve and shows “Solid = first leader, Dashed = second leader”. The person’s card names the second leader, and when a branch is collapsed the second leader’s card lists the hidden dotted-line reports.')] },
     { version:'1.34', date:'2026-11-04T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('夹带英文缩写或产品名的中文 OKR 也会自动翻译', 'Chinese OKR text with English abbreviations or product names is now translated'),
       title:c('中英混写的 OKR 也能自动翻译', 'Mixed Chinese–English OKR text is translated'),
