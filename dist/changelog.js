@@ -22,6 +22,12 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.36', date:'2026-11-04T13:06:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('OKR 自动生成的任务截止日改为当月 25 日，KR 修改或删除时任务同步；项目任务的完成标准取自项目', 'OKR tasks are due on the 25th and follow KR edits and deletes; project tasks take their completion standard from the project'),
+      title:c('KR 任务与项目任务跟着来源走', 'KR and project tasks follow their source'),
+      changes:[c('OKR 发布后每条 KR 生成的任务，截止日改为当月 25 日；25 日之后才发布的，截止日为当月最后一天，过了当月就算延期，不会顺延到下个月。', 'The task each KR gets when an OKR is published is now due on the 25th of that month; published after the 25th, it is due on the last day of the month, and after that it is overdue. It never moves into the next month.'),
+        c('KR 改了名称、目标值或说明（或目标改了名称），对应任务的名称、说明和完成标准会跟着更新，不会重复生成；KR 或目标被删除时，对应任务一起删除；如果任务已经有进展、成果或附件，则保留记录并标为“放弃”。', 'When a KR’s name, target or description changes (or its objective is renamed), its task’s name, description and completion standard follow, with no duplicate. Deleting a KR or its objective deletes its task; a task that already has progress, deliverables or files is kept for the record and marked Abandoned.'),
+        c('项目管理里分配的任务，完成标准改为取自项目：项目、阶段、任务名称，以及任务说明（没有时用项目说明），任务改名或换阶段时同步更新。', 'Tasks assigned in a project now take their completion standard from the project: the project, stage and task name plus the task’s description (or the project’s), updated when the task is renamed or moved.')] },
     { version:'1.35', date:'2026-11-04T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('完成即上榜；完成后 24 小时内由验收人或下达人评分，没人评分则由 AI 自动评分', 'Done counts right away; the reviewer or assigner scores within 24 hours, otherwise the AI does'),
       title:c('排行榜按完成计数，评分改为先人工、后 AI', 'Leaderboard counts completions; people score first, AI after 24 hours'),
