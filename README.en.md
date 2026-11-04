@@ -4,7 +4,7 @@
 
 GitHub Pages defaults to a browser demo for a pilot with 1–2 departments and 10–30 people. Its employees, tasks, business metrics and reviews are fictional, with a demo clock fixed at October 27, 2026. The repository also includes an independent company mode using the same-origin backend for authentication, authorization and business persistence.
 
-[Live demo](https://yonge6.github.io/onelaser-workos/) · [GitHub repository](https://github.com/Yonge6/onelaser-workos)
+[GitHub repository](https://github.com/Hydrax91129/onelaser-workos)
 
 ## Languages and themes
 
@@ -93,9 +93,9 @@ Open `http://127.0.0.1:8867`.
 
 Production development should implement the server-side policies in `spec/` and the implementation plan, followed by real authentication, authorization, evidence access, auditing, strict model-output validation and pilot acceptance testing.
 
-## GitHub Pages deployment
+## Demo site (retired)
 
-Pushing website changes to `main` triggers GitHub Actions to deploy `dist/`. The **Deploy GitHub Pages** workflow can also run manually. The published page is publicly accessible and contains only fictional product-flow examples. A real employee system requires a separate backend, authentication and server-side permissions.
+The public GitHub Pages demo was retired on 2026-11-04 ahead of making the repository private. Demo mode still runs locally (see Local run); the production system is craftos.app, built and released from the backend repository.
 
 The HTML uses matching version query parameters for scripts and styles. Update them together when changing localization, code or styling so cached files from different releases are not mixed.
 
