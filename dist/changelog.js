@@ -22,6 +22,12 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.31', date:'2026-11-03T22:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('OKR 新增“AI 帮我写 OKR”；目标分值改为自由填写，合计不是 100 分会标红', 'OKR: draft your OKR with AI; objective points are typed freely and show red until they total 100'),
+      title:c('AI 帮我写 OKR，目标分值自由填写', 'Draft OKRs with AI; free objective points'),
+      changes:[c('“我的 OKR”页顶部新增“AI 帮我写 OKR”：写几句这个月想做的事，AI 会参考公司目标整理出目标、关键结果、目标值、分值和权重。草稿可以勾选、改字，点“添加选中的”之前不会保存任何内容。', 'My OKRs has a new “Draft my OKR with AI” box: describe the month in a few sentences and AI drafts objectives, key results, targets, points and weights, aligned to the company objectives. Tick and edit the draft; nothing is saved until you click Add selected.'),
+        c('改一个目标的分值，其他目标不再被自动按比例调整；目标列表下方显示分值合计，正好 100 分为绿色，否则标红并显示还差或超出多少，合计 100 分后才能最终发布。KR 权重也不再自动调整。', 'Changing one objective’s points no longer rescales the others. A total under the list is green at exactly 100 and red otherwise, showing how far off; final publish needs exactly 100. KR weights are no longer rescaled either.'),
+        c('翻译失败时服务器会记录 AI 服务返回的原因，方便排查。', 'When a translation fails, the server now logs the reason the AI service gave.')] },
     { version:'1.30', date:'2026-11-04T00:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('邀请成员时可以设为“工厂对接人”：对方只能使用产品质量追踪，也不用参加 IT 季度账号确认', 'Invite someone as a factory contact: they only use product quality tracking and skip the IT quarterly account check'),
       title:c('工厂对接人用邀请加入', 'Factory contacts join by invite'),

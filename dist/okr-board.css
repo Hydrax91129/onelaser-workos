@@ -345,3 +345,16 @@ html[data-theme=dark] .okb-w-static{background:#262d3a;color:#c9d1df}html[data-t
 .okb-title-btn{cursor:pointer;border-bottom:1px dashed transparent}.okb-title-btn:hover{border-bottom-color:#9aa4b5}
 .okb-title-btn:hover::after{content:"✎";margin-left:6px;font-size:.85em;color:#6b7280}
 .okb-target-btn{font-size:inherit;color:inherit}
+/* AI 帮我写 OKR */
+.okb-ai{margin:12px 0;padding:14px 16px;border-radius:12px;border:1px solid #c9d7ff;background:linear-gradient(180deg,#f4f7ff,#fff)}
+.okb-ai-head{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin-bottom:8px}.okb-ai-head i{color:#245bdb;font-size:18px}.okb-ai-head span{color:var(--okb-faint,#7a8096);font-size:13px}
+.okb-ai textarea{width:100%;box-sizing:border-box;resize:vertical;padding:10px 12px;border-radius:8px;border:1px solid var(--okb-line,#e6e8ef);font:inherit;background:var(--surface,#fff);color:inherit}
+.okb-ai .okb-form-actions{margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.okb-ai-draft{margin-top:12px;display:grid;gap:10px}.okb-ai-o{padding:10px 12px;border-radius:10px;border:1px solid var(--okb-line,#e6e8ef);background:var(--surface,#fff)}
+.okb-ai-o.off,.okb-ai-kr.off{opacity:.45}.okb-ai-row{display:flex;align-items:center;gap:8px;padding:4px 0}.okb-ai-kr{padding-left:28px}
+.okb-ai-title{flex:1;min-width:120px;padding:6px 8px;border-radius:6px;border:1px solid transparent;background:transparent;font:inherit;color:inherit}.okb-ai-title:hover,.okb-ai-title:focus{border-color:var(--okb-line,#e6e8ef);background:var(--surface,#fff)}
+.okb-ai-target{width:130px;padding:6px 8px;border-radius:6px;border:1px solid var(--okb-line,#e6e8ef);font:inherit;background:transparent;color:inherit}
+.okb-ai-num{display:inline-flex;align-items:center;gap:4px;font-size:13px}.okb-ai-num input{width:58px;padding:5px 6px;border-radius:6px;border:1px solid var(--okb-line,#e6e8ef);font:inherit;text-align:right;background:transparent;color:inherit}
+.okb-ai-krtag{font-size:12px;font-weight:600;color:var(--okb-faint,#7a8096);min-width:30px}.okb-ai-align{font-size:12px;padding:2px 8px;border-radius:999px;background:#eef3ff;color:#245bdb;white-space:nowrap}
+.okb-o-total{margin:8px 0 4px}
+html[data-theme=dark] .okb-ai{border-color:#35508f;background:linear-gradient(180deg,#1f2c4d,transparent)}html[data-theme=dark] .okb-ai-head i{color:#a9c2ff}html[data-theme=dark] .okb-ai-align{background:#1f2c4d;color:#a9c2ff}
