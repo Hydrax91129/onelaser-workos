@@ -383,9 +383,12 @@
     cost:['PRODUCT HUB · COST', '成本核算', 'Cost calculator', '输入 SKU 或名称，按公司计价规则查看送达成本、各档售价、批发价和利润。成本明细由总裁授权查看。', 'Enter a SKU or name to see the delivered cost, price tiers, wholesale prices and margins under the company pricing rules. Cost details are granted by the president.'],
     supply:['PRODUCT HUB · SUPPLY CHAIN', '智能供应链', 'Smart supply chain', '用颜色一眼看出哪些 SKU 需要补货、库存超期或库存过多，并自动给出补货建议。', 'Colors show at a glance which SKUs need reordering, have aged stock or are overstocked, with automatic reorder suggestions.'],
   };
+  /* 产品资料 is the product library (product-library.js) once the server offers it: real data only, no sample rows or test banner. */
+  const libraryOn = () => !!window.WorkOSProductLibrary && ctx?.state?.().capabilities?.productLibrary === true;
   function render(tab) {
     if (!ctx) return '';
     if (tab && tab !== ui.tab) { ui.tab = tab; ui.product = null; }
+    if ((tab || ui.tab) === 'catalog' && libraryOn()) return window.WorkOSProductLibrary.render();
     let [eyebrow, zh, en, dzh, den] = PAGES[ui.tab] || PAGES.catalog;
     loadServer();
     if (ui.tab === 'cost' && !canDetail()) { dzh = '输入 SKU 或名称，查询产品的零售价。'; den = 'Enter a SKU or name to look up the retail price.'; }
@@ -889,5 +892,5 @@
     if (el.closest('#pd-replen')) { const v = Math.max(0, Number(el.value) || 0); ui[el.name] = v; rerender(); }
   });
 
-  window.WorkOSProducts = { configure(next) { ctx = next; }, render, _data:{ products, assumptions, cost, supply, source, OPEX, ladder, ov, fxState, plan, get rules() { return rules; } }, _ui:ui };
+  window.WorkOSProducts = { configure(next) { ctx = next; window.WorkOSProductLibrary?.configure(next); }, render, _data:{ products, assumptions, cost, supply, source, OPEX, ladder, ov, fxState, plan, get rules() { return rules; } }, _ui:ui };
 })();

@@ -22,6 +22,14 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.36', date:'2026-11-04T18:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('产品资料按新规则重建：五个产品族、八组字段、可见级别、定价工作表、Excel 批量更新（先预览再确认）', 'Product library rebuilt: five families, eight field groups, visibility levels, pricing worksheet, Excel bulk update with preview and confirm'),
+      title:c('产品资料库', 'Product library'),
+      changes:[c('“产品与库存 → 产品资料”按 KC 的产品资料库规则重做：主机、配件/备件、耗材、软件/服务、内部物料五个产品族，各自的必填/选填/不适用；必填未完成的产品在左侧红点提示。', 'Products & stock → Catalog follows KC’s product library rules: five families, each with its own required / optional / not applicable fields; incomplete products are marked in the list.'),
+        c('字段按“全员 / 产品与供应链 / 仅成本权限 / 仅管理员 / 敏感”分级，由服务器按权限过滤，导出和修改记录也一样；供应商、到岸价、尾程运费、文件和利润只有成本权限的同事能看到。', 'Fields are graded Everyone / Product & supply chain / Cost only / Admins / Sensitive and filtered on the server, including exports and history; suppliers, landed cost, freight, files and margins need cost access.'),
+        c('定价工作表：送达成本、零售档位（x99 标价）、MSRP/MAP/促销底价的贡献利润与底线提醒、批发档位（可手动调整、选择运费承担方）、NPCR 价格阶梯（含 Amazon/eBay）。费率和档位在“价格参数”里由主管理员设置。', 'Pricing worksheet: delivered cost, retail tiers (x99 prices), margins and floor warnings for MSRP / MAP / promotion floor, wholesale tiers with overrides and freight choice, NPCR ladder incl. Amazon/eBay. Rates and tiers are set by a main admin on Pricing settings.'),
+        c('主管理员可下载含全部表头和当前数据的标准模板（Excel / CSV），改好后上传：系统先给出更新前后对比和分析（新增、更新、错误、必填完整度、状态和价格变化、利润底线），点“确认更新”才写入；每次导入都有记录，可以撤销。', 'Main admins download the standard template (Excel / CSV) with every column and the current data, upload it and review a before/after comparison and analysis; nothing is written until they confirm, and each import can be undone.'),
+        c('单个产品编辑改为自动保存，规则与批量导入相同，每次修改都有记录；不再显示测试原型提示和示例 SKU。', 'Single-product edits save automatically with the same rules as the import, and every change is recorded; the prototype banner and sample SKUs are gone.')] },
     { version:'1.35', date:'2026-11-04T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('完成即上榜；完成后 24 小时内由验收人或下达人评分，没人评分则由 AI 自动评分', 'Done counts right away; the reviewer or assigner scores within 24 hours, otherwise the AI does'),
       title:c('排行榜按完成计数，评分改为先人工、后 AI', 'Leaderboard counts completions; people score first, AI after 24 hours'),
