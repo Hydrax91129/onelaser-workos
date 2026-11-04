@@ -2,20 +2,17 @@
  * HR records (人事档案), split into three region tabs: United States, China, other countries.
  *
  * Who sees what is decided by the server (/hr/*); this page only follows the flags it returns:
- *  - the company owner (and the legacy WORKOS_HR_USER_IDS list) sees and edits everyone and assigns each person's region;
- *  - hr_<region>_manage / hr_<region>_view grants (given in Organization & permissions) open one region, editable or read-only;
- *  - everyone sees their own record; managers see the basic employment facts of their reports.
- * SSN, ID numbers, bank details, tax IDs and salary arrive masked. "Show" asks the server for one value (anyone but the
- * person must give a reason; the server audits it) and shows it only in the open dialog: it is never stored or put in the
- * list. The pay & tax block (W-4, DE 4, social insurance…) is fetched only when someone opens it, and that read is audited too.
+ *  - the US tab is for the company owner only; the owner also assigns each person's region and exports US payroll for the CPA;
+ *  - hr_cn_* / hr_intl_* grants (given by the owner in Organization & permissions) open China or other countries, read-only or editable;
+ *  - people outside the US see their own record; managers see the basic employment facts of their reports.
+ * Whoever may open a record sees every value in full (SSN, ID, bank, salary); the server keeps them encrypted at rest.
  * Attachments use the shared upload box (upload-zone.js: paste, drag, click or button) and download through the API.
  */
 (() => {
   'use strict';
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   const icon = n => `<i class="ph ph-${n}" aria-hidden="true"></i>`;
-  let ctx = null, data = null, reminders = null, loading = false, error = '', detail = null, busy = false, payroll = null;
-  const revealed = new Map();
+  let ctx = null, data = null, reminders = null, loading = false, error = '', detail = null, busy = false;
   const ui = { q:'', view:'active', region:null };
   const lang = () => ctx?.lang() === 'en' ? 'en' : 'zh';
   const tr = (zh, en) => lang() === 'en' ? en : zh;
@@ -23,18 +20,17 @@
   const put = (path, body) => ctx.api.request(path, { method:'PUT', body });
   const STATUS = { active:['在职', 'Active', 'green'], leaving:['离职中', 'Leaving', 'amber'], left:['已离职', 'Left', 'done'] };
   const REGION = { us:['美国', 'United States'], cn:['中国', 'China'], intl:['海外其他地区', 'Other countries'], '':['未分配', 'Not assigned'] };
-  const EMPLOYMENT = { full_time:['全职', 'Full-time'], part_time:['兼职', 'Part-time'], intern:['实习', 'Intern'], contractor:['外包 / 顾问', 'Contractor'], other:['其他', 'Other'] };
+  const EMPLOYMENT = { full_time:['全职', 'Full-time'], part_time:['兼职', 'Part-time'], temporary:['临时', 'Temporary'], intern:['实习', 'Intern'], contractor:['外包 / 顾问', 'Contractor'], other:['其他', 'Other'] };
   const EVENT = { joined:['入职', 'Joined'], probation_passed:['转正', 'Passed probation'], contract_renewed:['续签合同', 'Contract renewed'], title_change:['岗位调整', 'Role change'], transfer:['调岗 / 调部门', 'Transfer'],
     promotion:['晋升', 'Promotion'], warning:['警告 / 处分', 'Warning'], leaving:['提出离职', 'Resigned / notice'], left:['离职', 'Left'], other:['其他', 'Other'] };
-  const DOC = { resume:['简历', 'Resume'], id:['身份证 / 护照', 'ID / passport'], w4:['签字的 W-4', 'Signed W-4'], de4:['签字的 DE 4', 'Signed DE 4'], i9:['I-9 及证件', 'I-9 and documents'], tax_form:['税务表格', 'Tax form'],
+  const DOC = { resume:['简历', 'Resume'], id:['身份证 / 护照', 'ID / passport'], offer_letter:['Offer letter', 'Offer letter'], handbook_ack:['员工手册确认', 'Handbook acknowledgment'], w4:['签字的 W-4', 'Signed W-4'], de4:['签字的 DE 4', 'Signed DE 4'], i9:['I-9 及证件', 'I-9 and documents'], tax_form:['税务表格', 'Tax form'], direct_deposit:['直存授权 / 作废支票', 'Direct deposit form / voided check'],
     contract:['劳动合同', 'Employment contract'], certificate:['证书 / 资质', 'Certificate'], education:['学历证明', 'Education'], other:['其他', 'Other'] };
-  const DOC_BY_REGION = { us:['resume', 'id', 'w4', 'de4', 'i9', 'tax_form', 'contract', 'certificate', 'education', 'other'], cn:['resume', 'id', 'contract', 'certificate', 'education', 'other'],
+  const DOC_BY_REGION = { us:['offer_letter', 'handbook_ack', 'w4', 'de4', 'tax_form', 'i9', 'direct_deposit', 'id', 'resume', 'contract', 'certificate', 'education', 'other'], cn:['resume', 'id', 'contract', 'certificate', 'education', 'other'],
     intl:['resume', 'id', 'tax_form', 'contract', 'certificate', 'education', 'other'], '':Object.keys(DOC) };
   const DOC_MIME = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
   const SECRET = { ssn:['SSN（社会安全号）', 'SSN'], idNumber:['身份证 / 护照号', 'ID / passport number'], localTaxId:['当地税号', 'Local tax ID'], bankRouting:['银行 routing number', 'Bank routing number'],
     bankAccount:['工资卡 / 直存账号', 'Pay account number'], emergencyPhone:['紧急联系人电话', 'Emergency phone'] };
-  const SECRET_BY_REGION = { us:['ssn', 'bankRouting', 'bankAccount', 'emergencyPhone'], cn:['idNumber', 'bankAccount', 'emergencyPhone'], intl:['localTaxId', 'idNumber', 'bankAccount', 'emergencyPhone'], '':Object.keys(SECRET) };
-  const BANK = new Set(['bankAccount', 'bankRouting']);
+  const SECRET_BY_REGION = { us:['ssn', 'emergencyPhone'], cn:['idNumber', 'bankAccount', 'emergencyPhone'], intl:['localTaxId', 'idNumber', 'bankAccount', 'emergencyPhone'], '':Object.keys(SECRET) };
   const REMIND = { probation_end:['试用期结束', 'Probation ends'], contract_end:['合同到期', 'Contract ends'], document_expiry:['证件到期', 'Document expires'], work_auth_expiry:['工作授权到期', 'Work authorization expires'] };
   const w = pair => pair ? tr(pair[0], pair[1]) : '';
   const badge = s => `<span class="rma-badge ${STATUS[s]?.[2] || ''}">${esc(w(STATUS[s]))}</span>`;
@@ -44,10 +40,10 @@
   const daysTo = v => v ? Math.round((new Date(v + 'T00:00:00Z') - new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z')) / 864e5) : null;
   const size = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
   const canManage = () => !!detail && (detail.canManage ?? detail.access === 'hr');
-  const isSelf = () => !!detail && detail.person.id === ctx.state().actor?.id;
+  const limited = () => !detail || detail.access === 'manager' || detail.access === 'basic';
 
   function configure(next) { ctx = next; }
-  function reset() { data = null; reminders = null; detail = null; payroll = null; loading = false; error = ''; revealed.clear(); Object.assign(ui, { q:'', view:'active', region:null }); }
+  function reset() { data = null; reminders = null; detail = null; loading = false; error = ''; Object.assign(ui, { q:'', view:'active', region:null }); }
   async function load() {
     if (loading) return; loading = true;
     try {
@@ -94,14 +90,18 @@
     const rows = filtered();
     const remind = (reminders || []).filter(r => !tabs.length || ui.region === 'all' || (r.region ?? ui.region) === ui.region);
     const intro = data.isHr
-      ? tr('按地区管理员工的雇佣信息、payroll 资料、附件和履历。SSN、身份证号、银行信息和薪资加密保存，默认只显示后 4 位，每次查看都要填写原因并留下记录。', 'Employment facts, payroll setup, attachments and history, by region. SSNs, ID numbers, bank details and salary are encrypted, shown masked, and every view needs a reason and is recorded.')
-      : tr('你自己的档案，以及你下属的雇佣信息。敏感资料只有对应地区的人事和员工本人能看。', 'Your own record and the employment facts of your reports. Sensitive details are visible only to the region’s HR and the person themself.');
+      ? tr('按地区管理员工的雇佣信息、payroll 资料、附件和履历。美国区只有主管理员能看；中国和海外其他地区只有主管理员选定的人能看。SSN、身份证号、银行信息和薪资在数据库里加密保存。', 'Employment facts, payroll setup, attachments and history, by region. The US region is for the company owner only; China and other countries only for the people the owner picks. SSNs, ID numbers, bank details and salary are encrypted in the database.')
+      : tr('你自己的档案，以及你下属的雇佣信息。', 'Your own record and the employment facts of your reports.');
     const count = r => data.items.filter(p => (p.region || '') === r).length;
     return `<div class="rma hr">
       <div class="page-heading"><div><div class="eyebrow">WORK OS · HR</div><h1>${tr('人事档案', 'HR records')}</h1><p>${intro}</p></div></div>
       ${keyNotice()}
       ${tabs.length ? `<div class="hr-regions" role="tablist" aria-label="${tr('地区', 'Region')}">${tabs.map(r => `<button role="tab" aria-selected="${ui.region === r}" class="${ui.region === r ? 'on' : ''}" data-hr="region-tab" data-r="${r}">${esc(w(REGION[r]))} <b>${count(r)}</b>${r && data.regions[r] === 'view' ? `<small>${tr('只读', 'read-only')}</small>` : ''}</button>`).join('')}${tabs.length > 1 ? `<button role="tab" aria-selected="${ui.region === 'all'}" class="${ui.region === 'all' ? 'on' : ''}" data-hr="region-tab" data-r="all">${tr('全部', 'All')} <b>${data.items.length}</b></button>` : ''}</div>` : ''}
       ${ui.region === '' && tabs.includes('') ? `<p class="wms-hint">${tr('这里是还没有设置地区的员工。打开员工档案，在顶部选择“美国 / 中国 / 海外其他地区”。只有主管理员能设置地区。', 'People without a region yet. Open a record and choose United States, China or Other countries at the top. Only the company owner sets regions.')}</p>` : ''}
+      ${ui.region === 'us' && data.canExportUs ? `<div class="hr-export">${'<button class="btn primary" type="button" data-hr="export-us">' + icon('file-csv') + ' ' + tr('导出给 CPA', 'Export for the CPA') + '</button>'}
+        <span>${tr('导出所有在职美国员工的 payroll 资料（CSV，可用 Excel 打开），最后一列列出上次导出后改过的字段。', 'All active US employees’ payroll data (CSV, opens in Excel); the last column lists what changed since the previous export.')}
+        <b>${tr('文件含 SSN 和银行账号，请用加密方式（例如加密压缩包或安全文件传输）发给 CPA，不要用普通邮件附件。', 'The file contains SSNs and bank accounts: send it to the CPA encrypted (e.g. an encrypted archive or secure file transfer), never as a plain email attachment.')}</b>
+        ${data.lastUsExport ? `<small>${tr('上次导出：', 'Last export: ')}${esc(String(data.lastUsExport.at).slice(0, 16).replace('T', ' '))} · ${esc(data.lastUsExport.byName)} · ${tr(`${data.lastUsExport.rows} 人`, `${data.lastUsExport.rows} people`)}</small>` : ''}</span></div>` : ''}
       ${data.isHr ? `<div class="rma-kpis">
         <div class="rma-kpi"><span>${tr('在职人数', 'Active')}</span><b>${by('active').length}</b><em>${tr(`离职中 ${by('leaving').length} 人`, `${by('leaving').length} leaving`)}</em></div>
         <div class="rma-kpi"><span>${tr('试用期中', 'On probation')}</span><b>${onProbation.length}</b><em>${tr(`30 天内转正 ${onProbation.filter(p => daysTo(p.probationEnd) <= 30).length} 人`, `${onProbation.filter(p => daysTo(p.probationEnd) <= 30).length} end within 30 days`)}</em></div>
@@ -131,11 +131,13 @@
     F('contact.address.line1', '地址第 1 行', 'Address line 1', 'text', { full:1 }), F('contact.address.line2', '地址第 2 行', 'Address line 2', 'text', { full:1 }), F('contact.address.city', '城市', 'City'),
     F('contact.address.state', '州 / 省', 'State / province'), F('contact.address.postalCode', '邮编', 'ZIP / postal code'), F('contact.address.country', '国家', 'Country')], note);
   const DETAILS = {
-    us:[G('法定姓名', 'Legal name', [F('legal.firstName', '名（与 SSN 卡一致）', 'First name (as on SSN card)'), F('legal.middleName', '中间名', 'Middle name'), F('legal.lastName', '姓', 'Last name'), F('legal.preferredName', '常用名', 'Preferred name')]),
+    us:[G('法定姓名', 'Legal name', [F('legal.firstName', '名（与 SSN 卡一致）', 'First name (as on SSN card)'), F('legal.middleName', '中间名', 'Middle name'), F('legal.lastName', '姓', 'Last name'), F('legal.preferredName', '常用名', 'Preferred name'),
+        F('legal.dateOfBirth', '出生日期', 'Date of birth', 'date'), F('legal.gender', '性别（选填）', 'Gender (optional)', 'select', { o:O(['female', '女', 'Female'], ['male', '男', 'Male'], ['nonbinary', '非二元', 'Non-binary'], ['decline', '不愿透露', 'Prefer not to say']) })]),
       CONTACT(['W-4 和州税按这里的住址。地址变了要同时更新签字的 W-4。', 'W-4 and state tax use this address. When it changes, collect a new signed W-4.']),
-      G('工作授权（I-9）', 'Work authorization (I-9)', [F('workAuth.i9Status', 'I-9 身份', 'I-9 status', 'select', { o:I9 }), F('workAuth.documentType', '证件类型', 'Document type', 'text', { ph:'List A / B + C' }),
+      G('工作授权（I-9 第一部分）', 'Work authorization (I-9 Section 1)', [F('workAuth.i9Status', '公民或移民身份', 'Citizenship / immigration status', 'select', { o:I9 }), F('workAuth.documentType', '证件类型', 'Document type', 'text', { ph:'List A / B + C' }),
         F('workAuth.expiresOn', '授权有效期至', 'Authorization expires', 'date'), F('workAuth.i9CompletedOn', 'I-9 完成日期', 'I-9 completed', 'date'),
-        F('workAuth.taxState', '工作所在州（州税，两位代码）', 'Work state for state tax (2 letters)', 'text', { max:2, ph:'CA', upper:1 }), F('workAuth.notes', '备注', 'Notes', 'textarea')]), EDU],
+        F('workAuth.taxState', '工作所在州（州税，两位代码）', 'Work state for state tax (2 letters)', 'text', { max:2, ph:'CA', upper:1 }), F('workAuth.notes', '备注', 'Notes', 'textarea')],
+        ['I-9 证件请上传到下方“合同与证件”，类型选“I-9 及证件”。', 'Upload the I-9 documents under Contracts & documents below.']), EDU],
     cn:[G('身份与户籍', 'Identity and hukou', [F('legal.nativeName', '法定姓名（与身份证一致）', 'Legal name (as on ID card)'), F('cn.hukouLocation', '户籍地', 'Hukou location'),
         F('cn.hukouType', '户口性质', 'Hukou type', 'select', { o:O(['urban', '城镇', 'Urban'], ['rural', '农村', 'Rural'], ['resident', '居民户口（统一）', 'Resident (unified)']) }), F('cn.currentAddress', '现住址', 'Current address', 'text', { full:1 })]),
       G('联系方式', 'Contact', [F('contact.phone', '手机', 'Mobile', 'tel'), F('contact.personalEmail', '个人邮箱', 'Personal email', 'email')]),
@@ -147,8 +149,9 @@
         ['合同起止日期在上方“雇佣信息”里填写；当地税号在“敏感资料”里加密保存。', 'Contract dates are in Employment above; the local tax ID is stored encrypted under Sensitive details.']), CONTACT(), EDU],
     '':[G('姓名', 'Name', [F('legal.firstName', '名', 'First name'), F('legal.lastName', '姓', 'Last name'), F('legal.nativeName', '法定姓名', 'Legal name')]), CONTACT(), EDU],
   };
-  const COV = k => [F(`benefits.${k}.status`, '状态', 'Status', 'select', { o:O(['enrolled', '已参加', 'Enrolled'], ['waived', '放弃', 'Waived'], ['not_eligible', '不符合条件', 'Not eligible']) }),
-    F(`benefits.${k}.tier`, '覆盖人员', 'Coverage', 'select', { o:O(['employee', '本人', 'Employee'], ['employee_spouse', '本人 + 配偶', 'Employee + spouse'], ['employee_children', '本人 + 子女', 'Employee + children'], ['family', '全家', 'Family']) })];
+  const COV = k => [F(`benefits.${k}.plan`, '计划', 'Plan'), F(`benefits.${k}.status`, '状态', 'Status', 'select', { o:O(['enrolled', '已参加', 'Enrolled'], ['waived', '放弃', 'Waived'], ['not_eligible', '不符合条件', 'Not eligible']) }),
+    F(`benefits.${k}.tier`, '覆盖人员', 'Coverage', 'select', { o:O(['employee', '本人', 'Employee'], ['employee_spouse', '本人 + 配偶', 'Employee + spouse'], ['employee_children', '本人 + 子女', 'Employee + children'], ['family', '全家', 'Family']) }),
+    F(`benefits.${k}.deduction`, '每期员工扣款', 'Employee deduction / pay period', 'number')];
   const FREQ = F('comp.payFrequency', '发薪周期', 'Pay frequency', 'select', { o:O(['weekly', '每周', 'Weekly'], ['biweekly', '每两周', 'Biweekly'], ['semimonthly', '每月两次', 'Semimonthly'], ['monthly', '每月', 'Monthly']) });
   const PAYTYPE = F('comp.payType', '计薪方式', 'Pay type', 'select', { o:O(['hourly', '小时工', 'Hourly'], ['salary', '年薪 / 固定薪资', 'Salaried'], ['commission_only', '纯提成', 'Commission only'], ['contract', '按合同', 'Contract']) });
   const COMMISSION = G('提成方案', 'Commission plan', [F('commission.plan', '计算方式', 'Method', 'select', { o:O(['none', '无提成', 'None'], ['percent_revenue', '按销售额比例', '% of revenue'], ['percent_margin', '按毛利比例', '% of margin'], ['tiered', '阶梯比例', 'Tiered'], ['per_unit', '按件', 'Per unit'], ['other', '其他', 'Other']) }),
@@ -168,11 +171,21 @@
         F('comp.standardHours', '每周标准工时', 'Standard hours / week', 'number'), F('comp.notes', '备注', 'Notes', 'textarea')],
         ['时薪或年薪金额在下方“敏感资料 → 薪资记录”里添加：小时工选“每小时”，年薪选“每年”。', 'Add the hourly rate or annual salary under Sensitive details → Salary records (per hour or per year).']),
       COMMISSION, BONUS,
-      G('福利', 'Benefits', [...COV('medical').map(f => ({ ...f, zh:'医疗：' + f.zh, en:'Medical: ' + f.en })), F('benefits.medical.plan', '医疗：计划名称', 'Medical: plan'),
+      G('福利', 'Benefits', [...COV('medical').map(f => ({ ...f, zh:'医疗：' + f.zh, en:'Medical: ' + f.en })),
         ...COV('dental').map(f => ({ ...f, zh:'牙科：' + f.zh, en:'Dental: ' + f.en })), ...COV('vision').map(f => ({ ...f, zh:'视力：' + f.zh, en:'Vision: ' + f.en })),
         F('benefits.retirement.enrolled', '参加 401(k)', 'Enrolled in 401(k)', 'bool'), F('benefits.retirement.employeePercent', '401(k) 员工缴纳 %', '401(k) employee %', 'number'),
         F('benefits.retirement.rothPercent', '其中 Roth %', 'of which Roth %', 'number'), F('benefits.retirement.employerMatch', '公司匹配规则', 'Employer match'),
+        F('benefits.hsa.enrolled', '参加 HSA', 'Enrolled in HSA', 'bool'), F('benefits.hsa.perPeriod', 'HSA 每期扣款', 'HSA / pay period', 'number'),
+        F('benefits.fsa.enrolled', '参加 FSA', 'Enrolled in FSA', 'bool'), F('benefits.fsa.kind', 'FSA 类型', 'FSA type', 'select', { o:O(['health', '医疗', 'Health care'], ['limited', '有限用途', 'Limited purpose'], ['dependent_care', '家属照护', 'Dependent care']) }),
+        F('benefits.fsa.perPeriod', 'FSA 每期扣款', 'FSA / pay period', 'number'), F('benefits.life.coverage', '人寿保险额度', 'Life insurance coverage'),
+        ...[0, 1].flatMap(i => [F(`benefits.life.beneficiaries.${i}.name`, `受益人 ${i + 1}：姓名`, `Beneficiary ${i + 1}: name`), F(`benefits.life.beneficiaries.${i}.relation`, `受益人 ${i + 1}：关系`, `Beneficiary ${i + 1}: relation`), F(`benefits.life.beneficiaries.${i}.percent`, `受益人 ${i + 1}：比例 %`, `Beneficiary ${i + 1}: %`, 'number')]),
         F('benefits.pto.daysPerYear', '带薪假（天 / 年）', 'PTO days / year', 'number'), F('benefits.pto.sickDaysPerYear', '病假（天 / 年）', 'Sick days / year', 'number'), F('benefits.pto.policy', 'PTO 规则', 'PTO policy'), F('benefits.other', '其他福利', 'Other benefits', 'textarea')]),
+      G('工资直存', 'Direct deposit', [0, 1, 2].flatMap(i => [F(`directDeposit.${i}.bankName`, `账户 ${i + 1}：银行`, `Account ${i + 1}: bank`), F(`directDeposit.${i}.accountType`, `账户 ${i + 1}：类型`, `Account ${i + 1}: type`, 'select', { o:O(['checking', '支票账户', 'Checking'], ['savings', '储蓄账户', 'Savings']) }),
+        F(`directDeposit.${i}.routing`, `账户 ${i + 1}：routing number`, `Account ${i + 1}: routing number`, 'text', { max:9 }), F(`directDeposit.${i}.account`, `账户 ${i + 1}：账号`, `Account ${i + 1}: account number`, 'text', { max:17 }),
+        F(`directDeposit.${i}.split`, `账户 ${i + 1}：分配方式`, `Account ${i + 1}: split`, 'select', { o:O(['percent', '按比例 %', 'Percent'], ['amount', '固定金额', 'Fixed amount'], ['remainder', '剩余全部', 'Remainder']) }), F(`directDeposit.${i}.value`, `账户 ${i + 1}：比例或金额`, `Account ${i + 1}: % or amount`, 'number')]),
+        ['最多三个账户；最后一个账户通常选“剩余全部”。', 'Up to three accounts; the last one usually takes the remainder.']),
+      G('受抚养人 / 家属（福利用）', 'Dependents (for benefits)', [0, 1, 2, 3].flatMap(i => [F(`dependents.${i}.name`, `家属 ${i + 1}：姓名`, `Dependent ${i + 1}: name`), F(`dependents.${i}.relation`, `家属 ${i + 1}：关系`, `Dependent ${i + 1}: relation`, 'select', { o:O(['spouse', '配偶', 'Spouse'], ['domestic_partner', '同居伴侣', 'Domestic partner'], ['child', '子女', 'Child'], ['other', '其他', 'Other']) }),
+        F(`dependents.${i}.dateOfBirth`, `家属 ${i + 1}：出生日期`, `Dependent ${i + 1}: date of birth`, 'date'), F(`dependents.${i}.ssn`, `家属 ${i + 1}：SSN`, `Dependent ${i + 1}: SSN`, 'text', { max:11, ph:'000-00-0000' })])),
       FAMILY([F('family.dependents', '受抚养人数量', 'Dependents', 'number'), F('family.children', '子女数量', 'Children', 'number')], '婚姻与受抚养人', 'Marital status and dependents'),
       G('联邦 W-4（2020 及以后版本）', 'Federal W-4 (2020 or later)', [F('w4.formYear', '表格年份', 'Form year', 'number'),
         F('w4.filingStatus', 'Step 1(c) 申报身份', 'Step 1(c) filing status', 'select', { o:O(['single_or_mfs', '单身或已婚分别申报', 'Single or married filing separately'], ['mfj_or_qss', '已婚合并申报或符合条件的丧偶配偶', 'Married filing jointly or qualifying surviving spouse'], ['head_of_household', '户主', 'Head of household']) }),
@@ -183,7 +196,10 @@
       G('加州 DE 4', 'California DE 4', [F('de4.filingStatus', '申报身份', 'Filing status', 'select', { o:O(['single_or_married_multi', '单身，或已婚（两份及以上收入）', 'Single or married (with two or more incomes)'], ['married_one_income', '已婚（一份收入）', 'Married (one income)'], ['head_of_household', '户主', 'Head of household']) }),
         F('de4.allowances', '预扣津贴数（Allowances）', 'Withholding allowances', 'number'), F('de4.additionalAllowances', '估算扣除的额外津贴', 'Additional allowances for estimated deductions', 'number'),
         F('de4.extraWithholding', '每期额外预扣', 'Additional withholding per period', 'number'), F('de4.exempt', '申报免预扣（Exempt）', 'Claims exemption', 'bool'), F('de4.signedOn', '签字日期', 'Signed on', 'date')],
-        ['不在加州工作的员工不用填。', 'Leave blank for people who do not work in California.'])],
+        ['不在加州工作的员工不用填。', 'Leave blank for people who do not work in California.']),
+      G('其他州州税表', 'Other state withholding form', [F('stateTax.state', '州（两位代码）', 'State (2 letters)', 'text', { max:2, upper:1 }), F('stateTax.form', '表格名称', 'Form name'), F('stateTax.filingStatus', '申报身份', 'Filing status'),
+        F('stateTax.allowances', '津贴 / 豁免数', 'Allowances / exemptions', 'number'), F('stateTax.extraWithholding', '每期额外预扣', 'Additional withholding per period', 'number'), F('stateTax.exempt', '申报免预扣', 'Claims exemption', 'bool'), F('stateTax.notes', '备注', 'Notes', 'textarea')],
+        ['在加州以外的州工作时填写。', 'For people working in a state other than California.'])],
     cn:[G('计薪', 'Pay', [FREQ, F('comp.notes', '备注', 'Notes', 'textarea')], ['工资金额在下方“敏感资料 → 薪资记录”里添加。', 'Add the salary amount under Sensitive details → Salary records.']), COMMISSION, BONUS,
       G('社保', 'Social insurance', [F('socialInsurance.city', '缴纳城市', 'City'), F('socialInsurance.base', '缴费基数', 'Contribution base', 'number'),
         ...SHARE('pension', '养老', 'Pension'), ...SHARE('medical', '医疗', 'Medical'), ...SHARE('unemployment', '失业', 'Unemployment'), ...SHARE('injury', '工伤', 'Work injury', false), ...SHARE('maternity', '生育', 'Maternity', false)]),
@@ -200,6 +216,12 @@
       FAMILY([F('family.dependents', '受抚养人数量', 'Dependents', 'number')], '婚姻与受抚养人', 'Marital status and dependents')],
   };
   PAYROLL[''] = PAYROLL.us.slice(0, 3);
+  const EEO = [G('EEO 自愿申报（全部选填）', 'Voluntary EEO self-identification (all optional)', [
+    F('ethnicity', '种族 / 族裔', 'Race / ethnicity', 'select', { o:O(['hispanic_latino', '西班牙裔或拉丁裔', 'Hispanic or Latino'], ['white', '白人', 'White'], ['black', '非裔', 'Black or African American'], ['asian', '亚裔', 'Asian'], ['native_american', '美洲原住民或阿拉斯加原住民', 'American Indian or Alaska Native'], ['pacific_islander', '夏威夷原住民或太平洋岛民', 'Native Hawaiian or Pacific Islander'], ['two_or_more', '两种及以上', 'Two or more races'], ['decline', '不愿透露', 'Decline to state']) }),
+    F('gender', '性别', 'Gender', 'select', { o:O(['female', '女', 'Female'], ['male', '男', 'Male'], ['nonbinary', '非二元', 'Non-binary'], ['decline', '不愿透露', 'Decline to state']) }),
+    F('veteran', '退伍军人', 'Veteran status', 'select', { o:O(['protected_veteran', '受保护退伍军人', 'Protected veteran'], ['not_protected', '不是受保护退伍军人', 'Not a protected veteran'], ['decline', '不愿透露', 'Decline to state']) }),
+    F('disability', '残障', 'Disability', 'select', { o:O(['yes', '有', 'Yes'], ['no', '无', 'No'], ['decline', '不愿透露', 'Decline to state']) })],
+    ['员工自愿填写，单独加密保存，只用于合规统计，不能用于任何聘用决定。', 'Voluntary, stored separately and encrypted, for compliance reporting only and never for employment decisions.'])];
 
   const get = (o, path) => path.split('.').reduce((v, k) => v == null ? undefined : v[k], o);
   const setIn = (o, path, v) => { const ks = path.split('.'); let cur = o; ks.slice(0, -1).forEach(k => { cur = cur[k] ??= {}; }); cur[ks[ks.length - 1]] = v; };
@@ -239,7 +261,11 @@
   function collect(form, groups) {
     const out = {};
     for (const f of groups.flatMap(g => g.fields)) { const el = form.querySelector(`[name="${f.path}"]`); if (el) setIn(out, f.path, valueOf(el)); }
-    if (out.commission?.tiers) out.commission.tiers = Object.values(out.commission.tiers).filter(t => t.rate != null && t.from != null);
+    // Numbered rows (tiers, accounts, dependents, beneficiaries) become arrays without the empty rows.
+    const filled = o => Object.values(o).some(v => v !== null && v !== '' && v !== false && !(v && typeof v === 'object' && !filled(v)));
+    const lists = o => { for (const [k, v] of Object.entries(o)) if (v && typeof v === 'object') { const keys = Object.keys(v); if (keys.length && keys.every(x => /^\d+$/.test(x))) o[k] = keys.sort((a, b) => a - b).map(x => v[x]).filter(filled); else lists(v); } };
+    lists(out);
+    if (out.commission?.tiers) out.commission.tiers = out.commission.tiers.filter(t => t.rate != null && t.from != null);
     return out;
   }
 
@@ -247,7 +273,6 @@
   async function openPerson(id) {
     try { detail = await ctx.api.get('/hr/people/' + encodeURIComponent(id)); }
     catch (e) { ctx.toast?.(e.message || tr('读取失败', 'Could not load')); return; }
-    revealed.clear(); payroll = null;
     drawDetail(true);
   }
   async function refresh() { if (!detail) return; detail = await ctx.api.get('/hr/people/' + encodeURIComponent(detail.person.id)); drawDetail(false); data = null; load(); }
@@ -259,7 +284,7 @@
       ${fact(tr('入职日期', 'Hired'), esc(p.hireDate || '—'))}${fact(tr('司龄', 'Tenure'), esc(tenure(detail.tenureDays)))}${fact(tr('用工类型', 'Type'), esc(w(EMPLOYMENT[p.employmentType])))}
       ${fact(tr('试用期至', 'Probation to'), esc(p.probationEnd || '—'))}${fact(tr('合同期', 'Contract'), esc(p.contractStart || p.contractEnd ? `${p.contractStart || '…'} → ${p.contractEnd || '…'}` : '—'))}${fact(tr('职级', 'Level'), esc(p.jobLevel || '—'))}
       ${fact(tr('工作地点', 'Work location'), esc(p.workLocation || '—'))}${p.lastDay ? fact(tr('最后工作日', 'Last day'), esc(p.lastDay)) : ''}
-      ${detail.access !== 'manager' ? fact(tr('紧急联系人', 'Emergency contact'), esc([p.emergencyName, p.emergencyRelation].filter(Boolean).join(' · ') || '—')) + fact(tr('开户银行', 'Bank'), esc(p.bankName || '—')) : ''}
+      ${!limited() ? fact(tr('紧急联系人', 'Emergency contact'), esc([p.emergencyName, p.emergencyRelation].filter(Boolean).join(' · ') || '—')) + fact(tr('开户银行', 'Bank'), esc(p.bankName || '—')) : ''}
     </dl>${detail.access === 'self' ? `<p class="wms-hint">${tr('资料有误请联系人事修改。', 'Ask HR to correct anything wrong.')}</p>` : detail.access === 'view' ? `<p class="wms-hint">${tr('你对这个地区只有只读权限。', 'You have read-only access to this region.')}</p>` : ''}`;
     const d = (name, label, v) => `<label class="field"><span>${label}</span><input type="date" name="${name}" value="${esc(v || '')}"></label>`;
     const t = (name, label, v, max = 80, ph = '') => `<label class="field"><span>${label}</span><input name="${name}" maxlength="${max}" value="${esc(v || '')}" placeholder="${esc(ph)}"></label>`;
@@ -287,20 +312,12 @@
   }
   function payrollSection() {
     if (detail.sensitive !== 'configured') return `<p class="wms-hint">${tr('加密密钥未设置，暂时不能录入或查看。', 'The data key is not set, so this cannot be entered or viewed yet.')}</p>`;
-    if (!payroll) return `<div class="hr-locked"><span>${detail.payroll?.set ? tr('已填写，加密保存。', 'On file, encrypted.') : tr('还没有填写。', 'Nothing on file yet.')}</span>
-      <button class="btn" type="button" data-hr="payroll-load">${icon('lock-key-open')} ${canManage() ? tr('打开并编辑', 'Open and edit') : tr('查看', 'View')}</button>
-      <small>${tr('打开会留下查看记录。', 'Opening it is recorded.')}</small></div><p class="wms-error" data-hr-payroll-error role="alert"></p>`;
-    return groupsView(PAYROLL[regionOf()], payroll.payroll || {}, canManage() ? 'hr-payroll' : null);
+    return groupsView(PAYROLL[regionOf()], detail.payroll?.data || {}, canManage() ? 'hr-payroll' : null);
   }
+  function eeoSection() { return groupsView(EEO, detail.eeo || {}, canManage() ? 'hr-eeo' : null); }
 
-  function secretRow(field, label, info, extra = '') {
-    const value = revealed.get(field), canView = info?.set && detail.sensitive === 'configured';
-    const bankLocked = BANK.has(field) && detail.canRevealBank === false;
-    return `<div class="hr-secret"><span>${label}</span><b class="mono">${Array.isArray(value) ? esc(tr(`${value.length} 条记录，见下表`, `${value.length} records, below`)) : value != null ? esc(value) : info?.set ? esc(bankLocked ? tr('已填写', 'On file') : info.hint) : '—'}</b>${extra}
-      ${canView && value == null && !bankLocked ? `<button class="btn" type="button" data-hr="reveal" data-field="${field}">${icon('eye')} ${tr('显示', 'Show')}</button>` : ''}
-      ${canView && bankLocked ? `<small class="wms-hint">${tr('需要可管理权限才能查看', 'Needs manage access to view')}</small>` : ''}
-      ${value != null ? `<button class="btn" type="button" data-hr="hide" data-field="${field}">${icon('eye-slash')} ${tr('隐藏', 'Hide')}</button>` : ''}
-      ${!isSelf() && canView && value == null && !bankLocked ? `<input class="hr-reason" data-hr-reason="${field}" maxlength="300" placeholder="${tr('查看原因（必填）', 'Reason (required)')}">` : ''}</div>`;
+  function secretRow(label, info) {
+    return `<div class="hr-secret"><span>${label}</span><b class="mono">${info?.set ? (info.value != null ? esc(info.value) : tr('无法读取（密钥未设置或已更换）', 'Unreadable (data key missing or changed)')) : '—'}</b></div>`;
   }
   function salaryTable(list) {
     if (!list.length) return `<p class="wms-hint">${tr('还没有薪资记录。', 'No salary records yet.')}</p>`;
@@ -310,18 +327,17 @@
       ${list.map(s => `<tr><td>${esc(s.effectiveDate)}</td><td class="num">${esc(s.currency)} ${esc(n(s.base))} / ${esc(per[s.period] || s.period)}</td><td class="num">${esc(n(s.allowance))}</td><td>${esc(s.reason || '—')}</td><td>${esc(s.byName)}</td></tr>`).join('')}</tbody></table>`;
   }
   function sensitiveSection() {
-    const s = detail.secrets, manage = canManage(), ready = detail.sensitive === 'configured', sal = revealed.get('salary');
+    const s = detail.secrets, manage = canManage(), ready = detail.sensitive === 'configured', sal = detail.salary?.list || [];
     const fields = SECRET_BY_REGION[regionOf()];
-    const rows = fields.map(f => secretRow(f, esc(w(SECRET[f])), s[f])).join('')
-      + secretRow('salary', tr('薪资记录', 'Salary records'), detail.salary.set ? { set:true, hint:tr(`已设置 · ${detail.salary.records} 条记录 · 最近生效 ${detail.salary.latestEffective}`, `${detail.salary.records} records · latest ${detail.salary.latestEffective}`) } : { set:false });
     const cur = regionOf() === 'us' ? 'USD' : regionOf() === 'cn' ? 'CNY' : (detail.details?.intl?.currency || 'CNY');
     const currencies = [...new Set([cur, 'CNY', 'USD', 'EUR', 'GBP', 'HKD', 'CAD', 'AUD', 'JPY'])];
     const periods = regionOf() === 'us' ? ['hour', 'year', 'month'] : ['month', 'year', 'hour'];
-    return `${rows}${Array.isArray(sal) ? salaryTable(sal) : ''}
-      ${manage && ready ? `<details class="hr-edit"><summary>${icon('pencil-simple')} ${tr('录入或修改号码、薪资', 'Enter or change numbers and salary')}</summary>
+    return `${fields.map(f => secretRow(esc(w(SECRET[f])), s[f])).join('')}
+      <h4 class="hr-sub">${tr('薪资记录', 'Salary records')}</h4>${salaryTable(sal)}
+      ${manage && ready ? `<details class="hr-edit"><summary>${icon('pencil-simple')} ${tr('修改号码、添加薪资记录', 'Change numbers, add a salary record')}</summary>
         <form id="hr-secrets" class="form-grid">
-          ${fields.map(f => `<label class="field"><span>${esc(w(SECRET[f]))}</span><input name="${f}" maxlength="40" autocomplete="off" placeholder="${tr('留空 = 不修改', 'Blank = keep')}"></label>`).join('')}
-          <div class="full rma-actions"><button class="btn primary" type="submit">${tr('加密保存', 'Encrypt and save')}</button></div><p class="wms-error" role="alert"></p></form>
+          ${fields.map(f => `<label class="field"><span>${esc(w(SECRET[f]))}</span><input name="${f}" maxlength="40" autocomplete="off" value="${esc(s[f]?.value || '')}" ${f === 'ssn' ? 'placeholder="000-00-0000"' : ''}></label>`).join('')}
+          <div class="full rma-actions"><button class="btn primary" type="submit">${tr('保存', 'Save')}</button><span class="wms-hint">${tr('清空一项即删除。', 'Clear a field to delete it.')}</span></div><p class="wms-error" role="alert"></p></form>
         <form id="hr-salary" class="form-grid">
           <label class="field"><span>${tr('生效日期', 'Effective date')}</span><input type="date" name="effectiveDate" required></label>
           <label class="field"><span>${tr('金额（时薪 / 月薪 / 年薪）', 'Amount (hourly / monthly / yearly)')}</span><input type="number" name="base" min="0" step="0.01" required></label>
@@ -329,9 +345,7 @@
           <label class="field"><span>${tr('币种 / 周期', 'Currency / per')}</span><span class="hr-pair"><select name="currency">${currencies.map(c => `<option>${c}</option>`).join('')}</select><select name="period">${periods.map(p => `<option value="${p}">${esc({ month:tr('每月', 'month'), year:tr('每年', 'year'), hour:tr('每小时', 'hour') }[p])}</option>`).join('')}</select></span></label>
           <label class="field full"><span>${tr('调整原因', 'Reason')}</span><input name="reason" maxlength="500" placeholder="${tr('例如：入职定薪 / 年度调薪 / 转正', 'e.g. starting pay, annual review')}"></label>
           <div class="full rma-actions"><button class="btn primary" type="submit">${tr('添加薪资记录', 'Add salary record')}</button></div><p class="wms-error" role="alert"></p></form>
-      </details>` : ''}
-      <p class="wms-error" data-hr-reveal-error role="alert"></p>
-      <p class="wms-hint">${isSelf() ? tr('这些资料只有你和对应地区的人事能看到，查看会留下记录。', 'Only you and the region’s HR can see these; views are recorded.') : tr('每次“显示”都会记录查看人、原因和时间。关闭窗口后自动隐藏。', 'Every view records who, why and when. Values hide again when you close this window.')}</p>`;
+      </details>` : ''}`;
   }
 
   function documentsSection() {
@@ -367,12 +381,13 @@
   }
 
   function drawDetail(first) {
-    const d = detail, p = d.person, seeSensitive = d.access !== 'manager';
+    const d = detail, p = d.person, seeSensitive = !limited();
     const body = `<div class="rma-detail hr-detail" data-hr-person="${esc(p.id)}">
       <div class="rma-head">${badge(d.profile.status)}<b>${esc(p.name)}</b><span>${esc(p.title || '')}</span><span>${tr('主管：', 'Manager: ')}${esc(p.managerName || '—')}</span>${p.email ? `<span class="mono">${esc(p.email)}</span>` : ''}${p.accountActive ? '' : `<span class="rma-badge red">${tr('账号已停用', 'Account disabled')}</span>`}${regionControl()}</div>
       <section class="rma-sec"><h3>${icon('identification-card')} ${tr('雇佣信息', 'Employment')}</h3>${employmentSection()}</section>
       ${seeSensitive && d.details !== undefined ? `<section class="rma-sec"><h3>${icon('address-book')} ${tr('基本资料', 'Personal details')}${regionOf() ? ` · ${esc(w(REGION[regionOf()]))}` : ''}</h3>${detailsSection()}</section>` : ''}
       ${seeSensitive && d.payroll !== undefined ? `<section class="rma-sec"><h3>${icon('currency-circle-dollar')} ${tr('薪酬与税务', 'Pay & tax')}</h3>${payrollSection()}</section>` : ''}
+      ${seeSensitive && d.eeo !== undefined ? `<section class="rma-sec"><h3>${icon('hand-heart')} ${tr('EEO 自愿申报', 'Voluntary EEO')}</h3>${eeoSection()}</section>` : ''}
       ${seeSensitive ? `<section class="rma-sec"><h3>${icon('lock-key')} ${tr('敏感资料', 'Sensitive details')}</h3>${sensitiveSection()}</section>
       <section class="rma-sec"><h3>${icon('files')} ${tr('合同与证件', 'Contracts & documents')}</h3>${documentsSection()}</section>` : ''}
       <section class="rma-sec"><h3>${icon('clock-counter-clockwise')} ${tr('履历', 'History')}</h3>${historySection()}</section>
@@ -390,17 +405,6 @@
     await refresh();
     return '';
   }
-  async function reveal(field) {
-    const err = document.querySelector('[data-hr-reveal-error]'); if (err) err.textContent = '';
-    const reason = document.querySelector(`[data-hr-reason="${field}"]`)?.value.trim() || '';
-    if (!isSelf() && reason.length < 4) { if (err) err.textContent = tr('请先填写查看原因（至少 4 个字）。', 'Give a reason first (at least 4 characters).'); document.querySelector(`[data-hr-reason="${field}"]`)?.focus(); return; }
-    try { const r = await ctx.api.post(`/hr/people/${encodeURIComponent(detail.person.id)}/reveal`, { field, reason }); revealed.set(field, r.value ?? ''); drawDetail(false); }
-    catch (x) { if (err) err.textContent = x.message || tr('查看失败', 'Could not show it'); }
-  }
-  async function loadPayroll() {
-    try { payroll = await ctx.api.get(`/hr/people/${encodeURIComponent(detail.person.id)}/payroll`); drawDetail(false); }
-    catch (x) { const err = document.querySelector('[data-hr-payroll-error]'); if (err) err.textContent = x.message || tr('读取失败', 'Could not load'); }
-  }
   async function download(docId) {
     const doc = detail.documents.find(d => d.id === docId); if (!doc) return;
     try {
@@ -410,18 +414,26 @@
       a.href = url; a.download = doc.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
     } catch (x) { ctx.toast?.(x.message || tr('下载失败', 'Download failed')); }
   }
+  /** US payroll file for the CPA (company owner only). The file holds SSNs, so the page says how to send it. */
+  async function exportUs() {
+    if (busy) return; busy = true;
+    try {
+      const r = await ctx.api.post('/hr/exports/us', {});
+      const url = URL.createObjectURL(new Blob([r.csv], { type:'text/csv;charset=utf-8' })), a = document.createElement('a');
+      a.href = url; a.download = r.filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
+      ctx.toast?.(tr(`已导出 ${r.rows} 位员工`, `Exported ${r.rows} employees`)); busy = false; data = null; load();
+    } catch (x) { ctx.toast?.(x.message || tr('导出失败', 'Export failed')); }
+    finally { busy = false; }
+  }
   const b64 = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] || ''); r.onerror = () => rej(new Error(tr('文件读取失败', 'Could not read the file'))); r.readAsDataURL(f); });
 
   document.addEventListener('click', async e => {
-    if (e.target.closest?.('[data-live-action="close"]') && document.querySelector('[data-hr-person]')) { revealed.clear(); payroll = null; return; }
     const el = e.target.closest?.('[data-hr]'); if (!el || !ctx) return;
     const a = el.dataset.hr;
     if (a === 'view') { ui.view = el.dataset.v; ctx.rerender(); return; }
     if (a === 'region-tab') { ui.region = el.dataset.r; ctx.rerender(); return; }
     if (a === 'open') { openPerson(el.dataset.id); return; }
-    if (a === 'reveal') { reveal(el.dataset.field); return; }
-    if (a === 'hide') { revealed.delete(el.dataset.field); drawDetail(false); return; }
-    if (a === 'payroll-load') { loadPayroll(); return; }
+    if (a === 'export-us') { exportUs(); return; }
     if (a === 'doc') { download(el.dataset.id); return; }
     if (a === 'doc-delete') {
       if (busy || !window.confirm(tr('删除这份文件？删除后无法恢复。', 'Delete this document? This cannot be undone.'))) return;
@@ -436,7 +448,7 @@
     const to = valueOf(e.target);
     if (!window.confirm(tr(`把 ${detail.person.name} 的地区改为“${w(REGION[to])}”？之后只有这个地区有权限的人能看到这份档案。`, `Move ${detail.person.name} to “${w(REGION[to])}”? Only people with access to that region will see this record.`))) { drawDetail(false); return; }
     busy = true;
-    try { await put(`/hr/people/${encodeURIComponent(detail.person.id)}/region`, { region:to }); ctx.toast?.(tr('已更改地区', 'Region changed')); payroll = null; busy = false; await refresh(); }
+    try { await put(`/hr/people/${encodeURIComponent(detail.person.id)}/region`, { region:to }); ctx.toast?.(tr('已更改地区', 'Region changed')); busy = false; await refresh(); }
     catch (x) { ctx.toast?.(x.message || tr('保存失败', 'Could not save')); drawDetail(false); }
     finally { busy = false; }
   });
@@ -447,10 +459,10 @@
     const i = document.querySelector('[data-hr-search]'); if (i) { i.focus(); try { i.setSelectionRange(pos, pos); } catch { /* ignore */ } }
   });
   document.addEventListener('submit', async e => {
-    const f = e.target; if (!ctx || !['hr-profile', 'hr-details', 'hr-payroll', 'hr-secrets', 'hr-salary', 'hr-doc', 'hr-event'].includes(f.id)) return;
+    const f = e.target; if (!ctx || !['hr-profile', 'hr-details', 'hr-payroll', 'hr-eeo', 'hr-secrets', 'hr-salary', 'hr-doc', 'hr-event'].includes(f.id)) return;
     e.preventDefault(); if (f.id === 'hr-doc' || busy) return; busy = true;
     const err = f.querySelector('.wms-error'); if (err) err.textContent = '';
-    const id = encodeURIComponent(detail.person.id), v = f.id === 'hr-details' || f.id === 'hr-payroll' ? {} : Object.fromEntries(new FormData(f));
+    const id = encodeURIComponent(detail.person.id), v = ['hr-details', 'hr-payroll', 'hr-eeo'].includes(f.id) ? {} : Object.fromEntries(new FormData(f));
     try {
       if (f.id === 'hr-profile') {
         const body = { expectedVersion:detail.profile.version || 0 };
@@ -460,15 +472,16 @@
         await put(`/hr/people/${id}/profile`, body); ctx.toast?.(tr('已保存', 'Saved'));
       }
       if (f.id === 'hr-details') { await put(`/hr/people/${id}/details`, { expectedVersion:detail.profile.version || 0, details:collect(f, DETAILS[regionOf()]) }); ctx.toast?.(tr('已保存', 'Saved')); }
-      if (f.id === 'hr-payroll') { payroll = await put(`/hr/people/${id}/payroll`, { expectedVersion:payroll?.version ?? null, payroll:collect(f, PAYROLL[regionOf()]) }); ctx.toast?.(tr('已加密保存', 'Encrypted and saved')); }
+      if (f.id === 'hr-payroll') { await put(`/hr/people/${id}/payroll`, { expectedVersion:detail.payroll?.version ?? null, payroll:collect(f, PAYROLL[regionOf()]) }); ctx.toast?.(tr('已保存', 'Saved')); }
+      if (f.id === 'hr-eeo') { await put(`/hr/people/${id}/eeo`, collect(f, EEO)); ctx.toast?.(tr('已保存', 'Saved')); }
       if (f.id === 'hr-secrets') {
-        const body = {}; for (const k of Object.keys(SECRET)) if (String(v[k] || '').trim()) body[k] = String(v[k]).trim();
-        if (!Object.keys(body).length) { if (err) err.textContent = tr('请至少填写一项。', 'Fill in at least one field.'); return; }
-        await put(`/hr/people/${id}/secrets`, body); ctx.toast?.(tr('已加密保存', 'Encrypted and saved'));
+        const body = {}; for (const k of SECRET_BY_REGION[regionOf()]) if (k in v && String(v[k] ?? '').trim() !== String(detail.secrets[k]?.value ?? '')) body[k] = String(v[k] ?? '').trim();
+        if (!Object.keys(body).length) { ctx.toast?.(tr('没有修改', 'No changes')); return; }
+        await put(`/hr/people/${id}/secrets`, body); ctx.toast?.(tr('已保存', 'Saved'));
       }
       if (f.id === 'hr-salary') {
         await ctx.api.post(`/hr/people/${id}/salary`, { effectiveDate:v.effectiveDate, base:Number(v.base), allowance:Number(v.allowance || 0), currency:v.currency, period:v.period, reason:String(v.reason || '').trim() });
-        revealed.delete('salary'); ctx.toast?.(tr('已添加薪资记录', 'Salary record added'));
+        ctx.toast?.(tr('已添加薪资记录', 'Salary record added'));
       }
       if (f.id === 'hr-event') { await ctx.api.post(`/hr/people/${id}/events`, { kind:v.kind, happenedOn:v.happenedOn, note:String(v.note || '').trim() }); ctx.toast?.(tr('已添加', 'Added')); }
       busy = false; await refresh();

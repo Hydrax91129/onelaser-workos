@@ -38,3 +38,7 @@ html[data-theme=dark] .hr-regions button b,html[data-theme=dark] .hr-region{back
 html[data-theme=dark] .hr-regions button.on{color:#8fb0ff;border-bottom-color:#8fb0ff}html[data-theme=dark] .hr-regions button.on b,html[data-theme=dark] .hr-region.r-us{background:#1c2a4a;color:#8fb0ff}
 html[data-theme=dark] .hr-region.r-cn{background:#3a1d24;color:#ff9aa8}html[data-theme=dark] .hr-region.r-intl{background:#163126;color:#7fdcae}html[data-theme=dark] .hr-region.none{background:#3a2c14;color:#f2c06b}
 html[data-theme=dark] .hr-group{border-color:#2c3341}html[data-theme=dark] .hr-region-pick select{background:#11151d;border-color:#323a49;color:inherit}html[data-theme=dark] .hr-locked small{color:#9aa4b5}
+.hr-export{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;padding:12px 14px;margin:0 0 14px;border:1px solid #f0c36d;border-radius:10px;background:#fffaf0;font-size:13px}
+.hr-export span{flex:1;min-width:240px;display:flex;flex-direction:column;gap:4px}.hr-export b{color:#a15c00}.hr-export small{color:#6b7280}
+.hr-sub{font-size:13px;margin:14px 0 6px}
+html[data-theme=dark] .hr-export{background:#2a2213;border-color:#6b5222}html[data-theme=dark] .hr-export b{color:#f2c06b}html[data-theme=dark] .hr-export small{color:#9aa4b5}

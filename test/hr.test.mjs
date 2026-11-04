@@ -16,8 +16,8 @@ const DETAIL = {
   person:{ id:'m2', name:'陈一', title:'市场专员', managerName:'林楠', email:'chen@example.com', accountActive:true },
   profile:{ status:'active', employmentType:'full_time', hireDate:'2025-03-01', contractEnd:'2026-11-20', jobLevel:'P3', notes:'内部备注', version:3 },
   access:'hr', sensitive:'configured', tenureDays:611, events:[{ id:'e1', kind:'joined', happenedOn:'2025-03-01', note:'', byName:'周明' }],
-  secrets:{ idNumber:{ set:true, hint:'****1234' }, bankAccount:{ set:false }, emergencyPhone:{ set:false } },
-  salary:{ set:true, records:1, latestEffective:'2026-01-01' }, documents:[],
+  secrets:{ idNumber:{ set:true, hint:'****1234', value:'TEST-0000-0000-1234' }, bankAccount:{ set:false }, emergencyPhone:{ set:false } },
+  salary:{ set:true, records:1, latestEffective:'2026-01-01', list:[{ id:'s1', effectiveDate:'2026-01-01', base:12000, allowance:800, currency:'CNY', period:'month', reason:'年度调薪', byName:'周明' }] }, documents:[],
 };
 
 function setup(people = PEOPLE, detail = DETAIL) {
@@ -66,26 +66,16 @@ test('HR records list: a key that is not set is explained to HR', async () => {
   assert.match(document.getElementById('app').querySelector('.wms-alert').textContent, /HR_DATA_KEY/);
 });
 
-test('HR detail: masked values, reveal needs a reason and stays only in the open dialog', async () => {
+test('HR detail: whoever may open the record sees values in full, but never in the list', async () => {
   const { window, document, calls, ctx } = setup();
   ctx.rerender(); await tick();
   click(window, document.querySelector('[data-hr="open"][data-id="m2"]')); await tick();
-  const modal = () => document.getElementById('overlay-root');
-  assert.match(modal().textContent, /\*\*\*\*1234/);
-  assert.ok(!modal().textContent.includes('TEST-0000'), 'full value is not in the page before View');
-  click(window, modal().querySelector('[data-hr="reveal"][data-field="idNumber"]')); await tick();
-  assert.ok(!calls.some(c => c[1]?.endsWith('/reveal')), 'no request without a reason');
-  assert.match(modal().querySelector('[data-hr-reveal-error]').textContent, /原因/);
-  modal().querySelector('[data-hr-reason="idNumber"]').value = '办理社保';
-  click(window, modal().querySelector('[data-hr="reveal"][data-field="idNumber"]')); await tick();
-  assert.deepEqual(plain(calls.find(c => c[1]?.endsWith('/reveal')).slice(1)), ['/hr/people/m2/reveal', { field:'idNumber', reason:'办理社保' }]);
-  assert.match(modal().textContent, /TEST-0000-0000-1234/);
+  const modal = document.getElementById('overlay-root');
+  assert.match(modal.textContent, /TEST-0000-0000-1234/);
+  assert.match(modal.textContent, /CNY 12,000/, 'salary history is a table');
+  assert.ok(!modal.textContent.includes('[object Object]'));
+  assert.ok(!calls.some(c => c[1]?.endsWith('/reveal')), 'no reveal step');
   assert.ok(!document.getElementById('app').textContent.includes('TEST-0000'), 'never shown in the list');
-  click(window, modal().querySelector('[data-hr="hide"][data-field="idNumber"]')); await tick();
-  assert.ok(!modal().textContent.includes('TEST-0000'));
-  modal().querySelector('[data-hr-reason="salary"]').value = '核对工资单';
-  click(window, modal().querySelector('[data-hr="reveal"][data-field="salary"]')); await tick();
-  assert.ok(!modal().textContent.includes('[object Object]'), 'salary history is a table, not one value');
 });
 
 test('HR detail: profile save sends only changed fields with the current version', async () => {

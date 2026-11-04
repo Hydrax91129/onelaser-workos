@@ -196,6 +196,6 @@ html[data-theme=dark] .pp-inline.pp-email.missing{border-color:#7a3a3a;backgroun
 .pp-second{min-width:120px}
 [data-theme="dark"] .pp-orgchart,[data-theme="dark"] .pp-oc-panel{--pp-dotted:#9aa4b8}
 /* HR records access per region in Organization & permissions */
-.pp-hr{display:flex;gap:6px;flex-wrap:wrap;min-width:230px}.pp-hr label{display:flex;flex-direction:column;gap:2px}.pp-hr em{font-style:normal;font-size:11px;color:#6b7280}
+.pp-hr{display:flex;gap:6px;flex-wrap:wrap;min-width:150px}.pp-hr label{display:flex;flex-direction:column;gap:2px}.pp-hr em{font-style:normal;font-size:11px;color:#6b7280}
 .pp-hr select{min-width:70px}.pp-hr select.on{font-weight:600;color:#245bdb}
 html[data-theme=dark] .pp-hr em{color:#9aa4b5}html[data-theme=dark] .pp-hr select.on{color:#8fb0ff}
