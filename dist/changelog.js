@@ -22,7 +22,7 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
-    { version:'1.39', date:'2026-11-04T14:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+    { version:'1.39', date:'2026-11-04T18:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('人事档案分美国 / 中国 / 海外其他地区三个标签；美国区只有主管理员能看，可以导出给 CPA；中国和海外按人授权', 'HR records split into US / China / other countries; the US is owner-only with an export for the CPA; China and other countries are granted per person'),
       title:c('人事档案按地区管理', 'HR records by region'),
       changes:[c('人事档案分成“美国”“中国”“海外其他地区”三个标签，每个员工属于一个地区。主管理员在员工档案顶部设置地区，还没设置的人在“未分配”里。', 'HR records now have United States, China and Other countries tabs, and each person belongs to one region. The company owner sets it at the top of the record; people without one are under Not assigned.'),
@@ -33,6 +33,14 @@
         c('有权限的人打开档案直接看到完整资料，不再遮盖；SSN、身份证号、银行账号、薪资和附件在数据库里加密保存。', 'People with access see every value in full, with no masking; SSNs, ID numbers, bank accounts, salary and attachments are encrypted in the database.'),
         c('附件按类型分类（offer letter、员工手册确认、签字的 W-4 / DE 4、I-9、直存授权、简历、劳动合同等）。新的上传框同时支持粘贴截图、拖进来、点击选择和“上传”按钮。', 'Attachments are sorted by type (offer letter, handbook acknowledgment, signed W-4 / DE 4, I-9, direct deposit form, resume, contract…). The new upload box takes a pasted screenshot, a dragged file, a click or the Upload button.'),
         c('婚姻、子女、受抚养人和 EEO 资料只用于 payroll、福利和合规统计，不能用于聘用、晋升或解雇等决定。', 'Marital status, children, dependents and EEO answers are for payroll, benefits and compliance reporting only, never for hiring, promotion or termination decisions.')] },
+    { version:'1.38', date:'2026-11-04T18:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('产品资料按新规则重建：五个产品族、八组字段、可见级别、定价工作表、Excel 批量更新（先预览再确认）', 'Product library rebuilt: five families, eight field groups, visibility levels, pricing worksheet, Excel bulk update with preview and confirm'),
+      title:c('产品资料库', 'Product library'),
+      changes:[c('“产品与库存 → 产品资料”按 KC 的产品资料库规则重做：主机、配件/备件、耗材、软件/服务、内部物料五个产品族，各自的必填/选填/不适用；必填未完成的产品在左侧红点提示。', 'Products & stock → Catalog follows KC’s product library rules: five families, each with its own required / optional / not applicable fields; incomplete products are marked in the list.'),
+        c('字段按“全员 / 产品与供应链 / 仅成本权限 / 仅管理员 / 敏感”分级，由服务器按权限过滤，导出和修改记录也一样；供应商、到岸价、尾程运费、文件和利润只有成本权限的同事能看到。', 'Fields are graded Everyone / Product & supply chain / Cost only / Admins / Sensitive and filtered on the server, including exports and history; suppliers, landed cost, freight, files and margins need cost access.'),
+        c('定价工作表：送达成本、零售档位（x99 标价）、MSRP/MAP/促销底价的贡献利润与底线提醒、批发档位（可手动调整、选择运费承担方）、NPCR 价格阶梯（含 Amazon/eBay）。费率和档位在“价格参数”里由主管理员设置。', 'Pricing worksheet: delivered cost, retail tiers (x99 prices), margins and floor warnings for MSRP / MAP / promotion floor, wholesale tiers with overrides and freight choice, NPCR ladder incl. Amazon/eBay. Rates and tiers are set by a main admin on Pricing settings.'),
+        c('主管理员可下载含全部表头和当前数据的标准模板（Excel / CSV），改好后上传：系统先给出更新前后对比和分析（新增、更新、错误、必填完整度、状态和价格变化、利润底线），点“确认更新”才写入；每次导入都有记录，可以撤销。', 'Main admins download the standard template (Excel / CSV) with every column and the current data, upload it and review a before/after comparison and analysis; nothing is written until they confirm, and each import can be undone.'),
+        c('单个产品编辑改为自动保存，规则与批量导入相同，每次修改都有记录；不再显示测试原型提示和示例 SKU。', 'Single-product edits save automatically with the same rules as the import, and every change is recorded; the prototype banner and sample SKUs are gone.')] },
     { version:'1.37', date:'2026-11-04T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('每个人可以再设一位“第二领导”（虚线汇报），权限和第一领导相同；组织架构图上用虚线连接', 'Each person can have a second leader (dotted line) with the same rights as the first leader; the org chart links them with a dashed line'),
       title:c('第二领导（虚线汇报）', 'Second leader (dotted line)'),
