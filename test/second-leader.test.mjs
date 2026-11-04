@@ -31,7 +31,7 @@ test('member list: second leader column with the hint, excluding the person and 
   window.WorkOSPeople._ui.org = { items:people };
   const html = window.WorkOSPeople.org();
   assert.match(html, /第二领导（虚线汇报）/);
-  assert.match(html, /第一领导不方便时，由第二领导日常查看和指导；审批和评分仍由第一领导负责/);
+  assert.match(html, /第一领导不方便时，由第二领导日常查看和指导；第二领导对这个人的权限和第一领导完全相同/);
   document.body.innerHTML = html;
   const sel = document.querySelector('[data-pp-field="secondManagerId"][data-id="e1"]');
   assert.ok(sel, 'the select exists');
@@ -95,9 +95,11 @@ test('task analysis lists dotted-line reports in their own section', () => {
   const st = state({ page:'team' });
   const { window } = loadPeople(st);
   const stats = { total:2, open:1, accepted:1, waiting:0, revision:0, overdue:0, dueSoon:0, completionRate:50, onTimeRate:null, onTimeKnown:0, onTimeUnknown:1, avgQuality:null };
-  window.WorkOSPeople._ui.team = { scope:'reports', canViewAll:false, members:[], dottedMembers:[{ id:'e1', display_name:'Lin', manager_id:'us', line:'second', depth:1, stats, attention:[] }], totals:null };
+  window.WorkOSPeople._ui.team = { scope:'reports', canViewAll:false, members:[{ id:'e1', display_name:'Lin', manager_id:'us', second_manager_id:'cn', line:'second', depth:1, stats, attention:[] }, { id:'e2', display_name:'Ma', manager_id:'cn', line:'first', depth:1, stats, attention:[] }], totals:stats };
   const html = window.WorkOSPeople.team();
-  assert.match(html, /虚线汇报给我（第二领导，只读）/);
+  assert.match(html, /虚线汇报给我（第二领导）/);
+  assert.match(html, /直属下属 <b>1<\/b>/, 'the dotted-line report is not counted as a direct report');
+  assert.match(html, /权限和第一领导相同/);
   assert.match(html, /data-pp="view-tasks" data-id="e1"/);
   assert.doesNotMatch(html, /还没有人向你汇报/);
 });
