@@ -17,3 +17,28 @@
 html[data-theme=dark] .hr-reminders{background:#171b24;border-color:#2c3341}html[data-theme=dark] .hr-reminders li,html[data-theme=dark] .hr-secret{border-color:#2c3341}
 html[data-theme=dark] .hr-secret>span,html[data-theme=dark] .hr-reminders li span,html[data-theme=dark] .hr-docs small{color:#9aa4b5}
 html[data-theme=dark] .hr-reason{background:#11151d;border-color:#323a49;color:inherit}html[data-theme=dark] .hr-edit summary{color:#8fb0ff}
+/* Region tabs (US / China / other countries) and region profile groups */
+.hr-regions{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px;border-bottom:1px solid var(--border,#e4e7ef)}
+.hr-regions button{border:0;background:none;padding:8px 14px;font:inherit;font-size:14px;font-weight:600;color:#4b5563;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.hr-regions button b{font-weight:600;font-size:12px;color:#6b7280;background:#f1f3f7;border-radius:10px;padding:1px 7px}
+.hr-regions button small{font-size:11px;font-weight:500;color:#a15c00}
+.hr-regions button.on{color:#245bdb;border-bottom-color:#245bdb}.hr-regions button.on b{background:#e6edff;color:#245bdb}
+.hr-region{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:10px;background:#f1f3f7;color:#4b5563;white-space:nowrap}
+.hr-region.r-us{background:#e6edff;color:#245bdb}.hr-region.r-cn{background:#fdecec;color:#b42335}.hr-region.r-intl{background:#e7f6ee;color:#16794a}.hr-region.none{background:#fff4e0;color:#a15c00}
+.hr-region-pick{display:flex;align-items:center;gap:6px;font-size:13px;margin-left:auto}.hr-region-pick select{padding:3px 6px;border:1px solid var(--border,#d7dbe5);border-radius:6px;font:inherit;font-size:13px}
+.hr-groups{display:flex;flex-direction:column;gap:12px}
+.hr-group{border:1px solid var(--border,#e4e7ef);border-radius:8px;padding:10px 12px;margin:0 0 10px}
+fieldset.hr-group{margin:0}.hr-group legend,.hr-group h4{font-size:13px;font-weight:700;padding:0 4px;margin:0 0 6px}
+.hr-group .wms-hint{margin:0 0 8px}
+.field.hr-check{display:flex!important;flex-direction:row!important;align-items:center;gap:8px;align-self:end;min-height:38px}.field.hr-check input{width:auto;margin:0}.field.hr-check span{order:2}
+[data-upload-scope] .up-zone{margin-top:8px}
+.hr-locked{display:flex;align-items:center;flex-wrap:wrap;gap:10px;font-size:14px}.hr-locked small{color:#6b7280}
+html[data-theme=dark] .hr-regions{border-color:#2c3341}html[data-theme=dark] .hr-regions button{color:#c2cad8}
+html[data-theme=dark] .hr-regions button b,html[data-theme=dark] .hr-region{background:#232a37;color:#c2cad8}
+html[data-theme=dark] .hr-regions button.on{color:#8fb0ff;border-bottom-color:#8fb0ff}html[data-theme=dark] .hr-regions button.on b,html[data-theme=dark] .hr-region.r-us{background:#1c2a4a;color:#8fb0ff}
+html[data-theme=dark] .hr-region.r-cn{background:#3a1d24;color:#ff9aa8}html[data-theme=dark] .hr-region.r-intl{background:#163126;color:#7fdcae}html[data-theme=dark] .hr-region.none{background:#3a2c14;color:#f2c06b}
+html[data-theme=dark] .hr-group{border-color:#2c3341}html[data-theme=dark] .hr-region-pick select{background:#11151d;border-color:#323a49;color:inherit}html[data-theme=dark] .hr-locked small{color:#9aa4b5}
+.hr-export{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;padding:12px 14px;margin:0 0 14px;border:1px solid #f0c36d;border-radius:10px;background:#fffaf0;font-size:13px}
+.hr-export span{flex:1;min-width:240px;display:flex;flex-direction:column;gap:4px}.hr-export b{color:#a15c00}.hr-export small{color:#6b7280}
+.hr-sub{font-size:13px;margin:14px 0 6px}
+html[data-theme=dark] .hr-export{background:#2a2213;border-color:#6b5222}html[data-theme=dark] .hr-export b{color:#f2c06b}html[data-theme=dark] .hr-export small{color:#9aa4b5}

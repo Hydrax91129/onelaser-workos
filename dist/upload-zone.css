@@ -1,0 +1,15 @@
+/* WorkOSUpload box (upload-zone.js): paste, drag, click or button. */
+.up-zone{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:14px 16px;border:1.5px dashed var(--border,#c9cfdc);border-radius:10px;background:var(--surface,#fafbfd);cursor:pointer;transition:border-color .15s,background .15s}
+.up-zone:hover,.up-zone:focus-visible{border-color:#3370ff;outline:none}
+.up-zone.over{border-color:#3370ff;background:#eef3ff}
+.up-zone.busy{opacity:.7;cursor:progress}
+.up-zone>.ph{font-size:22px;color:#3370ff}
+.up-text{flex:1;min-width:180px;display:flex;flex-direction:column;gap:2px;font-size:13px}
+.up-text small{color:#6b7280}
+.up-msg{flex-basis:100%;margin:0;font-size:12px;color:#4b5563;min-height:0}
+.up-msg:empty{display:none}
+.up-msg.err{color:#c62a43}
+html[data-theme=dark] .up-zone{background:#11151d;border-color:#3a4354}
+html[data-theme=dark] .up-zone.over{background:#16213a;border-color:#6f97ff}
+html[data-theme=dark] .up-text small,html[data-theme=dark] .up-msg{color:#9aa4b5}
+html[data-theme=dark] .up-msg.err{color:#ff8a9c}
