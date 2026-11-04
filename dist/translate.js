@@ -13,8 +13,14 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   const lang = () => (ctx?.lang?.() || window.WorkI18n?.lang) === 'en' ? 'en' : 'zh';
   const cjk = s => (s.match(/[㐀-鿿豈-﫿]/g) || []).length, latin = s => (s.match(/[A-Za-z]/g) || []).length;
-  // Text already written in both languages (e.g. "销售经理 Sales Manager") is shown as is.
-  const mainLang = s => { const c = cjk(s), l = latin(s); if (!c && l < 2) return null; if (c >= 2 && /[A-Za-z]{3,}/.test(s) && /[\u3400-\u9fff]{2,}/.test(s) && l >= 4) return null; return c * 3 >= l ? 'zh' : 'en'; };
+  // Text already written in both languages is shown as is: one Chinese part without Latin letters and one English
+  // part without Chinese, in either order, separated by a space, /, |, -, ( or （ ("销售经理 Sales Manager",
+  // "质量追踪 / Quality tracking"). A Chinese sentence that merely contains abbreviations or product names
+  // (WMS, GTM, KOL, GalvoFlex) is not bilingual and is translated.
+  const ZH_EN = /^([^A-Za-z]+?)[\s/|\-(（]+([^\u3400-\u9fff\uf900-\ufaff]+)$/, EN_ZH = /^([^\u3400-\u9fff\uf900-\ufaff]+?)[\s/|\-(（]+([^A-Za-z]+)$/;
+  const zhPart = p => cjk(p) >= 2, enPart = p => latin(p) >= 4 && /[a-z]/.test(p); // at least one real word, not only abbreviations
+  const bilingual = s => { let m = s.match(ZH_EN); if (m && zhPart(m[1]) && enPart(m[2])) return true; m = s.match(EN_ZH); return !!(m && enPart(m[1]) && zhPart(m[2])); };
+  const mainLang = s => { const c = cjk(s), l = latin(s); if (!c && l < 2) return null; if (bilingual(s)) return null; return c * 3 >= l ? 'zh' : 'en'; };
   const enabled = () => ctx?.capabilities?.()?.autoTranslate === true;
   function want(text, target) {
     if (text.length > 4000) return null; // the server translates up to 4000 characters per text; longer text stays as written
