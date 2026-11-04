@@ -22,6 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.37', date:'2026-11-04T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('每个人可以再设一位“第二领导”（虚线汇报），权限和第一领导相同；组织架构图上用虚线连接', 'Each person can have a second leader (dotted line) with the same rights as the first leader; the org chart links them with a dashed line'),
+      title:c('第二领导（虚线汇报）', 'Second leader (dotted line)'),
+      changes:[c('“组织与权限”成员列表新增“第二领导（虚线汇报）”一栏。第一领导不方便时（例如时差），由第二领导日常查看和指导。', 'Organization & permissions has a new “Second leader (dotted line)” column, for when the first leader is unavailable (for example across time zones).'),
+        c('第二领导对这个人的权限和第一领导完全相同：查看 OKR、任务、项目和团队报表，验收任务、给 OKR 领导评分、调整截止时间、审批，也包括 TA 下面的团队。新任务默认验收人仍是第一领导，可以手动改成第二领导。薪资、证件等 HR 敏感信息仍只给 HR。', 'The second leader has exactly the same rights over the person as the first leader: OKRs, tasks, projects and team reports, reviewing tasks, OKR leader scores, due dates and approvals, including the person’s own team. New tasks still default to the first leader as reviewer and can be switched to the second leader. Salary, ID and other sensitive HR data stay with HR.'),
+        c('领导（第一或第二）现在也能看到下属所在的项目（只读），并能给其他部门下属的 OKR 打领导分。', 'Leaders (first or second) now also see the projects their reports are in (read-only) and can give leader scores on OKRs of reports in other departments.'),
+        c('组织架构图用虚线曲线把第二领导和员工连起来，图上方有“实线 = 第一领导，虚线 = 第二领导”的说明；员工卡片上也写着第二领导是谁，下属收起时第二领导卡片上会列出被收起的虚线下属。', 'The org chart joins the second leader and the person with a dashed curve and shows “Solid = first leader, Dashed = second leader”. The person’s card names the second leader, and when a branch is collapsed the second leader’s card lists the hidden dotted-line reports.')] },
     { version:'1.36', date:'2026-11-04T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('个人任务支持批量编辑和删除：勾选任务后底部出现操作栏，删除后 10 秒内可撤销', 'My tasks: bulk edit and delete — tick tasks and use the bar at the bottom; deletes can be undone for 10 seconds'),
       title:c('任务批量编辑与删除', 'Bulk edit and delete tasks'),

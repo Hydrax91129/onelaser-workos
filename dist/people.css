@@ -71,7 +71,7 @@ html[data-theme=dark] .pp-att-tag.red{background:#4a2026;color:#ff9aa8}html[data
 .pp-switch input:focus-visible+span{outline:2px solid var(--pp-blue);outline-offset:2px}
 .pp-lock{font-size:12px;color:var(--pp-sub);display:inline-flex;gap:4px;align-items:center}
 .pp-notes{margin-top:12px}.pp-notes p{font-size:12.5px;color:var(--pp-sub);line-height:1.6;margin:4px 0}
-.pp-orgchart{overflow-x:auto;padding:10px 0}
+.pp-orgchart{overflow-x:auto;padding:10px 0;position:relative}
 .pp-orgchart ul{display:flex;justify-content:center;padding-top:20px;position:relative;margin:0;padding-left:0;list-style:none}
 .pp-orgchart>ul{padding-top:0}
 .pp-orgchart li{position:relative;padding:20px 8px 0;text-align:center}
@@ -185,3 +185,13 @@ html[data-theme=dark] .pp-org tr.pp-group-row.unset .pp-group-name{color:#ffc46b
 .pp-row-actions{white-space:nowrap}.pp-row-actions .btn+.btn{margin-left:6px}
 .pp-org td:has(.pp-email){position:relative;min-width:190px}.pp-inline.pp-email.missing{border-color:#f0a3a3;background:#fff6f6}.pp-email-lock{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#8a93a3;font-size:13px;pointer-events:none}
 html[data-theme=dark] .pp-inline.pp-email.missing{border-color:#7a3a3a;background:#2a1a1c}
+
+/* Second leader (dotted line): dashed curves over the org chart, a legend and a note on the card */
+.pp-orgchart>svg.pp-oc-dotted{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-index:1}
+.pp-orgchart>svg.pp-oc-dotted path{fill:none;stroke:var(--pp-dotted,#8a94a6);stroke-width:1.6;stroke-dasharray:6 5;stroke-linecap:round;opacity:.85}
+.pp-oc-second{display:block;margin-top:3px;font-size:11px;line-height:1.3;color:var(--pp-dotted,#8a94a6);white-space:normal}
+.pp-oc-lines{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted,#676879);margin-right:8px}
+.pp-oc-lines i{display:inline-block;width:22px;height:0;border-top:1.6px solid var(--pp-line,#c3c6d4)}
+.pp-oc-lines i.dashed{border-top:1.6px dashed var(--pp-dotted,#8a94a6);margin-left:8px}
+.pp-second{min-width:120px}
+[data-theme="dark"] .pp-orgchart,[data-theme="dark"] .pp-oc-panel{--pp-dotted:#9aa4b8}
