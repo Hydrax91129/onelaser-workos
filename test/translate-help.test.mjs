@@ -88,3 +88,17 @@ test('text longer than the server limit is shown as written and never sent', asy
   await new Promise(r => setTimeout(r, 120));
   assert.equal(posts.length, 1); assert.equal(JSON.stringify(posts[0].texts), '["完成黑五促销素材"]');
 });
+
+test('a Chinese sentence with English abbreviations or product names is translated; only two-part bilingual text is kept', () => {
+  const { window } = boot(['translate.js']);
+  const main = window.WorkOSTranslate._mainLang;
+  for (const s of ['销售经理 Sales Manager', 'Sales Manager 销售经理', '质量追踪 / Quality tracking'])
+    assert.equal(main(s), null, 'already bilingual: ' + s);
+  for (const s of ['GA搭建 包含 (HRM/ 财务AR/AP / 电子资产管理/ 企业数据中心)',
+    'WMS+PIM+SCM+COST 四套供应链管理支撑系统搭建 解决产品管理与供应链管理的混乱',
+    '12月产品发布GTM 准备完毕 (Mworks+GalvoFlex + XRF Gen2)',
+    '市场部AI自动化推进 (KOL, Social Meida, Ads, SEO, GEO) AI监控与运行报告',
+    '客服监督+控评+客诉反溯+工厂QA 系统的落地'])
+    assert.equal(main(s), 'zh', 'Chinese with abbreviations: ' + s);
+  assert.equal(main('Grow dealer sales 20% with KOL campaigns'), 'en');
+});

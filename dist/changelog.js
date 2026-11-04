@@ -22,6 +22,11 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.34', date:'2026-11-04T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('夹带英文缩写或产品名的中文 OKR 也会自动翻译', 'Chinese OKR text with English abbreviations or product names is now translated'),
+      title:c('中英混写的 OKR 也能自动翻译', 'Mixed Chinese–English OKR text is translated'),
+      changes:[c('像“WMS+PIM+SCM+COST 四套供应链管理支撑系统搭建”“12月产品发布GTM 准备完毕”这样夹带英文缩写或产品名的中文内容，切换到英文界面时也会自动翻译，不再保留中文原文。', 'Chinese text that contains English abbreviations or product names, such as "WMS+PIM+SCM+COST 四套供应链管理支撑系统搭建", is now translated in the English interface instead of staying in Chinese.'),
+        c('只有明确写成“中文 + 英文”两段的内容（如“销售经理 Sales Manager”“质量追踪 / Quality tracking”）才视为已双语、保持原样。', 'Only text clearly written as two parts, one Chinese and one English (e.g. "销售经理 Sales Manager", "质量追踪 / Quality tracking"), is treated as already bilingual and shown as written.')] },
     { version:'1.33', date:'2026-11-04T00:53:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('OKR 输入的内容自动保存，刷新或崩溃也不会丢；AI 草稿直接保存，只需最后“最终发布”一次', 'OKR edits save automatically and survive a reload or crash; AI drafts are saved at once, and Publish is the only confirmation'),
       title:c('OKR 自动保存，只需确认一次', 'OKR autosave, one confirmation'),
