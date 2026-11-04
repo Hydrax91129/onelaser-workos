@@ -4,7 +4,7 @@
 
 GitHub Pages 默认是面向 1–2 个部门、10–30 人试点方案的浏览器演示，员工、任务、业务指标与验收记录均为虚构数据，演示日期固定为 2026-10-27。仓库同时提供独立的企业真实模式，由同源后台执行登录、授权和业务持久化。
 
-[在线演示](https://yonge6.github.io/onelaser-workos/) · [GitHub 仓库](https://github.com/Yonge6/onelaser-workos)
+[GitHub 仓库](https://github.com/Hydrax91129/onelaser-workos)
 
 ## 中英双语与日间 / 夜间主题
 
@@ -90,9 +90,9 @@ python3 -m http.server 8867 --bind 127.0.0.1 --directory dist
 
 后续正式开发应按项目 `spec/` 中的服务端规则与交付方案实施，并完成真实登录、权限、文件与证据读取、审计、模型输出强校验及试点验收。
 
-## GitHub Pages 发布
+## 演示站点（已停用）
 
-推送 `main` 分支的网页修改后，GitHub Actions 自动部署 `dist/`。也可以在 Actions 中手动运行 Deploy GitHub Pages。页面公开可访问，仅用于虚构数据的产品流程演示；真实员工系统需要独立后端、身份认证和服务端权限。
+公开的 GitHub Pages 演示已于 2026-11-04 停用（仓库将改为私有）。演示模式仍可在本地运行（见“本地运行”）；正式系统是 craftos.app，由后端仓库构建上线。
 
 网页脚本和样式带有同一版本查询参数。后续同时修改语言、脚本或样式时应同步更新版本，避免浏览器缓存将不同版本混用。
 
