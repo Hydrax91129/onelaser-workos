@@ -26,7 +26,9 @@
       short:c('侧边栏改为“产品 PIM”和“WMS”两个模块；成本核算改名“定价”', 'Sidebar: Product PIM and WMS modules; the cost calculator is now Pricing'),
       title:c('产品 PIM 与 WMS 分开', 'Product PIM and WMS'),
       changes:[c('“产品 PIM”下有：产品资料、定价（原“成本核算”）、经销商订单。', 'Product PIM: Catalog, Pricing (formerly Cost calculator) and Dealer orders.'),
-        c('“WMS”下有：库存、退货维修、智能供应链。原来的链接仍然能打开对应页面。', 'WMS: Stock, Returns & repairs and Smart supply chain. Old links still open the right page.')] },
+        c('“WMS”下有：库存、退货维修、智能供应链。原来的链接仍然能打开对应页面。', 'WMS: Stock, Returns & repairs and Smart supply chain. Old links still open the right page.'),
+        c('右上角的版本号弹窗只列一句话标题，日期旁边同时写西海岸和北京时间。', 'The version pop-up next to the top-right badge shows one short title per release, with US West Coast and Beijing time.'),
+        c('侧边栏的“版本更新”详细页只有主管理员能看到。', 'The detailed Release notes page in the sidebar is for the company owner only.')] },
     { version:'1.41', date:'2026-11-04T20:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('停用账号会自动把人事档案改为“已离职”', 'Disabling an account marks the HR record as left'),
       title:c('离职自动归档，人事档案更简洁', 'Leavers filed automatically; a simpler HR record'),
@@ -309,8 +311,11 @@
     finally { loading = false; ctx?.rerender?.(); }
   }
   const short = h => String(h || '').slice(0, 7);
+  /* "11/04 18:30 PT · 11/05 10:30 北京": release time on the US West Coast and in Beijing. */
+  const zoned = (iso, tz) => { try { const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone:tz, month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(new Date(iso)).map(x => [x.type, x.value])); return `${p.month}/${p.day} ${p.hour}:${p.minute}`; } catch { return ''; } };
+  const when = iso => Number.isFinite(new Date(iso).getTime()) ? `${zoned(iso, 'America/Los_Angeles')} ${tr('西海岸', 'PT')} · ${zoned(iso, 'Asia/Shanghai')} ${tr('北京', 'Beijing')}` : '';
   const fmt = iso => { try { return new Date(iso).toLocaleString(lang() === 'en' ? 'en-US' : 'zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }); } catch { return iso; } };
-  const commit = (repo, h) => h ? `<a href="https://github.com/Yonge6/${repo}/commit/${esc(h)}" target="_blank" rel="noopener"><code>${esc(short(h))}</code></a>` : `<code>—</code>`;
+  const commit = (repo, h) => h ? `<a href="https://github.com/Hydrax91129/${repo}/commit/${esc(h)}" target="_blank" rel="noopener"><code>${esc(short(h))}</code></a>` : `<code>—</code>`;
 
   function page() {
     if (live === undefined) loadLive();
@@ -325,7 +330,7 @@
     const items = RELEASES.map((r, i) => {
       const tag = i === liveIdx ? `<span class="cl-tag live">${tr('线上', 'Live')}</span>` : r.status === 'pending' && (liveIdx < 0 || i < liveIdx) ? `<span class="cl-tag">${tr('待发布', 'Pending')}</span>` : '';
       return `<article class="cl-item ${i === liveIdx ? 'is-live' : ''}">
-        <header><span class="cl-ver">v${esc(r.version)}</span>${tag}<h2>${esc(t(r.title))}</h2><time datetime="${esc(r.date)}">${esc(fmt(r.date))}</time></header>
+        <header><span class="cl-ver">v${esc(r.version)}</span>${tag}<h2>${esc(t(r.title))}</h2><time datetime="${esc(r.date)}">${esc(new Date(r.date).getFullYear())} · ${esc(when(r.date))}</time></header>
         <ul>${r.changes.map(x => `<li>${esc(t(x))}</li>`).join('')}</ul>
         <dl class="cl-meta">
           <div><dt>${icon('user')} ${tr('修改', 'Changed by')}</dt><dd>${esc(t(r.author))}</dd></div>
@@ -337,5 +342,5 @@
       ${banner}<div class="cl-list">${items}</div></div>`;
   }
 
-  window.WorkOSChangelog = { configure, page, RELEASES, text:t, reset() { live = undefined; } };
+  window.WorkOSChangelog = { configure, page, RELEASES, text:t, when, reset() { live = undefined; } };
 })();
