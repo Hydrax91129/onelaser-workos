@@ -80,3 +80,20 @@ test('saving a review shows a busy label and then a thank-you confirmation', () 
   assert.match(liveSource, /tr\('谢谢评分！已验收通过','Thanks for scoring! Accepted'\)/);
   assert.match(liveSource, /if \(reviewDone\) celebrate\(\.\.\.reviewDone\)/);
 });
+
+test('earlier deliverable versions stay readable with their files after a new one is submitted', async () => {
+  const older = { id: 'sub-1', version: 1, title: '网站配件页', description: '大图加 logo', created_at: '2026-11-05T09:16:00Z', attachments: [shot] };
+  const newer = { id: 'sub-2', version: 2, title: '补图', description: '补图', created_at: '2026-11-05T09:18:00Z', attachments: [pdf] };
+  const html = await drawerFor({ ...base, submission_version: 2, submissions: [older, newer] });
+  const current = html.slice(html.indexOf('当前成果'), html.indexOf('历史成果版本'));
+  assert.match(current, /attachments\/att-2/, 'the current deliverable shows the newest files');
+  assert.doesNotMatch(current, /attachments\/att-1/);
+  const history = html.slice(html.indexOf('历史成果版本'));
+  assert.match(history, /历史成果版本（1）/);
+  assert.match(history, /<details class="older-version">.*大图加 logo.*attachments\/att-1/s);
+});
+
+test('a single version shows no earlier-versions section', async () => {
+  const html = await drawerFor({ ...base, submissions: submission([shot]) });
+  assert.doesNotMatch(html, /历史成果版本/);
+});

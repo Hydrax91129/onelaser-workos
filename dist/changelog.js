@@ -22,6 +22,12 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.41', date:'2026-11-05T07:13:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
+      short:c('提交新成果版本后，旧版本的说明和附件仍能查看；成果图片最多可传 100 张', 'Earlier deliverable versions keep their text and files visible; a deliverable can carry up to 100 images'),
+      title:c('历史成果版本和更多图片', 'Earlier versions and more images'),
+      changes:[c('任务详情的“当前成果”下面新增“历史成果版本”：点开任意旧版本，可以看到当时的说明、图片和文件。', 'Task details now list “Earlier versions” under the current deliverable: open any of them to see its text, images and files.'),
+        c('提交成果时图片最多 100 张，其他文件最多 10 个，每个不超过 8 MB；上传时按钮会显示进度。', 'A deliverable can carry up to 100 images and 10 other files, 8 MB each, and the button shows upload progress.'),
+        c('较大的图片上传前会自动压缩：长边不超过 2560 像素，JPEG 仍是 JPEG，其他格式转为 WebP；GIF 和 1 MB 以内的小图不处理。系统不保留压缩前的原图。', 'Large images are compressed before upload: at most 2560 px on the longest side, JPEG stays JPEG and other formats become WebP; GIFs and small images under 1 MB are left alone. The uncompressed original is not kept.')] },
     { version:'1.40', date:'2026-11-04T19:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('系统统一改名为 WorkOS', 'The system is now called WorkOS everywhere'),
       title:c('统一叫 WorkOS', 'One name: WorkOS'),
