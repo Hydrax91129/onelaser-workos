@@ -22,6 +22,11 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.42', date:'2026-11-05T09:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('侧边栏改为“产品 PIM”和“WMS”两个模块；成本核算改名“定价”', 'Sidebar: Product PIM and WMS modules; the cost calculator is now Pricing'),
+      title:c('产品 PIM 与 WMS 分开', 'Product PIM and WMS'),
+      changes:[c('“产品 PIM”下有：产品资料、定价（原“成本核算”）、经销商订单。', 'Product PIM: Catalog, Pricing (formerly Cost calculator) and Dealer orders.'),
+        c('“WMS”下有：库存、退货维修、智能供应链。原来的链接仍然能打开对应页面。', 'WMS: Stock, Returns & repairs and Smart supply chain. Old links still open the right page.')] },
     { version:'1.41', date:'2026-11-04T20:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('停用账号会自动把人事档案改为“已离职”', 'Disabling an account marks the HR record as left'),
       title:c('离职自动归档，人事档案更简洁', 'Leavers filed automatically; a simpler HR record'),

@@ -380,8 +380,8 @@
   /* ---------- shell ---------- */
   const PAGES = {
     catalog:['PRODUCT HUB · CATALOG', '产品管理', 'Product catalog', '查询产品，由产品经理补齐属性，建立公司完整的产品目录。', 'Look up products; PMs complete the attributes to build the full company catalog.'],
-    cost:['PRODUCT HUB · COST', '成本核算', 'Cost calculator', '输入 SKU 或名称，按公司计价规则查看送达成本、各档售价、批发价和利润。成本明细由总裁授权查看。', 'Enter a SKU or name to see the delivered cost, price tiers, wholesale prices and margins under the company pricing rules. Cost details are granted by the president.'],
-    supply:['PRODUCT HUB · SUPPLY CHAIN', '智能供应链', 'Smart supply chain', '用颜色一眼看出哪些 SKU 需要补货、库存超期或库存过多，并自动给出补货建议。', 'Colors show at a glance which SKUs need reordering, have aged stock or are overstocked, with automatic reorder suggestions.'],
+    cost:['PRODUCT PIM · PRICING', '定价', 'Pricing', '输入 SKU 或名称，按公司计价规则查看送达成本、各档售价、批发价和利润。成本明细由总裁授权查看。', 'Enter a SKU or name to see the delivered cost, price tiers, wholesale prices and margins under the company pricing rules. Cost details are granted by the president.'],
+    supply:['WMS · SUPPLY CHAIN', '智能供应链', 'Smart supply chain', '用颜色一眼看出哪些 SKU 需要补货、库存超期或库存过多，并自动给出补货建议。', 'Colors show at a glance which SKUs need reordering, have aged stock or are overstocked, with automatic reorder suggestions.'],
   };
   /* 产品资料 is the product library (product-library.js) once the server offers it: real data only, no sample rows or test banner. */
   const libraryOn = () => !!window.WorkOSProductLibrary && ctx?.state?.().capabilities?.productLibrary === true;
