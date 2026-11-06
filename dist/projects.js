@@ -77,7 +77,7 @@
 
   /* ---------- live data (server) ---------- */
   const isLive = () => ctx?.state?.().capabilities?.projectsLive === true && !!ctx?.api;
-  let liveState = { loaded:false, loading:false, error:'' };
+  let liveState = { loaded:false, loading:false, error:'' }, feeds = {};
   const FROM_BOARD = { not_started:'todo', working:'working', hold:'stuck', review:'review', done:'done', overdue:'overdue', abandoned:'abandoned' };
   const day = v => String(v || '').slice(0, 10);
   const T2 = v => ({ zh:v, en:v });
@@ -92,10 +92,10 @@
       for (const p of pr.items || []) {
         projects.push({ id:p.id, name:T2(p.name), color:p.color, emoji:p.icon, owner:p.owner_id, members:p.members || [], start:day(p.start_date), end:day(p.end_date), health:p.health, canEdit:p.canEdit, canManage:p.canManage, desc:T2(p.description || ''),
           groups:(p.groups || []).map(g => ({ id:g.id, name:T2(g.name), color:g.color })), milestones:(p.milestones || []).map(m => ({ id:m.id, name:T2(m.name), date:m.date, done:m.done })),
-          updates:(p.updates || []).map(u => ({ by:u.author_id, at:day(u.created_at), health:u.health, text:T2(u.body) })) });
+          updates:(p.updates || []).map(u => ({ by:u.author_id, at:day(u.created_at), health:u.health, text:T2(u.body) })), files:p.files || [] });
         for (const t of p.tasks || []) tasks.push({ id:t.id, project:p.id, group:t.project_group_id, title:T2(t.title), owner:t.owner_id, status:FROM_BOARD[t.board_status] || 'todo', priority:t.board_priority || 'medium', start:day(t.created_at), due:day(t.due_at), lastUpdate:t.last_update_at || t.updated_at || t.created_at, subtasks:[], comments:[], desc:t.description || '', version:t.version, score:t.completion?.final_score ?? (t.completion?.ai_status === 'scored' ? t.completion.ai_score : null) ?? null, live:true });
       }
-      liveState = { loaded:true, loading:false, error:'' };
+      liveState = { loaded:true, loading:false, error:'' }; feeds = {};
     } catch (e) { liveState = { loaded:true, loading:false, error:e.message || 'error' }; }
     ctx.rerender();
   }
@@ -250,6 +250,7 @@
         <section class="pj-panel"><div class="pj-panel-head"><h3>${tr('项目描述', 'Description')}</h3>${editable(p) && ui.adding !== 'desc' ? `<button class="pj-btn small" data-pj="edit-desc">${icon('pencil-simple')} ${L(p.desc) ? tr('编辑', 'Edit') : tr('添加描述', 'Add description')}</button>` : ''}</div>
           ${ui.adding === 'desc' ? `<form class="pj-status-form" id="pj-desc"><textarea name="text" maxlength="4000" rows="6" data-pj-focus placeholder="${tr('写清楚：项目目标、范围、交付标准、关键时间点和需要的支持。', 'Spell out the goal, scope, deliverable standard, key dates and the support needed.')}">${esc(L(p.desc))}</textarea><div class="pj-form-actions"><button type="button" class="pj-btn" data-pj="cancel">${tr('取消', 'Cancel')}</button><button class="pj-btn primary">${tr('保存', 'Save')}</button></div></form>`
             : L(p.desc) ? `<p class="pj-text">${tx(L(p.desc))}</p>` : `<p class="pj-empty-line">${editable(p) ? tr('还没有项目描述。写清楚目标、范围和交付标准，方便成员对齐。', 'No description yet. Write down the goal, scope and deliverable standard so everyone is aligned.') : tr('负责人还没有填写项目描述。', 'The owner has not written a description yet.')}</p>`}</section>
+        ${filesPanel(p)}
         ${projectInsight(p)}
       </div>
       <aside class="pj-ov-side">
@@ -258,7 +259,7 @@
           ${ui.adding === 'ms' ? `<form class="pj-ms-form" id="pj-ms"><input name="name" required maxlength="120" data-pj-focus placeholder="${tr('里程碑名称，如“素材定稿”', 'Milestone, e.g. Creative final')}"><input name="date" type="date" required value="${p.end || ''}"><div class="pj-form-actions"><button type="button" class="pj-btn" data-pj="cancel">${tr('取消', 'Cancel')}</button><button class="pj-btn primary">${tr('添加', 'Add')}</button></div></form>` : p.milestones.length ? '' : `<p class="pj-empty-line">${tr('还没有里程碑。把关键节点写上，团队更容易按时交付。', 'No milestones yet. Add the key checkpoints so the team can deliver on time.')}</p>`}</section>
         <section class="pj-panel"><h3>${tr('成员', 'Members')}</h3><ul class="pj-members">${p.members.map(id => `<li>${av(id, 28)}<div><strong>${esc(person(id).name)}</strong><span>${tx(L(person(id).role))}${id === p.owner ? ' · ' + tr('项目管理员', 'Project admin') : ''}</span></div><b>${tasksOf(p).filter(t => t.owner === id && t.status !== 'done').length} ${tr('项待办', 'open')}</b></li>`).join('')}</ul></section>
       </aside>
-    </div>`;
+    </div>${isLive() ? `<section class="pj-panel pj-ov-feed"><div class="pj-panel-head"><h3>${icon('pulse')} ${tr('项目动态', 'Activity')}</h3><button class="pj-btn small" data-pj="feed-all">${tr('查看全部', 'See all')}</button></div>${feedList(p, 12)}</section>` : ''}`;
   }
 
   function cellMenu(t, field) {
@@ -283,12 +284,12 @@
     return `<span class="pj-pillcell"><b class="pj-fresh" style="--c:${bg}" title="${esc(tr('最后更新：', 'Last update: ') + fmt(new Date(at).toISOString().slice(0, 10)))}"><span class="pj-long">${n ? tr(`${n} 天未更新`, `${n}d no update`) : tr('今天已更新', 'Updated today')}</span><span class="pj-short">${n ? tr(`${n}天前`, `${n}d ago`) : tr('今天', 'Today')}</span></b></span>`;
   }
   function table(p) {
-    return viewBar(p, false) + `<div class="pj-table-wrap">${p.groups.map(g => { const items = viewTasks(p).filter(t => t.group === g.id); return `<section class="pj-group" style="--gc:${g.color}">
-      <h3 class="pj-group-title">${icon('caret-down')} ${tx(L(g.name))} <span>${items.length} ${tr('项任务', 'tasks')}</span></h3>
+    return viewBar(p, false) + aiBar(p) + `<div class="pj-table-wrap">${p.groups.map(g => { const items = viewTasks(p).filter(t => t.group === g.id); return `<section class="pj-group" style="--gc:${g.color}" data-pj-drop="${esc(g.id)}">
+      ${stageTitle(p, g, items)}
       <div class="pj-table pj-hub" role="table">
         <div class="pj-tr pj-th" role="row"><span>${tr('任务', 'Task')}</span><span>${tr('负责人', 'Owner')}</span><span>${tr('优先级', 'Priority')}</span><span>${tr('状态', 'Status')}</span><span>${tr('截止日期', 'Due date')}</span><span>${tr('最后更新', 'Last update')}</span></div>
-        ${items.map(t => { const open = f => ui.cell && ui.cell.id === t.id && ui.cell.f === f; return `<div class="pj-tr" role="row">
-          <span class="pj-td-title"><button class="pj-tlink" data-pj="open-task" data-id="${t.id}">${tx(L(t.title))}</button>${t.subtasks.length ? `<em>${icon('tree-view')} ${t.subtasks.filter(x => x.done).length}/${t.subtasks.length}</em>` : ''}${t.comments.length ? `<em>${icon('chat-circle')} ${t.comments.length}</em>` : ''}</span>
+        ${items.map(t => { const open = f => ui.cell && ui.cell.id === t.id && ui.cell.f === f; return `<div class="pj-tr" role="row" ${editable(p) ? `draggable="true" data-pj-drag="${esc(t.id)}"` : ''}>
+          <span class="pj-td-title">${editable(p) && p.groups.length > 1 ? `<span class="pj-move-wrap"><button class="plain pj-move" data-pj="cell" data-id="${t.id}" data-f="group" title="${tr('移到其他阶段（也可以直接拖动这一行）', 'Move to another stage (or drag the row)')}" aria-label="${tr('移到其他阶段', 'Move to another stage')}">${icon('arrows-down-up')}</button>${open('group') ? stageMenu(t, p) : ''}</span>` : ''}<button class="pj-tlink" data-pj="open-task" data-id="${t.id}">${tx(L(t.title))}</button>${t.subtasks.length ? `<em>${icon('tree-view')} ${t.subtasks.filter(x => x.done).length}/${t.subtasks.length}</em>` : ''}${t.comments.length ? `<em>${icon('chat-circle')} ${t.comments.length}</em>` : ''}</span>
           <span class="pj-td-owner"><button class="pj-cellbtn plain" data-pj="cell" data-id="${t.id}" data-f="owner">${av(t.owner, 24)}<span>${esc(person(t.owner).name)}</span></button>${open('owner') ? ownerMenu(t) : ''}</span>
           <span class="pj-pillcell"><button class="pj-cellbtn" style="--c:${(PRIORITY[t.priority] || PRIORITY.medium)[2]}" data-pj="cell" data-id="${t.id}" data-f="priority">${esc(tr(...(PRIORITY[t.priority] || PRIORITY.medium).slice(0, 2)))}</button>${open('priority') ? cellMenu(t, 'priority') : ''}</span>
           <span class="pj-pillcell"><button class="pj-cellbtn" style="--c:${(STATUS[t.status] || STATUS.todo)[2]}" data-pj="cell" data-id="${t.id}" data-f="status">${esc(tr(...(STATUS[t.status] || STATUS.todo).slice(0, 2)))}</button>${open('status') ? cellMenu(t, 'status') : ''}</span>
@@ -298,7 +299,7 @@
         ${ui.adding === g.id ? `<form class="pj-tr pj-addrow" id="pj-add" data-group="${g.id}"><input name="title" required placeholder="${tr('任务名称，回车保存', 'Task name, press Enter')}" data-pj-focus><select name="owner">${(isLive() ? [...new Set([...p.members, ...Object.keys(PEOPLE)])] : p.members).map(id => `<option value="${id}" ${id === me() ? 'selected' : ''}>${esc(person(id).name)}</option>`).join('')}</select><input name="due" type="date" value="${isLive() ? new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10) : '2026-11-20'}" required><button class="pj-btn small primary">${tr('添加', 'Add')}</button><button type="button" class="pj-btn small" data-pj="cancel">${tr('取消', 'Cancel')}</button></form>` : `<button class="pj-addline" data-pj="add-task" data-group="${g.id}">${icon('plus')} ${tr('添加任务', 'Add task')}</button>`}
         <div class="pj-tr pj-sum"><span></span><span></span><span class="pj-stack small">${Object.keys(PRIORITY).map(k => { const n = items.filter(t => t.priority === k).length; return n ? `<span style="--c:${PRIORITY[k][2]};flex:${n}"></span>` : ''; }).join('')}</span><span class="pj-stack small">${Object.keys(STATUS).map(k => { const n = items.filter(t => t.status === k).length; return n ? `<span style="--c:${STATUS[k][2]};flex:${n}"></span>` : ''; }).join('')}</span><span></span><span></span></div>
       </div></section>`; }).join('')}
-      <button class="pj-btn pj-addgroup">${icon('plus')} ${tr('添加阶段', 'Add stage')}</button></div>`;
+      ${!editable(p) ? '' : ui.adding === 'stage' ? `<form class="pj-stage-form" id="pj-gadd"><input name="name" required maxlength="80" data-pj-focus placeholder="${tr('阶段名称，如“复盘”', 'Stage name, e.g. Wrap-up')}"><button type="button" class="pj-btn" data-pj="cancel">${tr('取消', 'Cancel')}</button><button class="pj-btn primary">${tr('添加', 'Add')}</button></form>` : `<button class="pj-btn pj-addgroup" data-pj="add-stage">${icon('plus')} ${tr('添加阶段', 'Add stage')}</button>`}</div>`;
   }
 
   function board(p) {
@@ -335,6 +336,7 @@
   }
 
   function activity(p) {
+    if (isLive()) return `<div class="pj-panel pj-feed">${feedList(p, 300)}</div>`;
     const feed = [
       ...p.updates.map(u => ({ at:u.at, by:u.by, html:`${tr('发布了状态更新', 'posted a status update')} ${healthDot(u.health)}`, text:L(u.text) })),
       ...tasksOf(p).flatMap(t => t.comments.map(c => ({ at:c.at, by:c.by, html:`${tr('评论了', 'commented on')} <button class="pj-tlink" data-pj="open-task" data-id="${t.id}">${tx(L(t.title))}</button>`, text:L(c.text) }))),
@@ -389,6 +391,177 @@
     ctx.modal(tr('新建项目', 'New project'), `<form id="pj-new"><label class="field full"><span>${tr('项目名称', 'Project name')}</span><input name="name" required placeholder="${tr('例如：Cobra 2.0 新品开发', 'e.g. Cobra 2.0 launch')}"></label><p class="fine">${tr('选择模板', 'Choose a template')}</p><div class="pj-tpls">${tpl.map(([id, ic, n, s], i) => `<label class="pj-tpl"><input type="radio" name="tpl" value="${id}" ${i === 1 ? 'checked' : ''}><span>${icon(ic)}<strong>${n}</strong><em>${s}</em></span></label>`).join('')}</div><div class="form-grid"><label class="field"><span>${tr('开始日期', 'Start')}</span><input name="start" type="date" value="${isLive() ? new Date().toISOString().slice(0, 10) : '2026-11-02'}"></label><label class="field"><span>${tr('结束日期', 'End')}</span><input name="end" type="date" value="${isLive() ? new Date(Date.now() + 60 * 864e5).toISOString().slice(0, 10) : '2026-12-31'}"></label></div>${adminSelect(me())}<p class="fine">${tr('邀请成员（可稍后再加）', 'Invite members (you can add more later)')}</p>${memberPicker([])}<p class="fine">${tr('成员可以来自不同部门；项目成员能看到整个项目，看不到项目以外的内容。', 'Members can come from any department; they see the whole project and nothing outside it.')}</p></form>`, `<button class="btn primary" type="submit" form="pj-new">${tr('创建项目', 'Create project')}</button>`);
   }
 
+
+  /* ---------- stages: rename, delete, add, move tasks between them ---------- */
+  const STAGE_COLORS = ['#579bfc', '#a25ddc', '#00c875', '#fdab3d', '#e2445c', '#ff7575', '#9cd326', '#037f4c'];
+  const groupsBody = p => p.groups.map(g => ({ id:g.id, name:(L(g.name) || '').trim() || '—', color:g.color }));
+  function stageTitle(p, g, items) {
+    if (ui.adding === 'stage:' + g.id) return `<form class="pj-stage-form" id="pj-gname" data-group="${esc(g.id)}"><input name="name" required maxlength="80" data-pj-focus value="${esc(L(g.name))}"><button type="button" class="pj-btn" data-pj="cancel">${tr('取消', 'Cancel')}</button><button class="pj-btn primary">${tr('保存', 'Save')}</button></form>`;
+    const tools = editable(p) ? `<span class="pj-stage-tools"><button class="plain" data-pj="stage-rename" data-group="${esc(g.id)}" title="${tr('改名', 'Rename')}" aria-label="${tr('阶段改名', 'Rename stage')}">${icon('pencil-simple')}</button>${p.groups.length > 1 ? `<button class="plain" data-pj="stage-delete" data-group="${esc(g.id)}" title="${tr('删除阶段', 'Delete stage')}" aria-label="${tr('删除阶段', 'Delete stage')}">${icon('trash')}</button>` : ''}</span>` : '';
+    return `<h3 class="pj-group-title">${icon('caret-down')} ${tx(L(g.name))} <span>${items.length} ${tr('项任务', 'tasks')}</span>${tools}</h3>`;
+  }
+  function stageMenu(t, p) {
+    return `<div class="pj-menu pj-menu-stage"><p class="pj-menu-label">${tr('移到阶段', 'Move to stage')}</p>${p.groups.filter(g => g.id !== t.group).map(g => `<button data-pj="set-cell" data-id="${t.id}" data-f="group" data-v="${esc(g.id)}" style="--c:${g.color}">${tx(L(g.name))}</button>`).join('')}</div>`;
+  }
+  function deleteStage(p, gid) {
+    const g = p.groups.find(x => x.id === gid); if (!g || p.groups.length < 2) return;
+    const rest = p.groups.filter(x => x.id !== gid), n = tasksOf(p).filter(t => t.group === gid).length;
+    if (!window.confirm(n ? tr(`删除阶段「${L(g.name)}」？里面的 ${n} 个任务会移到「${L(rest[0].name)}」，不会被删除。`, `Delete stage “${L(g.name)}”? Its ${n} task(s) move to “${L(rest[0].name)}”; no task is deleted.`) : tr(`删除阶段「${L(g.name)}」？`, `Delete stage “${L(g.name)}”?`))) return;
+    p.groups = rest; tasksOf(p).forEach(t => { if (t.group === gid) t.group = rest[0].id; });
+    return saveProject(p, { groups:groupsBody(p) }, '阶段已删除', 'Stage deleted');
+  }
+  function moveTask(task, gid) {
+    if (!task || !gid || task.group === gid) return rerender();
+    if (isLive()) return liveTaskPatch(task, { groupId:gid });
+    task.group = gid; ctx.toast(tr('示例数据，修改不会保存', 'Sample data; changes are not saved')); return rerender();
+  }
+  let dragTask = null;
+  document.addEventListener('dragstart', e => { const row = e.target.closest?.('[data-pj-drag]'); if (!row || !ctx) return; dragTask = row.dataset.pjDrag; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', dragTask); } catch { /* old browsers */ } row.classList.add('pj-dragging'); });
+  document.addEventListener('dragend', () => { dragTask = null; document.querySelectorAll('.pj-dragging,.pj-drop-over').forEach(x => x.classList.remove('pj-dragging', 'pj-drop-over')); });
+  document.addEventListener('dragover', e => { if (!dragTask) return; const sec = e.target.closest?.('[data-pj-drop]'); if (!sec) return; e.preventDefault(); document.querySelectorAll('.pj-drop-over').forEach(x => x !== sec && x.classList.remove('pj-drop-over')); sec.classList.add('pj-drop-over'); });
+  document.addEventListener('drop', e => { if (!dragTask) return; const sec = e.target.closest?.('[data-pj-drop]'); if (!sec) return; e.preventDefault(); const t = tasks.find(x => x.id === dragTask); dragTask = null; sec.classList.remove('pj-drop-over'); moveTask(t, sec.dataset.pjDrop); });
+
+  /* ---------- key project files: one place, same categories in every project ---------- */
+  const FILE_CATS = { brief:['方案 / 简报', 'Brief / plan', 'file-text'], design:['设计 / 素材', 'Design / creative', 'image'], contract:['合同 / 报价', 'Contract / quote', 'handshake'], report:['报告 / 复盘', 'Report / review', 'chart-line-up'], other:['其他', 'Other', 'paperclip'] };
+  const FILE_MIME = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'text/csv', 'text/plain'];
+  const fsize = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+  const apiBase = () => (window.WORKOS_CONFIG && window.WORKOS_CONFIG.apiBase) || '/api';
+  const b64 = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] || ''); r.onerror = () => rej(new Error(tr('文件读取失败', 'Could not read the file'))); r.readAsDataURL(f); });
+  function filesPanel(p) {
+    if (!isLive()) return '';
+    const files = p.files || [], up = editable(p) && window.WorkOSUpload;
+    if (up) window.WorkOSUpload.register('pj-files', { lang:lang(), accept:FILE_MIME, multiple:true, maxBytes:20 * 1024 * 1024, onFiles:files => uploadFiles(p, files) });
+    const cats = Object.keys(FILE_CATS).filter(c => files.some(f => f.category === c));
+    return `<section class="pj-panel pj-files" data-upload-scope="pj-files"><div class="pj-panel-head"><h3>${icon('folder-simple')} ${tr('项目附件', 'Project files')} <b class="pj-count">${files.length}</b></h3></div>
+      <p class="pj-muted">${tr('方案、设计、合同报价、报告都放这里，按分类整理，所有成员看到的是同一份最新文件。', 'Plans, designs, contracts and reports live here, sorted by category, so every member works from the same latest file.')}</p>
+      ${cats.map(c => `<div class="pj-file-cat"><h4>${icon(FILE_CATS[c][2])} ${tr(FILE_CATS[c][0], FILE_CATS[c][1])}</h4><ul class="pj-file-list">${files.filter(f => f.category === c).map(f => `<li>
+        <button class="plain pj-file-name" data-pj="file-download" data-id="${esc(f.id)}" data-name="${esc(f.name)}" title="${tr('下载', 'Download')}">${icon(f.mime.startsWith('image/') ? 'image' : f.mime === 'application/pdf' ? 'file-pdf' : 'file')} <span>${esc(f.name)}</span></button>
+        <small>${fsize(f.size)} · ${esc(person(f.uploadedBy).name)} · ${fmt(day(f.at))}</small>
+        ${f.canDelete ? `<button class="plain pj-file-del" data-pj="file-delete" data-id="${esc(f.id)}" data-name="${esc(f.name)}" title="${tr('删除', 'Delete')}" aria-label="${tr('删除文件', 'Delete file')}">${icon('trash')}</button>` : ''}</li>`).join('')}</ul></div>`).join('')}
+      ${files.length ? '' : `<p class="pj-empty-line">${tr('还没有附件。', 'No files yet.')}</p>`}
+      ${up ? `<div class="pj-file-up"><label>${tr('分类', 'Category')} <select data-pj-file-cat>${Object.keys(FILE_CATS).map(c => `<option value="${c}">${tr(FILE_CATS[c][0], FILE_CATS[c][1])}</option>`).join('')}</select></label>
+        ${window.WorkOSUpload.html({ id:'pj-files', lang:lang(), accept:FILE_MIME, multiple:true, maxBytes:20 * 1024 * 1024, hint:tr('PDF、Word、Excel、PPT、图片、CSV、TXT', 'PDF, Word, Excel, PowerPoint, images, CSV, TXT') })}</div>` : ''}
+    </section>`;
+  }
+  async function uploadFiles(p, files) {
+    const category = document.querySelector('[data-pj-file-cat]')?.value || 'other';
+    for (const file of files) await ctx.api.post('/projects/' + encodeURIComponent(p.id) + '/files', { name:file.name, category, dataBase64:await b64(file) });
+    ctx.toast(tr(`已上传 ${files.length} 个文件`, `${files.length} file(s) uploaded`));
+    await reloadLive();
+    return '';
+  }
+  async function downloadFile(fid, name) {
+    try {
+      const r = await fetch(`${apiBase()}/projects/files/${encodeURIComponent(fid)}`, { credentials:'same-origin', cache:'no-store' });
+      if (!r.ok) { let m = ''; try { m = (await r.json()).error?.message; } catch { /* not JSON */ } throw new Error(m || tr('下载失败', 'Download failed')); }
+      const url = URL.createObjectURL(await r.blob()), a = document.createElement('a');
+      a.href = url; a.download = name || 'file'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (x) { ctx.toast(x.message || tr('下载失败', 'Download failed')); }
+  }
+  async function deleteFile(fid, name) {
+    if (!window.confirm(tr(`删除文件「${name}」？删除后其他成员也看不到了。`, `Delete “${name}”? Other members will no longer see it.`))) return;
+    try { await ctx.api.request('/projects/files/' + encodeURIComponent(fid), { method:'DELETE' }); ctx.toast(tr('文件已删除', 'File deleted')); } catch (e) { failed(e); }
+    await reloadLive();
+  }
+
+  /* ---------- 动态: every task created or changed, notes, files and stage changes ---------- */
+  function loadFeed(p) {
+    const f = feeds[p.id]; if (f && (f.items || f.loading)) return;
+    feeds[p.id] = { loading:true };
+    ctx.api.get('/projects/' + encodeURIComponent(p.id) + '/activity').then(r => { feeds[p.id] = { items:r.items || [] }; ctx.rerender(); }).catch(e => { feeds[p.id] = { items:[], error:e.message || 'error' }; ctx.rerender(); });
+  }
+  const STATUS_WORD = k => STATUS[k] ? tr(STATUS[k][0], STATUS[k][1]) : k;
+  const FIELD_WORD = { title:['名称', 'name'], priority:['优先级', 'priority'], status:['状态', 'status'], due:['截止日期', 'due date'], dueAt:['截止日期', 'due date'], owner:['负责人', 'owner'], ownerId:['负责人', 'owner'], notes:['备注', 'notes'], description:['说明', 'description'], criteria:['验收标准', 'criteria'], groupId:['分组', 'group'], category:['分类', 'category'] };
+  function feedLine(a) {
+    const d = a.detail || {}, task = a.taskId ? `<button class="pj-tlink" data-pj="open-task" data-id="${esc(a.taskId)}">${tx(a.taskTitle || '')}</button>` : `<b>${tx(a.taskTitle || d.title || '')}</b>`;
+    const who = id => esc(person(id).name);
+    switch (a.kind) {
+      case 'task_created': return [tr('新建了任务', 'created') + ' ' + task, [d.owner ? tr('负责人 ', 'owner ') + who(d.owner) : '', d.stage ? tr('阶段 ', 'stage ') + tx(d.stage) : '', d.due ? tr('截止 ', 'due ') + fmt(d.due) : ''].filter(Boolean).join(' · ')];
+      case 'task_changed': return [tr('更新了', 'updated') + ' ' + task, [d.status ? tr('状态 → ', 'status → ') + esc(STATUS_WORD(d.status)) : '', d.owner ? tr('负责人 → ', 'owner → ') + who(d.owner) : '', d.stage ? tr('移到阶段 ', 'moved to ') + tx(d.stage) : '', d.due ? tr('截止 → ', 'due → ') + fmt(d.due) : '', d.priority ? tr('优先级 → ', 'priority → ') + esc(PRIORITY[d.priority] ? tr(PRIORITY[d.priority][0], PRIORITY[d.priority][1]) : d.priority) : '', d.title && d.title !== a.taskTitle ? tr('改名为 ', 'renamed to ') + tx(d.title) : ''].filter(Boolean).join(' · ')];
+      case 'task_edited': return [tr('在个人任务里修改了', 'edited in the Task hub') + ' ' + task, (d.fields || []).map(f => FIELD_WORD[f] ? tr(FIELD_WORD[f][0], FIELD_WORD[f][1]) : '').filter(Boolean).join('、')];
+      case 'task_note': return [tr('写了进展', 'posted an update on') + ' ' + task, tx(d.body || '')];
+      case 'task_completed': return [tr('提交了完成成果', 'submitted the result of') + ' ' + task, ''];
+      case 'task_auto_accepted': return [task + ' ' + tr('已自动验收', 'was auto-accepted'), ''];
+      case 'task_completion_scored': return [task + ' ' + tr('AI 评分', 'AI score') + (d.score != null ? ` <b>${esc(d.score)}</b>` : ''), ''];
+      case 'task_archived': return [tr('删除了任务', 'deleted') + ' ' + task, ''];
+      case 'task_restored': return [tr('恢复了任务', 'restored') + ' ' + task, ''];
+      case 'status': return [tr('发布了项目状态', 'posted a project status') + ' ' + (HEALTH[d.health] ? healthDot(d.health) : ''), tx(d.body || '')];
+      case 'stage_added': return [tr('添加了阶段', 'added stage') + ' ' + tx(d.name || ''), ''];
+      case 'stage_renamed': return [tr('把阶段', 'renamed stage') + ' ' + tx(d.from || '') + ' ' + tr('改名为', 'to') + ' ' + tx(d.to || ''), ''];
+      case 'stage_deleted': return [tr('删除了阶段', 'deleted stage') + ' ' + tx(d.name || ''), d.movedTo ? tr('里面的任务移到了 ', 'its tasks moved to ') + tx(d.movedTo) : ''];
+      case 'description': return [tr('修改了项目描述', 'edited the description'), ''];
+      case 'milestone_added': return [tr('添加了里程碑', 'added milestone') + ' ' + tx(d.name || ''), d.date ? fmt(d.date) : ''];
+      case 'milestone_done': return [tr('完成了里程碑', 'completed milestone') + ' ' + tx(d.name || ''), ''];
+      case 'members': return [tr('调整了成员', 'changed members'), [(d.added || []).length ? tr('加入 ', 'added ') + d.added.map(who).join('、') : '', (d.removed || []).length ? tr('移出 ', 'removed ') + d.removed.map(who).join('、') : ''].filter(Boolean).join(' · ')];
+      case 'admin': return [tr('把项目管理员交给了', 'made project admin:') + ' ' + who(d.to), ''];
+      case 'file_added': return [tr('上传了附件', 'uploaded') + ' ' + esc(d.name || ''), FILE_CATS[d.category] ? tr(FILE_CATS[d.category][0], FILE_CATS[d.category][1]) : ''];
+      case 'file_deleted': return [tr('删除了附件', 'deleted file') + ' ' + esc(d.name || ''), ''];
+      default: return [esc(a.kind), ''];
+    }
+  }
+  function feedList(p, max) {
+    loadFeed(p);
+    const f = feeds[p.id] || {};
+    if (!f.items) return `<p class="pj-empty-line">${tr('正在读取动态…', 'Loading activity…')}</p>`;
+    if (f.error) return `<p class="pj-empty-line">${esc(f.error)}</p>`;
+    if (!f.items.length) return `<p class="pj-empty-line">${tr('还没有动态。新建任务、更新状态、上传附件后都会出现在这里。', 'Nothing yet. New tasks, changes, notes and files show up here.')}</p>`;
+    const when = v => new Date(v).toLocaleString(lang() === 'en' ? 'en-US' : 'zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    return `<div class="pj-feed-list">${f.items.slice(0, max).map(a => { const [line, sub] = feedLine(a); return `<div class="pj-feed-row">${av(a.actorId, 28)}<div><div><strong>${esc(person(a.actorId).name)}</strong> ${line} <span class="pj-feed-at">${when(a.at)}</span></div>${sub ? `<p>${sub}</p>` : ''}</div></div>`; }).join('')}</div>`;
+  }
+
+  /* ---------- AI 拆任务: describe the work, AI drafts tasks with owners, stages and dates; people confirm ---------- */
+  let aiDraft = null;
+  function aiBar(p) {
+    if (!isLive() || !editable(p)) return '';
+    return `<div class="pj-ai-bar"><button class="pj-btn primary small" data-pj="ai-plan">${icon('sparkle')} ${tr('AI 拆任务', 'AI task split')}</button><span class="pj-muted">${tr('用几句话说要做什么、谁负责，AI 会按阶段拆成任务并分配给成员，你确认后才创建。', 'Describe the work in a few sentences; AI drafts tasks by stage and assigns members. Nothing is created until you confirm.')}</span></div>`;
+  }
+  function aiDialog(p) {
+    if (!p) return;
+    aiDraft = null;
+    ctx.modal(tr('AI 拆任务', 'AI task split') + ' · ' + esc(L(p.name)), `<div class="pj-ai" id="pj-ai">
+      <label class="field full"><span>${tr('要做什么？', 'What needs to be done?')}</span><textarea id="pj-ai-text" rows="6" maxlength="4000" placeholder="${tr('例如：黑五活动 11/20 前要定好折扣方案（KC 负责），Zach 做落地页，墨菲准备 3 组广告素材，11/25 前全部上线测试。', 'e.g. Lock the Black Friday discount plan by 11/20 (KC), Zach builds the landing page, three ad creatives, everything live for testing by 11/25.')}"></textarea></label>
+      <div class="pj-ai-actions"><button class="btn primary" data-pj="ai-run">${icon('sparkle')} ${tr('生成任务草稿', 'Draft tasks')}</button></div>
+      <div id="pj-ai-out"></div></div>`);
+    requestAnimationFrame(() => document.getElementById('pj-ai-text')?.focus());
+  }
+  const memberOptions = (p, sel) => [...new Set([...(p.members || []), ...Object.keys(PEOPLE)])].map(id => `<option value="${esc(id)}" ${id === sel ? 'selected' : ''}>${esc(person(id).name)}</option>`).join('');
+  function aiDraftHtml(p) {
+    if (!aiDraft?.length) return '';
+    return `<p class="pj-muted">${tr('检查一下：可以改名称、负责人、阶段和截止日期，不要的取消勾选。', 'Check the draft: edit the name, owner, stage and due date, untick what you do not want.')}</p>
+      <div class="pj-ai-list">${aiDraft.map((t, i) => `<div class="pj-ai-row" data-i="${i}">
+        <input type="checkbox" data-ai="keep" ${t.keep ? 'checked' : ''} aria-label="${tr('创建这个任务', 'Create this task')}">
+        <input data-ai="title" value="${esc(t.title)}" maxlength="200" aria-label="${tr('任务名称', 'Task name')}">
+        <select data-ai="ownerId" aria-label="${tr('负责人', 'Owner')}"><option value="">${tr('选负责人', 'Pick owner')}</option>${memberOptions(p, t.ownerId)}</select>
+        <select data-ai="groupId" aria-label="${tr('阶段', 'Stage')}">${p.groups.map(g => `<option value="${esc(g.id)}" ${g.id === t.groupId ? 'selected' : ''}>${esc(L(g.name))}</option>`).join('')}</select>
+        <input type="date" data-ai="dueDate" value="${esc(t.dueDate)}" aria-label="${tr('截止日期', 'Due date')}">
+        <select data-ai="priority" aria-label="${tr('优先级', 'Priority')}">${Object.keys(PRIORITY).map(k => `<option value="${k}" ${k === t.priority ? 'selected' : ''}>${esc(tr(PRIORITY[k][0], PRIORITY[k][1]))}</option>`).join('')}</select>
+        ${t.description ? `<small>${esc(t.description)}</small>` : ''}</div>`).join('')}</div>
+      <div class="pj-ai-actions"><button class="btn primary" data-pj="ai-create">${icon('check')} ${tr('创建勾选的任务', 'Create ticked tasks')}</button></div>`;
+  }
+  function readDraft() {
+    document.querySelectorAll('.pj-ai-row').forEach(row => { const t = aiDraft[+row.dataset.i]; if (!t) return; row.querySelectorAll('[data-ai]').forEach(el => { t[el.dataset.ai] = el.type === 'checkbox' ? el.checked : el.value; }); });
+  }
+  async function aiRun(p) {
+    const text = document.getElementById('pj-ai-text')?.value.trim() || '', out = document.getElementById('pj-ai-out');
+    if (text.length < 4) { ctx.toast(tr('先写几句要做什么。', 'Write a few sentences first.')); return; }
+    if (out) out.innerHTML = `<p class="pj-muted">${icon('spinner')} ${tr('AI 正在拆任务…', 'Drafting tasks…')}</p>`;
+    try { const r = await ctx.api.post('/projects/' + encodeURIComponent(p.id) + '/ai-plan', { text, lang:lang() }); aiDraft = (r.tasks || []).map(t => ({ ...t, keep:true })); if (out) out.innerHTML = aiDraftHtml(p); }
+    catch (e) { if (out) out.innerHTML = `<p class="pj-ai-err">${esc(e.message || tr('AI 暂时无法生成，请稍后再试。', 'AI is unavailable; try again later.'))}</p>`; }
+  }
+  async function aiCreate(p) {
+    if (!aiDraft) return; readDraft();
+    const keep = aiDraft.filter(t => t.keep && String(t.title).trim().length >= 2);
+    if (!keep.length) { ctx.toast(tr('没有勾选任务。', 'No task ticked.')); return; }
+    const missing = keep.find(t => !t.ownerId); if (missing) { ctx.toast(tr(`「${missing.title}」还没选负责人。`, `“${missing.title}” has no owner yet.`)); return; }
+    let ok = 0;
+    for (const t of keep) {
+      try { await ctx.api.post('/projects/' + encodeURIComponent(p.id) + '/tasks', { title:String(t.title).trim(), ownerId:t.ownerId, groupId:t.groupId, dueAt:new Date((t.dueDate || p.end) + 'T17:00:00').toISOString(), description:t.description || undefined, priority:t.priority || 'medium' }); ok++; }
+      catch (e) { ctx.toast(`${t.title}: ${e.message || tr('创建失败', 'failed')}`); }
+    }
+    ctx.closeOverlay(); aiDraft = null;
+    ctx.toast(tr(`已创建 ${ok} 个任务，负责人会在个人任务里收到`, `${ok} task(s) created; owners see them in their Task hub`));
+    ui.tab = 'list'; await reloadLive();
+  }
 
   /* ---------- project analysis (reports area) ---------- */
   function analysis() {
@@ -456,7 +629,7 @@
       case 'cal-move': ui.calMonth = t.dataset.v === '0' ? 0 : (ui.calMonth || 0) + Number(t.dataset.v); return rerender();
       case 'open-task': return openTask(id);
       case 'cell': ui.cell = ui.cell && ui.cell.id === id && ui.cell.f === t.dataset.f ? null : { id, f:t.dataset.f }; return rerender();
-      case 'set-cell': if (isLive()) { ui.cell = null; const f = t.dataset.f, v = t.dataset.v; return liveTaskPatch(task, f === 'owner' ? { ownerId:v } : f === 'status' ? { status:v } : f === 'priority' ? { priority:v } : {}); } task[t.dataset.f] = t.dataset.v; ui.cell = null; ctx.toast(t.dataset.f === 'owner' ? tr(`已分派给 ${person(t.dataset.v).name}；仅为示例，不会写入真实任务`, `Assigned to ${person(t.dataset.v).name}; sample only, no live task created`) : tr('已更新', 'Updated')); return rerender();
+      case 'set-cell': if (t.dataset.f === 'group') { ui.cell = null; return moveTask(task, t.dataset.v); } if (isLive()) { ui.cell = null; const f = t.dataset.f, v = t.dataset.v; return liveTaskPatch(task, f === 'owner' ? { ownerId:v } : f === 'status' ? { status:v } : f === 'priority' ? { priority:v } : {}); } task[t.dataset.f] = t.dataset.v; ui.cell = null; ctx.toast(t.dataset.f === 'owner' ? tr(`已分派给 ${person(t.dataset.v).name}；仅为示例，不会写入真实任务`, `Assigned to ${person(t.dataset.v).name}; sample only, no live task created`) : tr('已更新', 'Updated')); return rerender();
       case 'toggle-done': if (isLive()) { if (task.status === 'done') return liveTaskPatch(task, { status:'working' }); return failed({ code:'COMPLETION_RESULT_REQUIRED' }); } task.status = task.status === 'done' ? 'working' : 'done'; rerender(); return repaintPanel();
       case 'toggle-sub': task.subtasks[+t.dataset.i].done = !task.subtasks[+t.dataset.i].done; rerender(); return repaintPanel();
       case 'add-task': ui.adding = t.dataset.group; return rerender();
@@ -466,6 +639,15 @@
       case 'ms-toggle': { const p = proj(ui.project), m = p.milestones[+t.dataset.i]; m.done = !m.done; rerender(); return saveProject(p, { milestones:msBody(p) }, m.done ? '里程碑已完成' : '里程碑已改为未完成', m.done ? 'Milestone done' : 'Milestone reopened'); }
       case 'ms-del': { const p = proj(ui.project); p.milestones.splice(+t.dataset.i, 1); rerender(); return saveProject(p, { milestones:msBody(p) }, '里程碑已删除', 'Milestone deleted'); }
       case 'cancel': ui.adding = null; return rerender();
+      case 'add-stage': ui.adding = 'stage'; return rerender();
+      case 'stage-rename': ui.adding = 'stage:' + t.dataset.group; return rerender();
+      case 'stage-delete': return deleteStage(proj(ui.project), t.dataset.group);
+      case 'file-download': return downloadFile(t.dataset.id, t.dataset.name);
+      case 'file-delete': return deleteFile(t.dataset.id, t.dataset.name);
+      case 'feed-all': ui.tab = 'activity'; return rerender();
+      case 'ai-plan': return aiDialog(proj(ui.project));
+      case 'ai-run': return aiRun(proj(ui.project));
+      case 'ai-create': return aiCreate(proj(ui.project));
       case 'new-project': return newProjectDialog();
     }
   }, true);
@@ -476,6 +658,10 @@
     e.preventDefault();
     const v = Object.fromEntries(new FormData(f));
     if (f.id === 'pj-invite') { const p = proj(ui.project), owner = String(v.ownerId || p.owner), picked = [...new FormData(f).getAll('member')].map(String), members = [...new Set([owner, ...picked])]; p.members = members; p.owner = owner; ctx.closeOverlay(); return saveProject(p, { members, ownerId:owner }, '项目成员已更新', 'Project members updated'); }
+    if (f.id === 'pj-gadd' || f.id === 'pj-gname') { const p = proj(ui.project), name = String(v.name || '').trim(); if (!name) return;
+      if (f.id === 'pj-gadd') p.groups.push({ id:'g' + Date.now().toString(36), name:T2(name), color:STAGE_COLORS[p.groups.length % STAGE_COLORS.length] });
+      else { const g = p.groups.find(x => x.id === f.dataset.group); if (g) g.name = T2(name); }
+      return saveProject(p, { groups:groupsBody(p) }, f.id === 'pj-gadd' ? '阶段已添加' : '阶段已改名', f.id === 'pj-gadd' ? 'Stage added' : 'Stage renamed'); }
     if (f.id === 'pj-desc') { const p = proj(ui.project), text = String(v.text || '').trim(); p.desc = { zh:text, en:text }; return saveProject(p, { description:text }, '项目描述已保存', 'Description saved'); }
     if (f.id === 'pj-ms') { const p = proj(ui.project); p.milestones.push({ name:T2(String(v.name).trim()), date:v.date, done:false }); p.milestones.sort((a, b) => String(a.date).localeCompare(String(b.date))); return saveProject(p, { milestones:msBody(p) }, '里程碑已添加', 'Milestone added'); }
     if (isLive() && ['pj-add', 'pj-status', 'pj-comment', 'pj-new'].includes(f.id)) { liveSubmit(f, v); return; }
