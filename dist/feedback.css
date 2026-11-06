@@ -36,7 +36,7 @@
 .fb-ver:hover,.fb-ver:focus-visible{background:var(--hover,#f1f2f6);color:var(--ink,#1f2433)}
 .fb-ver-pop{display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:2500;width:min(380px,90vw);padding:12px 14px;border-radius:10px;background:#fff;color:#1f2433;border:1px solid #e3e6ee;box-shadow:0 12px 32px #0003;font-weight:400;font-size:12px;line-height:1.5;flex-direction:column;gap:6px;text-align:left}
 .fb-ver:hover .fb-ver-pop,.fb-ver:focus-within .fb-ver-pop{display:flex}
-.fb-ver-pop b{font-size:13px;margin-bottom:2px}.fb-ver-row{display:grid;grid-template-columns:42px 40px 1fr;gap:6px;align-items:baseline}.fb-ver-row em{font-style:normal;font-weight:700;color:#245bdb}.fb-ver-row i{font-style:normal;color:#6b7185}
+.fb-ver-pop b{font-size:13px;margin-bottom:2px}.fb-ver-row{display:grid;grid-template-columns:46px 1fr;gap:6px;align-items:baseline;padding:3px 0}.fb-ver-row em{font-style:normal;font-weight:700;color:#245bdb}.fb-ver-row i{display:block;font-style:normal;font-size:11px;color:#6b7185}
 [data-theme=dark] .fb-ver{color:#a3a9b8}[data-theme=dark] .fb-ver:hover,[data-theme=dark] .fb-ver:focus-visible{background:#2a2d38;color:#e7e9ef}
 [data-theme=dark] .fb-ver-pop{background:#1d1f27;color:#e7e9ef;border-color:#2d313d}[data-theme=dark] .fb-ver-row em{color:#8fb3ff}[data-theme=dark] .fb-ver-row i{color:#a3a9b8}
 

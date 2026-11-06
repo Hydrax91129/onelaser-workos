@@ -116,7 +116,29 @@
   function stageLegend() {
     return `<div class="okb-stage-legend"><div class="okb-stage-legend-row"><b>${tr('每人三个状态', 'Three stages')}</b><button type="button" class="okb-stage-help-btn" data-okr="stage-help" aria-expanded="${!!ui.stageHelp}">${icon('question')} ${tr('说明', 'Help')}</button></div>
       <div class="okb-stage-legend-row"><i class="okb-stage done">${tr('建立', 'Set')}</i><i class="okb-stage done">${tr('自评', 'Self')}</i><i class="okb-stage done">${tr('领导', 'Leader')}</i><span>${tr('绿 = 完成 · 黄 = 进行中 · 灰 = 未开始', 'green done · amber in progress · grey not started')}</span></div>
-      ${ui.stageHelp ? `<dl class="okb-stage-help"><dt>${tr('① 建立', '① Set')}</dt><dd>${tr('本月 OKR 是否已“最终发布”。✓ = 已发布；“未发布” = 已填写但还没发布；— = 还没填写。设置期：上月 25 日至本月 5 日。', 'Whether this month’s OKR is published. ✓ published; “draft” filled in but not published; — not started. Window: 25th of last month to the 5th.')}</dd><dt>${tr('② 自评', '② Self')}</dt><dd>${tr('员工已自评的项数 / 需要评分的项数（每条 KR 算一项，没有 KR 的目标算一项）。自评期：本月 25 日至 30 日，逾期按 0 分。', 'Items the owner has self-scored / items to score (each KR, or an objective without KRs). Window: the 25th to the 30th; missing ones count as 0.')}</dd><dt>${tr('③ 领导', '③ Leader')}</dt><dd>${tr('领导已评分的项数 / 需要评分的项数。领导评分期：本月 30 日至下月 3 日。', 'Items the leader has scored / items to score. Window: the 30th to the 3rd of next month.')}</dd></dl>` : ''}</div>`;
+      ${nudgeButton()}${ui.stageHelp ? `<dl class="okb-stage-help"><dt>${tr('① 建立', '① Set')}</dt><dd>${tr('本月 OKR 是否已“最终发布”。✓ = 已发布；“未发布” = 已填写但还没发布；— = 还没填写。设置期：上月 25 日至本月 5 日。', 'Whether this month’s OKR is published. ✓ published; “draft” filled in but not published; — not started. Window: 25th of last month to the 5th.')}</dd><dt>${tr('② 自评', '② Self')}</dt><dd>${tr('员工已自评的项数 / 需要评分的项数（每条 KR 算一项，没有 KR 的目标算一项）。自评期：本月 25 日至 30 日，逾期按 0 分。', 'Items the owner has self-scored / items to score (each KR, or an objective without KRs). Window: the 25th to the 30th; missing ones count as 0.')}</dd><dt>${tr('③ 领导', '③ Leader')}</dt><dd>${tr('领导已评分的项数 / 需要评分的项数。领导评分期：本月 30 日至下月 3 日。', 'Items the leader has scored / items to score. Window: the 30th to the 3rd of next month.')}</dd></dl>` : ''}</div>`;
+  }
+  /* 一键催办: leaders remind everyone in their team who is behind on this month's OKR (server decides who and when). */
+  const leadsSomeone = () => people().some(id => ['direct', 'indirect'].includes(relationOf(id)));
+  const nudgeButton = () => leadsSomeone() ? `<button type="button" class="btn okb-nudge-btn" data-okr="nudge-open">${icon('bell-ringing')} ${tr('一键催办', 'Nudge the team')}</button>` : '';
+  const NUDGE_STAGE = { setup:['建立', 'Set up'], self:['自评', 'Self score'], lead:['领导评分', 'Leader score'] };
+  async function openNudge() {
+    const p = ui.cycle || nowPeriod();
+    let r; try { r = await ctx.api.get('/okr/nudge?period=' + encodeURIComponent(p)); } catch (e) { ctx.toast(ctx.explainError ? ctx.explainError(e) : e.message); return; }
+    const items = r.items || [];
+    const rows = items.map(x => `<li><b>${esc(nameOf(x.userId) || x.name)}</b><span class="okb-nudge-stage">${esc(tr(...NUDGE_STAGE[x.stage]))}</span><span>${esc(x.stage === 'setup' ? tr('还没有发布 OKR', 'OKR not published') : x.stage === 'self' ? tr(`${x.count} 项未自评`, `${x.count} not self-scored`) : tr(`${x.count} 项待领导评分`, `${x.count} to score`))}</span><span class="${x.overdue ? 'okb-nudge-late' : ''}">${x.overdue ? tr('已逾期', 'overdue') + ' · ' : ''}${tr('截止', 'due')} ${esc(x.deadline)}</span></li>`).join('');
+    ctx.modal(tr(`一键催办 · ${periodLabel(p)} OKR`, `Nudge the team · ${periodLabel(p)} OKR`), items.length
+      ? `<p class="fine">${tr('下面这些同事当前阶段还没完成。发送后，每人会收到一条站内提醒和钉钉消息；同一个人同一阶段每天最多催一次。', 'These people have not finished the current stage. Each gets an in-app reminder and a DingTalk message; at most once per person and stage per day.')}</p><ul class="okb-nudge-list">${rows}</ul><div class="rma-actions"><button type="button" class="btn primary" data-okr="nudge-send" data-period="${esc(p)}">${icon('paper-plane-tilt')} ${tr(`发送催办（${items.length} 人）`, `Send ${items.length} reminder${items.length > 1 ? 's' : ''}`)}</button></div>`
+      : `<p>${tr('团队里目前没有需要催办的人：这个阶段大家都已完成，或者还没到时间。', 'Nobody in your team needs a reminder right now: everyone is done with this stage, or it has not started yet.')}</p>`,
+      `<button class="btn" data-live-action="close">${tr('关闭', 'Close')}</button>`);
+  }
+  async function sendNudge(btn) {
+    if (btn.disabled) return; btn.disabled = true;
+    try {
+      const r = await ctx.api.post('/okr/nudge', { period:btn.dataset.period });
+      ctx.toast(r.sent ? tr(`已催办 ${r.sent} 人`, `Reminded ${r.sent}`) + (r.already ? tr(`；${r.already} 人今天已经催过`, `; ${r.already} already reminded today`) : '') : tr('今天已经都催过了，明天可以再催', 'Everyone was already reminded today; try again tomorrow'));
+      document.querySelector('#overlay-root [data-live-action="close"]')?.click();
+    } catch (e) { btn.disabled = false; ctx.toast(ctx.explainError ? ctx.explainError(e) : e.message); }
   }
   function stageChips(id, objs) {
     const st = stages(id, objs), cls = (n, t) => !t ? 'none' : n >= t ? 'done' : n ? 'part' : 'none';
@@ -919,6 +941,8 @@
     if (!t) { if ((ui.menu || ui.confirm) && !event.target.closest('.okb-popover')) { ui.menu = null; ui.confirm = null; if (S().page === 'okr') rerender(); } return; }
     event.preventDefault();
     const a = t.dataset.okr, id = t.dataset.id;
+    if (a === 'nudge-open') { openNudge(); return; }
+    if (a === 'nudge-send') { sendNudge(t); return; }
     const inDrawer = !!t.closest('#overlay-root');
     const keepMenu = ['menu', 'kr-status', 'set-status', 'cancel-confirm', 'publish', 'save-retry', 'save-discard', 'restored-ok'].includes(a);
     if (!keepMenu) { ui.menu = null; ui.confirm = null; }

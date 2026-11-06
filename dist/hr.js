@@ -13,7 +13,7 @@
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   const icon = n => `<i class="ph ph-${n}" aria-hidden="true"></i>`;
   let ctx = null, data = null, reminders = null, loading = false, error = '', detail = null, busy = false;
-  const ui = { q:'', view:'active', region:null };
+  const ui = { q:'', view:'active', region:null, sec:'job' };
   const lang = () => ctx?.lang() === 'en' ? 'en' : 'zh';
   const tr = (zh, en) => lang() === 'en' ? en : zh;
   const apiBase = () => (window.WORKOS_CONFIG && window.WORKOS_CONFIG.apiBase) || '/api';
@@ -288,19 +288,22 @@
     </dl>${detail.access === 'self' ? `<p class="wms-hint">${tr('资料有误请联系人事修改。', 'Ask HR to correct anything wrong.')}</p>` : detail.access === 'view' ? `<p class="wms-hint">${tr('你对这个地区只有只读权限。', 'You have read-only access to this region.')}</p>` : ''}`;
     const d = (name, label, v) => `<label class="field"><span>${label}</span><input type="date" name="${name}" value="${esc(v || '')}"></label>`;
     const t = (name, label, v, max = 80, ph = '') => `<label class="field"><span>${label}</span><input name="${name}" maxlength="${max}" value="${esc(v || '')}" placeholder="${esc(ph)}"></label>`;
-    return `<form id="hr-profile" class="form-grid">
+    const more = [p.probationEnd, p.contractStart, p.contractEnd, p.emergencyName, p.emergencyRelation, p.bankName, p.consentDate, p.consentVersion, p.notes].filter(Boolean).length;
+    return `<form id="hr-profile" class="form-grid hr-compact">
+      <label class="field"><span>${tr('在职状态', 'Status')}</span><select name="status" data-hr-status>${opt(STATUS, p.status)}</select></label>
+      <div class="hr-lastday" ${p.status === 'active' && !p.lastDay ? 'hidden' : ''}>${d('lastDay', tr('最后工作日', 'Last day'), p.lastDay)}</div>
       ${d('hireDate', tr('入职日期', 'Hire date'), p.hireDate)}
       <label class="field"><span>${tr('用工类型', 'Employment type')}</span><select name="employmentType">${opt(EMPLOYMENT, p.employmentType)}</select></label>
+      ${t('jobLevel', tr('职级', 'Level'), p.jobLevel, 60, 'P3')}${t('workLocation', tr('工作地点', 'Work location'), p.workLocation)}
+      <details class="full hr-more"><summary>${icon('caret-down')} ${tr('更多：试用期、合同、紧急联系人、银行、授权、备注', 'More: probation, contract, emergency contact, bank, consent, notes')}${more ? ` <b>${tr(`已填 ${more} 项`, `${more} filled`)}</b>` : ''}</summary><div class="form-grid hr-compact">
       ${d('probationEnd', tr('试用期结束', 'Probation ends'), p.probationEnd)}
       ${d('contractStart', tr('合同开始', 'Contract starts'), p.contractStart)}${d('contractEnd', tr('合同到期', 'Contract ends'), p.contractEnd)}
-      ${t('jobLevel', tr('职级', 'Level'), p.jobLevel, 60, 'P3')}${t('workLocation', tr('工作地点', 'Work location'), p.workLocation)}
-      <label class="field"><span>${tr('在职状态', 'Status')}</span><select name="status">${opt(STATUS, p.status)}</select></label>
-      ${d('lastDay', tr('最后工作日', 'Last day'), p.lastDay)}
       ${t('emergencyName', tr('紧急联系人', 'Emergency contact'), p.emergencyName, 60)}${t('emergencyRelation', tr('关系', 'Relation'), p.emergencyRelation, 40, tr('配偶 / 父母…', 'Spouse, parent…'))}
       ${t('bankName', tr('开户银行', 'Bank'), p.bankName, 80, tr('例如：示例银行', 'e.g. Example Bank'))}
       ${d('consentDate', tr('个人信息授权日期', 'Consent date'), p.consentDate)}${t('consentVersion', tr('授权书版本', 'Consent notice version'), p.consentVersion, 40, '2026-01')}
       <label class="field full"><span>${tr('人事内部备注（员工本人看不到）', 'Internal HR notes (not shown to the employee)')}</span><textarea name="notes" rows="2" maxlength="4000">${esc(p.notes || '')}</textarea></label>
-      <div class="full rma-actions"><button class="btn primary" type="submit">${tr('保存', 'Save')}</button><span class="wms-hint">${tr('状态改为“已离职”不会自动停用账号，请在“组织与权限”里单独处理。', 'Marking someone as left does not disable their account; do that in Organization & permissions.')}</span></div>
+      </div></details>
+      <div class="full rma-actions"><button class="btn primary" type="submit">${tr('保存', 'Save')}</button><span class="wms-hint">${tr('在“组织与权限”里停用账号，会自动把这里改为“已离职”；反过来，这里改为“已离职”不会停用账号。', 'Disabling the account in Organization & permissions marks this record as left automatically; marking someone as left here does not disable their account.')}</span></div>
       <p class="wms-error" role="alert"></p></form>`;
   }
 
@@ -382,15 +385,21 @@
 
   function drawDetail(first) {
     const d = detail, p = d.person, seeSensitive = !limited();
+    // One section at a time behind tabs, so the record fits on one screen instead of one long form.
+    const secs = [
+      { id:'job', icon:'identification-card', label:tr('雇佣信息', 'Employment'), html:employmentSection },
+      seeSensitive && d.details !== undefined && { id:'details', icon:'address-book', label:tr('基本资料', 'Personal'), title:tr('基本资料', 'Personal details') + (regionOf() ? ` · ${w(REGION[regionOf()])}` : ''), html:detailsSection },
+      seeSensitive && d.payroll !== undefined && { id:'pay', icon:'currency-circle-dollar', label:tr('薪酬与税务', 'Pay & tax'), html:payrollSection },
+      seeSensitive && d.eeo !== undefined && { id:'eeo', icon:'hand-heart', label:'EEO', title:tr('EEO 自愿申报', 'Voluntary EEO'), html:eeoSection },
+      seeSensitive && { id:'secret', icon:'lock-key', label:tr('敏感资料', 'Sensitive'), title:tr('敏感资料', 'Sensitive details'), html:sensitiveSection },
+      seeSensitive && { id:'docs', icon:'files', label:tr('合同与证件', 'Documents'), title:tr('合同与证件', 'Contracts & documents'), html:documentsSection },
+      { id:'history', icon:'clock-counter-clockwise', label:tr('履历', 'History'), html:historySection },
+    ].filter(Boolean);
+    const cur = secs.some(x => x.id === ui.sec) ? ui.sec : 'job';
     const body = `<div class="rma-detail hr-detail" data-hr-person="${esc(p.id)}">
       <div class="rma-head">${badge(d.profile.status)}<b>${esc(p.name)}</b><span>${esc(p.title || '')}</span><span>${tr('主管：', 'Manager: ')}${esc(p.managerName || '—')}</span>${p.email ? `<span class="mono">${esc(p.email)}</span>` : ''}${p.accountActive ? '' : `<span class="rma-badge red">${tr('账号已停用', 'Account disabled')}</span>`}${regionControl()}</div>
-      <section class="rma-sec"><h3>${icon('identification-card')} ${tr('雇佣信息', 'Employment')}</h3>${employmentSection()}</section>
-      ${seeSensitive && d.details !== undefined ? `<section class="rma-sec"><h3>${icon('address-book')} ${tr('基本资料', 'Personal details')}${regionOf() ? ` · ${esc(w(REGION[regionOf()]))}` : ''}</h3>${detailsSection()}</section>` : ''}
-      ${seeSensitive && d.payroll !== undefined ? `<section class="rma-sec"><h3>${icon('currency-circle-dollar')} ${tr('薪酬与税务', 'Pay & tax')}</h3>${payrollSection()}</section>` : ''}
-      ${seeSensitive && d.eeo !== undefined ? `<section class="rma-sec"><h3>${icon('hand-heart')} ${tr('EEO 自愿申报', 'Voluntary EEO')}</h3>${eeoSection()}</section>` : ''}
-      ${seeSensitive ? `<section class="rma-sec"><h3>${icon('lock-key')} ${tr('敏感资料', 'Sensitive details')}</h3>${sensitiveSection()}</section>
-      <section class="rma-sec"><h3>${icon('files')} ${tr('合同与证件', 'Contracts & documents')}</h3>${documentsSection()}</section>` : ''}
-      <section class="rma-sec"><h3>${icon('clock-counter-clockwise')} ${tr('履历', 'History')}</h3>${historySection()}</section>
+      ${secs.length > 1 ? `<div class="hr-sec-tabs" role="tablist">${secs.map(x => `<button type="button" role="tab" aria-selected="${x.id === cur}" class="${x.id === cur ? 'on' : ''}" data-hr="sec" data-s="${x.id}">${icon(x.icon)} ${esc(x.label)}</button>`).join('')}</div>` : ''}
+      ${secs.map(x => `<section class="rma-sec" data-hr-sec="${x.id}" ${x.id === cur ? '' : 'hidden'}><h3>${icon(x.icon)} ${esc(x.title || x.label)}</h3>${x.html()}</section>`).join('')}
     </div>`;
     if (first || !document.querySelector('[data-hr-person]')) { ctx.modal(`${esc(p.name)} · ${tr('人事档案', 'HR record')}`, body, `<button class="btn" data-live-action="close">${tr('关闭', 'Close')}</button>`); document.querySelector('#overlay-root .modal')?.classList.add('modal-wide'); }
     else { document.querySelector('[data-hr-person]').outerHTML = body; }
@@ -432,7 +441,13 @@
     const a = el.dataset.hr;
     if (a === 'view') { ui.view = el.dataset.v; ctx.rerender(); return; }
     if (a === 'region-tab') { ui.region = el.dataset.r; ctx.rerender(); return; }
-    if (a === 'open') { openPerson(el.dataset.id); return; }
+    if (a === 'open') { ui.sec = 'job'; openPerson(el.dataset.id); return; }
+    if (a === 'sec') {
+      ui.sec = el.dataset.s;
+      document.querySelectorAll('[data-hr="sec"]').forEach(b => { const on = b.dataset.s === ui.sec; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+      document.querySelectorAll('[data-hr-sec]').forEach(x => { x.hidden = x.dataset.hrSec !== ui.sec; });
+      return;
+    }
     if (a === 'export-us') { exportUs(); return; }
     if (a === 'doc') { download(el.dataset.id); return; }
     if (a === 'doc-delete') {
@@ -442,6 +457,10 @@
       catch (x) { ctx.toast?.(x.message || tr('删除失败', 'Could not delete')); }
       finally { busy = false; }
     }
+  });
+  document.addEventListener('change', e => {
+    if (!e.target.matches?.('[data-hr-status]')) return;
+    const box = e.target.form?.querySelector('.hr-lastday'); if (box) box.hidden = e.target.value === 'active';
   });
   document.addEventListener('change', async e => {
     if (!e.target.matches?.('[data-hr-region]') || !detail || busy) return;

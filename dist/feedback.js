@@ -15,11 +15,11 @@
   function versionChip() {
     const list = window.WorkOSChangelog?.RELEASES || [];
     if (!list.length) return '';
-    const shown = list;
-    const txt = v => window.WorkOSChangelog.text(v);
-    const md = iso => { const d = new Date(iso); return Number.isFinite(d.getTime()) ? `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')}` : ''; };
-    const v = shown[0].version; // this build's own version: the newest entry ships with it
-    return `<button type="button" class="fb-ver" data-live-page="changelog" aria-label="${tr(`当前版本 v${v}，查看全部更新说明`, `Version v${v}; all release notes`)}">v${esc(v)}<span class="fb-ver-pop" role="tooltip"><b>${tr('更新说明（全部）', 'Release notes (all)')}</b>${shown.map(r => `<span class="fb-ver-row"><em>v${esc(r.version)}</em><i>${md(r.date)}</i><span>${esc(txt(r.short))}</span></span>`).join('')}<small>${tr('点击版本号查看详细说明', 'Click the version for full notes')}</small></span></button>`;
+    const txt = v => window.WorkOSChangelog.text(v), when = iso => window.WorkOSChangelog.when?.(iso) || '';
+    const v = list[0].version; // this build's own version: the newest entry ships with it
+    // The detailed release page is for the company owner only; everyone else gets the short list here.
+    const owner = ctx?.state?.()?.actor?.executiveAccess === true;
+    return `<button type="button" class="fb-ver" ${owner ? 'data-live-page="changelog"' : ''} aria-label="${tr(`当前版本 v${v}`, `Version v${v}`)}">v${esc(v)}<span class="fb-ver-pop" role="tooltip"><b>${tr('更新说明', 'Release notes')}</b>${list.map(r => `<span class="fb-ver-row"><em>v${esc(r.version)}</em><span>${esc(txt(r.title || r.short))}<i>${esc(when(r.date))}</i></span></span>`).join('')}${owner ? `<small>${tr('点击版本号查看详细说明', 'Click the version for full notes')}</small>` : ''}</span></button>`;
   }
   function configure(next) { ctx = next; }
   function button() { return `<button class="fb-btn" data-feedback-open title="${tr('报告问题或提建议，直接发给管理员', 'Report a bug or suggest an improvement')}">${icon('bug')}<span>${tr('Bug 与建议', 'Bug & ideas')}</span></button>${versionChip()}`; }

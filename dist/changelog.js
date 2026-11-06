@@ -22,6 +22,29 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.46', date:'2026-11-06T11:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('“我下达的任务”和“别人给我下达的任务”显示全部任务，可在卡片里往下翻', 'Assigned by me / Assigned to me now list every task and scroll inside the card'),
+      title:c('下达的任务能看全', 'See all assigned tasks'),
+      changes:[c('个人报表里的“我下达的任务”和“别人给我下达的任务”以前只显示前 6 条，现在列出全部（最多 100 条），未完成的排在前面，按截止时间排序，卡片里可以往下翻。', 'In the personal report, Assigned by me and Assigned to me used to show only the first 6 tasks. They now list all of them (up to 100), unfinished first by due date, and scroll inside the card.')] },
+    { version:'1.45', date:'2026-11-06T10:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('OKR 团队页新增“一键催办”', 'OKR team view: one-click nudge'),
+      title:c('OKR 一键催办', 'Nudge the team on OKRs'),
+      changes:[c('在 OKR 团队页“每人三个状态”下面有“一键催办”按钮（只有带团队的人能看到）。点开会列出团队里当前阶段还没完成的人：没发布 OKR、没自评、或者下属还没打领导分，逾期的标红。', 'In the OKR team view, “Nudge the team” (for people who lead someone) lists who has not finished the current stage: OKR not published, not self-scored, or a leader who has not scored their people; overdue ones are red.'),
+        c('点“发送催办”后，每人收到一条站内提醒和钉钉消息，写明是谁催的、截止日期。同一个人同一阶段每天最多催一次。', 'Sending gives each person an in-app reminder and a DingTalk message naming who sent it and the deadline; at most once per person and stage per day.')] },
+    { version:'1.44', date:'2026-11-05T21:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('侧边栏改为“产品 PIM”和“WMS”两个模块；成本核算改名“定价”', 'Sidebar: Product PIM and WMS modules; the cost calculator is now Pricing'),
+      title:c('产品 PIM 与 WMS 分开', 'Product PIM and WMS'),
+      changes:[c('“产品 PIM”下有：产品资料、定价（原“成本核算”）、经销商订单。', 'Product PIM: Catalog, Pricing (formerly Cost calculator) and Dealer orders.'),
+        c('“WMS”下有：库存、退货维修、智能供应链。原来的链接仍然能打开对应页面。', 'WMS: Stock, Returns & repairs and Smart supply chain. Old links still open the right page.'),
+        c('右上角的版本号弹窗只列一句话标题，日期旁边同时写西海岸和北京时间。', 'The version pop-up next to the top-right badge shows one short title per release, with US West Coast and Beijing time.'),
+        c('侧边栏的“版本更新”详细页只有主管理员能看到。', 'The detailed Release notes page in the sidebar is for the company owner only.')] },
+    { version:'1.43', date:'2026-11-05T20:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('停用账号会自动把人事档案改为“已离职”', 'Disabling an account marks the HR record as left'),
+      title:c('离职自动归档，人事档案更简洁', 'Leavers filed automatically; a simpler HR record'),
+      changes:[c('在“组织与权限”里停用某人的账号后，TA 的人事档案会自动变为“已离职”，最后工作日取停用当天（HR 已填写的保留），档案历史里也会记一条“离职”。恢复账号会改回“在职”。', 'Disabling someone in Organization & permissions now marks their HR record as left, with the last day set to that day (a date HR already entered is kept) and a “left” entry in the history. Enabling the account again sets it back to active.'),
+        c('以前就停用的账号已经一并改为“已离职”，会出现在人事档案的“已离职”标签里。', 'Accounts disabled earlier are now marked left too and appear under the Left tab in HR records.'),
+        c('人事档案改成页签：雇佣信息、基本资料、薪酬与税务、敏感资料、合同与证件、履历分开显示，一次只看一页，不用一直往下翻。', 'HR records now use tabs (employment, personal, pay & tax, sensitive, documents, history), one page at a time instead of one long scroll.'),
+        c('雇佣信息只留常用的 6 项（在职状态、入职日期、用工类型、职级、工作地点，离职时才出现最后工作日），试用期、合同、紧急联系人、银行、授权和备注收进“更多”。', 'Employment shows only the everyday fields (status, hire date, type, level, location, and the last day once someone is leaving); probation, contract, emergency contact, bank, consent and notes are under More.')] },
     { version:'1.42', date:'2026-11-05T18:38:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
       short:c('别人下达的任务：提交成果、验收人确认后才算完成；3 天没人验收自动通过', 'Work someone else gave you is done once the reviewer accepts it; auto-accepted after 3 days'),
       title:c('验收确认才算完成', 'Done means accepted'),
@@ -311,8 +334,11 @@
     finally { loading = false; ctx?.rerender?.(); }
   }
   const short = h => String(h || '').slice(0, 7);
+  /* "11/04 18:30 PT · 11/05 10:30 北京": release time on the US West Coast and in Beijing. */
+  const zoned = (iso, tz) => { try { const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone:tz, month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(new Date(iso)).map(x => [x.type, x.value])); return `${p.month}/${p.day} ${p.hour}:${p.minute}`; } catch { return ''; } };
+  const when = iso => Number.isFinite(new Date(iso).getTime()) ? `${zoned(iso, 'America/Los_Angeles')} ${tr('西海岸', 'PT')} · ${zoned(iso, 'Asia/Shanghai')} ${tr('北京', 'Beijing')}` : '';
   const fmt = iso => { try { return new Date(iso).toLocaleString(lang() === 'en' ? 'en-US' : 'zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }); } catch { return iso; } };
-  const commit = (repo, h) => h ? `<a href="https://github.com/Yonge6/${repo}/commit/${esc(h)}" target="_blank" rel="noopener"><code>${esc(short(h))}</code></a>` : `<code>—</code>`;
+  const commit = (repo, h) => h ? `<a href="https://github.com/Hydrax91129/${repo}/commit/${esc(h)}" target="_blank" rel="noopener"><code>${esc(short(h))}</code></a>` : `<code>—</code>`;
 
   function page() {
     if (live === undefined) loadLive();
@@ -327,7 +353,7 @@
     const items = RELEASES.map((r, i) => {
       const tag = i === liveIdx ? `<span class="cl-tag live">${tr('线上', 'Live')}</span>` : r.status === 'pending' && (liveIdx < 0 || i < liveIdx) ? `<span class="cl-tag">${tr('待发布', 'Pending')}</span>` : '';
       return `<article class="cl-item ${i === liveIdx ? 'is-live' : ''}">
-        <header><span class="cl-ver">v${esc(r.version)}</span>${tag}<h2>${esc(t(r.title))}</h2><time datetime="${esc(r.date)}">${esc(fmt(r.date))}</time></header>
+        <header><span class="cl-ver">v${esc(r.version)}</span>${tag}<h2>${esc(t(r.title))}</h2><time datetime="${esc(r.date)}">${esc(new Date(r.date).getFullYear())} · ${esc(when(r.date))}</time></header>
         <ul>${r.changes.map(x => `<li>${esc(t(x))}</li>`).join('')}</ul>
         <dl class="cl-meta">
           <div><dt>${icon('user')} ${tr('修改', 'Changed by')}</dt><dd>${esc(t(r.author))}</dd></div>
@@ -339,5 +365,5 @@
       ${banner}<div class="cl-list">${items}</div></div>`;
   }
 
-  window.WorkOSChangelog = { configure, page, RELEASES, text:t, reset() { live = undefined; } };
+  window.WorkOSChangelog = { configure, page, RELEASES, text:t, when, reset() { live = undefined; } };
 })();
