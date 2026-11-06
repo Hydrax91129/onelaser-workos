@@ -97,3 +97,14 @@ details.pl-grp>summary .no{font-family:var(--pl-num);font-size:12px;color:var(--
 .pl-pill.new{background:var(--pl-ok-bg);color:var(--pl-ok)}.pl-pill.update{background:var(--pl-opt-bg);color:var(--pl-opt)}.pl-pill.same{background:var(--pl-sunk);color:var(--pl-mute)}.pl-pill.error{background:var(--pl-req-bg);color:var(--pl-req)}
 .pl-changes{display:flex;flex-direction:column;gap:2px;text-align:left}
 .pl-confirm{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-top:12px;padding:12px;border-radius:9px;background:var(--pl-sunk)}
+/* shared top bar: search + filters for SKU 管理 and 定价管理; template and bulk update on the right */
+.pl-top{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:center;justify-content:space-between;background:var(--pl-panel);border:1px solid var(--pl-line);border-radius:12px;padding:12px;margin-bottom:12px}
+.pl-find{display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex:1 1 560px;min-width:0}
+.pl-find .pl-q{flex:1 1 260px;min-width:180px;font-size:15px;padding:9px 12px}
+.pl-find select{flex:0 1 auto;min-width:0}
+.pl-acts{display:flex;gap:8px;flex-wrap:wrap}
+.pl-tabs.sub{background:none;padding:0}.pl-tabs.sub button[aria-selected=true]{background:var(--pl-sunk);box-shadow:none}
+.pl-count{font-size:12px;color:var(--pl-mute)}
+.pl-more{padding:0 16px 16px}.pl-more .pd{padding:0}
+@media (max-width:640px){.pl-find .pl-q{flex-basis:100%}.pl-acts{width:100%}}
+.pl .pl-find select{width:auto;flex:0 0 auto;max-width:180px}.pl .pl-find .pl-q{width:auto}
