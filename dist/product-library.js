@@ -153,7 +153,7 @@
   const CALC_KEY = 'workos.pl.calc';
   const calcRates = () => { if (!S.calc) { let saved = {}; try { saved = JSON.parse(localStorage.getItem(CALC_KEY) || '{}'); } catch { saved = {}; }
     const st = D().settings || {}, pc = v => v == null || !isFinite(v) ? '' : String(Math.round(v * 1000) / 10);
-    S.calc = { sales:saved.sales ?? pc(st.dtcRate ?? itemsRate('dtcRate')), wh:saved.wh ?? pc(st.whRate ?? itemsRate('whRate')), test:'' }; } return S.calc; };
+    S.calc = { sales:saved.sales ?? pc(st.dtcRate ?? itemsRate('dtcRate')), wh:saved.wh ?? pc(st.whRate ?? itemsRate('whRate')), p1:'', s1:'', p2:'', s2:'' }; } return S.calc; };
   const itemsRate = k => items().find(i => i.pricing?.[k] != null)?.pricing?.[k];
   const stock = {};
   function loadStock(sku) {
@@ -181,6 +181,16 @@
     const v = it.values, c = calcRates(), n = x => x == null || x === '' || !isFinite(Number(x)) ? null : Number(x);
     const landed = n(v.landed), last = n(v.lastMile) ?? 0, ship = n(v.shipFee) ?? 0, sales = n(c.sales), wh = n(c.wh);
     const delivered = landed == null ? null : landed + last;
+    const calc = (price, kind = 'retail', shipping = ship) => {
+      price = n(price); if (price == null || price <= 0) return null;
+      const rate = kind === 'retail' ? sales : wh, fee = rate == null ? null : price * rate / 100;
+      const costBase = kind === 'retail' ? delivered : (v.whFreight === 'us' ? delivered : landed);
+      const cm = fee == null || costBase == null ? null : (kind === 'retail' ? price + shipping : price) - fee - costBase;
+      return { price, fee, costBase, cm, npcr:cm == null ? null : cm / price, shipping };
+    };
+    const tryRow = (name, p, sh) => { const r = calc(p, 'retail', n(sh) ?? 0); if (!r) return ''; return `<tr class="pl-try"><td>${esc(name)}</td><td class="num"><b>${usd(r.price)}</b>${r.shipping ? `<span class="p">+${usd(r.shipping)} ${tr('运费', 'ship')}</span>` : `<span class="p">${tr('包邮', 'free shipping')}</span>`}</td><td class="num">${usd(r.fee)}</td><td class="num">${usd(r.costBase)}</td><td class="num ${tone(r.npcr, null)}">${usd(r.cm)}</td><td class="num ${tone(r.npcr, null)}"><b>${pct(r.npcr)}</b></td></tr>`; };
+    const t1 = calc(c.p1, 'retail', n(c.s1) ?? 0), t2 = calc(c.p2, 'retail', n(c.s2) ?? 0);
+    const diff = t1 && t2 && t1.cm != null && t2.cm != null ? `<tr class="pl-try diff"><td>${tr('差额（试算 2 − 试算 1）', 'Difference (2 − 1)')}</td><td class="num">${usd(t2.price - t1.price)}</td><td class="num">${usd(t2.fee - t1.fee)}</td><td></td><td class="num ${t2.cm - t1.cm < 0 ? 'bad' : 'good'}"><b>${t2.cm - t1.cm >= 0 ? '+' : ''}${usd(t2.cm - t1.cm)}</b></td><td class="num">${t1.npcr != null && t2.npcr != null ? ((t2.npcr - t1.npcr) * 100 >= 0 ? '+' : '') + ((t2.npcr - t1.npcr) * 100).toFixed(1) + ' pt' : '—'}</td></tr>` : '';
     const row = (name, price, kind = 'retail') => {
       price = n(price); if (price == null || price <= 0) return '';
       const rate = kind === 'retail' ? sales : wh, fee = rate == null ? null : price * rate / 100;
@@ -194,10 +204,11 @@
     return `<div class="pl-card pl-pricing"><div class="pl-subhead" style="margin-top:0">${tr('价格计算器', 'Price calculator')} ${visChip('sens')} <small class="pl-note">${tr('只用到岸价、尾程运费和两个费用比率；NPCR = 贡献利润 ÷ 售价', 'Uses only landed cost, last mile and the two cost rates; NPCR = contribution ÷ price')}</small></div>
       <div class="pl-fields pl-price-row">${pin('landed', it)}${pin('lastMile', it)}${rateIn('sales', tr('销售费用比率', 'Selling-cost rate'))}${rateIn('wh', tr('批发费用比率', 'Wholesale-cost rate'))}</div>
       <div class="pl-calc pl-calc-tight"><div class="pl-out key"><div class="k">${tr('送达成本 = 到岸 + 尾程', 'Delivered = landed + last mile')}</div><div class="v">${usd(delivered)}</div></div>
-        <div class="pl-out"><div class="k">${tr('试算一个价格', 'Try a price')}</div><input type="text" class="n" inputmode="decimal" id="pl-calc-test" data-pl-calc="test" value="${esc(c.test)}" placeholder="USD" style="width:100%"></div></div>
+      </div>
+      <div class="pl-tries">${[1, 2].map(i => `<div class="pl-out"><div class="k">${tr(`试算 ${i}`, `Test ${i}`)}</div><div class="pl-try-in"><label>${tr('售价', 'Price')}<input type="text" class="n" inputmode="decimal" id="pl-calc-p${i}" data-pl-calc="p${i}" value="${esc(c['p' + i])}" placeholder="USD"></label><label>${tr('运费', 'Shipping')}<input type="text" class="n" inputmode="decimal" id="pl-calc-s${i}" data-pl-calc="s${i}" value="${esc(c['s' + i])}" placeholder="${tr('0 = 包邮', '0 = free')}"></label></div></div>`).join('')}</div>
       ${landed == null ? `<p class="pl-note">${tr('先填到岸价，才能算贡献利润和 NPCR。', 'Enter the landed cost to see contribution and NPCR.')}</p>` : ''}
       <div class="pl-tbl"><table><thead><tr><th>${tr('价格', 'Price')}</th><th>${tr('售价', 'Price')}</th><th>${tr('费用', 'Cost of sale')}</th><th>${tr('成本', 'Cost')}</th><th>${tr('贡献利润', 'Contribution')}</th><th>NPCR</th></tr></thead><tbody>
-        ${row(tr('试算', 'Test'), c.test)}${row('MSRP', v.msrp)}${row('MAP', v.map)}${row(tr('官网促销底价', 'Promo floor'), v.promoFloor)}${row(tr('大促价', 'Major promotion'), v.priceMajor)}${row(tr('小促价', 'Minor promotion'), v.priceMinor)}${row(tr('清货价', 'Clearance'), v.priceClear)}${ws}
+        ${tryRow(tr('试算 1', 'Test 1'), c.p1, c.s1)}${tryRow(tr('试算 2', 'Test 2'), c.p2, c.s2)}${diff}${row('MSRP', v.msrp)}${row('MAP', v.map)}${row(tr('官网促销底价', 'Promo floor'), v.promoFloor)}${row(tr('大促价', 'Major promotion'), v.priceMajor)}${row(tr('小促价', 'Minor promotion'), v.priceMinor)}${row(tr('清货价', 'Clearance'), v.priceClear)}${ws}
       </tbody></table></div></div>`;
   }
   function wholesaleCard(it) {
@@ -234,8 +245,7 @@
       if (!list.length) return '';
       return `<details class="pl-grp" open>${grpHead(g.no, L(g), `<span class="cnt">${groupCount(list, it)}</span>`)}${body}</details>`;
     }).join('');
-    const more = pricing && window.WorkOSProducts?.pricingFor ? window.WorkOSProducts.pricingFor(it.sku) : '';
-    return sum + (pricing ? pricingCard(it) + (more ? `<div class="pl-card pl-more">${more}</div>` : '') : groups) + historyHTML(it);
+    return sum + (pricing ? pricingCard(it) : groups) + historyHTML(it);
   }
   function historyHTML(it) {
     const h = S.history[it.sku], src = { create:tr('新建', 'created'), edit:tr('编辑', 'edit'), import:tr('批量导入', 'import'), undo:tr('撤销导入', 'undo'), price:tr('价格', 'price'), status:tr('状态', 'status') };
