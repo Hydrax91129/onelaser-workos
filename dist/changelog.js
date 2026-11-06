@@ -22,6 +22,14 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.48', date:'2026-11-06T18:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('智能供应链接入真实 WMS 数据：在库天数、DS、断货和存放过长预警、船次登记与核对入库', 'Smart supply chain on live WMS data: stock age, DS, stock-out and aged alerts, shipments and counted receiving'),
+      title:c('智能供应链：真实数据、船次与入库', 'Smart supply chain: live data, shipments and receiving'),
+      changes:[c('智能供应链不再用示例数据：每个 SKU 的日均销量（DS7 / DS30 / DS90）取美国仓出库记录，库龄按先进先出计算，可售天数 = 美国仓库存 ÷ DS30，打开页面即实时计算。', 'The smart supply chain no longer uses sample data: daily sold (DS7 / DS30 / DS90) comes from US-warehouse goods out, stock age is first in, first out, and days of cover = US stock ÷ DS30, calculated live.'),
+        c('按公司规则自动分级：海运 40 天、安全库存 30 天；卖不到下一船到港标红，低于补货点标橙，库龄超过 60 天标紫，可售超过 120 天标蓝，30 天没出库标灰。参数可由供应链管理员修改。', 'Company rules: 40 days ocean, 30 days safety stock; red = runs out before the next ship, orange = below the reorder point, purple = older than 60 days, blue = more than 120 days of cover, gray = no sales in 30 days. Supply managers can change the rules.'),
+        c('新增船次登记：船名航次、提单号、柜号、货代、起运港和目的港、ETD / ETA、每个 SKU 的数量和箱数。点“已开船”时货物从工厂仓转到在途；过了 ETA 未到港会标红提醒。', 'Shipments: vessel and voyage, B/L, containers, forwarder, ports, ETD / ETA and per-SKU quantities and cartons. “Sailed” moves the goods from the factory to in transit; a ship past its ETA is flagged.'),
+        c('到货入库由 WMS 仓库操作人员逐行填写实收数量后才能确认，库存才会增加；和装箱单不一致的数量自动生成盘点差异，等主管确认。', 'Receiving needs a warehouse operator to enter the counted quantity of every line before stock goes up; any difference from the packing list becomes a count adjustment for the manager to confirm.'),
+        c('主管理员可导入期初库龄（每个批次的入仓日期和数量）；断货、3 天内到港、船期延误和每月存放过长汇总会推送到消息红点。', 'Owners can import opening stock age (received date and quantity per batch); stock-outs, ships due within 3 days, late ships and a monthly aged-stock summary go to the inbox.')] },
     { version:'1.47', date:'2026-11-06T13:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('项目：附件按分类统一存放、AI 拆任务、阶段可改名删除和拖动任务、概览显示项目动态', 'Projects: shared files by category, AI task split, rename/delete stages and drag tasks, activity on the overview'),
       title:c('项目附件、AI 拆任务和项目动态', 'Project files, AI task split and activity'),

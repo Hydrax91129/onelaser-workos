@@ -16,6 +16,7 @@
     completion:['flag-checkered', '任务已完成', 'Task completed', '#00a86b'], completion_scored:['star', '成果已评分', 'Result scored', '#fdab3d'], nudge:['bell-ringing', '提醒', 'Reminder', '#fdab3d'], okr:['target', 'OKR 提醒', 'OKR reminder', '#fdab3d'],
     hr_reminder:['identification-card', '人事提醒', 'HR reminder', '#fdab3d'],
     it_reminder:['key', 'IT 提醒', 'IT reminder', '#579bfc'],
+    supply_alert:['boat', '供应链预警', 'Supply chain alert', '#e2445c'],
     quality:['shield-warning', '品质问题', 'Quality issue', '#e2445c'],
   };
   const ago = iso => { const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -63,6 +64,7 @@
     else if (it.kind === 'okr') { window.location.hash = '#okr'; }
     else if (it.kind === 'hr_reminder') { window.location.hash = '#hr'; }
     else if (it.kind === 'it_reminder') { window.location.hash = '#it'; }
+    else if (it.kind === 'supply_alert') { window.location.hash = '#supply-chain'; }
     else if (it.kind === 'quality') { window.location.hash = '#quality'; if (it.issueId) window.WorkOSQuality?.open(it.issueId); }
     else paint();
   });

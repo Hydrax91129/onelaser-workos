@@ -385,10 +385,13 @@
   };
   /* 产品资料 is the product library (product-library.js) once the server offers it: real data only, no sample rows or test banner. */
   const libraryOn = () => !!window.WorkOSProductLibrary && ctx?.state?.().capabilities?.productLibrary === true;
+  /* 智能供应链 is supply-chain.js once the server computes it from the WMS ledger (no sample stock). */
+  const supplyOn = () => !!window.WorkOSSupply && ctx?.state?.().capabilities?.supplyChain === true;
   function render(tab) {
     if (!ctx) return '';
     if (tab && tab !== ui.tab) { ui.tab = tab; ui.product = null; }
     if ((tab || ui.tab) === 'catalog' && libraryOn()) return window.WorkOSProductLibrary.render();
+    if ((tab || ui.tab) === 'supply' && supplyOn()) return window.WorkOSSupply.render();
     let [eyebrow, zh, en, dzh, den] = PAGES[ui.tab] || PAGES.catalog;
     loadServer();
     if (ui.tab === 'cost' && !canDetail()) { dzh = '输入 SKU 或名称，查询产品的零售价。'; den = 'Enter a SKU or name to look up the retail price.'; }
@@ -892,5 +895,5 @@
     if (el.closest('#pd-replen')) { const v = Math.max(0, Number(el.value) || 0); ui[el.name] = v; rerender(); }
   });
 
-  window.WorkOSProducts = { configure(next) { ctx = next; window.WorkOSProductLibrary?.configure(next); }, render, _data:{ products, assumptions, cost, supply, source, OPEX, ladder, ov, fxState, plan, get rules() { return rules; } }, _ui:ui };
+  window.WorkOSProducts = { configure(next) { ctx = next; window.WorkOSProductLibrary?.configure(next); window.WorkOSSupply?.configure(next); }, render, _data:{ products, assumptions, cost, supply, source, OPEX, ladder, ov, fxState, plan, get rules() { return rules; } }, _ui:ui };
 })();

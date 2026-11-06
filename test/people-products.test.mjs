@@ -34,10 +34,12 @@ test('sidebar sections follow the requested order, and restricted pages are gate
   assert.match(live, /hr:!!window\.WorkOSHr && state\.capabilities\?\.hr===true/, 'HR records appear only when the server offers them');
   assert.ok(ids('hidden').includes('executive') && ids('hidden').includes('integrations'), 'executive board removed; integrations moved into settings');
   assert.match(live, /const productAccess = \(\) => !!window\.WorkOSProducts && \(\(state\.actor\?\.grants\|\|\[\]\)\.includes\('products'\) \|\| state\.actor\?\.executiveAccess === true\)/, 'products follow grants; only the deployment-configured owner bypasses them');
-  assert.match(live, /products:libraryAccess\(\)\|\|productAccess\(\)\|\|dealersAccess\(\), 'product-cost':productAccess\(\), 'supply-chain':productAccess\(\), wms:wmsAccess\(\)\|\|productAccess\(\)/);
+  assert.match(live, /products:libraryAccess\(\)\|\|productAccess\(\)\|\|dealersAccess\(\), 'product-cost':productAccess\(\), 'supply-chain':productAccess\(\)\|\|supplyAccess\(\), wms:wmsAccess\(\)\|\|productAccess\(\)\|\|supplyAccess\(\)/);
+  assert.match(live, /supplyAccess = \(\) => !!window\.WorkOSSupply && state\.capabilities\?\.supplyChain === true && \(state\.actor\?\.grants\|\|\[\]\)\.some\(g => g === 'supply' \|\| g === 'supply_manage'\)/, 'the supply grant opens the supply chain page');
   assert.match(live, /org:!!window\.WorkOSPeople && state\.actor\?\.isAdmin===true/);
-  for (const id of ['product-cost', 'supply-chain']) assert.match(live, new RegExp(`'?${id}'?: \\(\\) => productAccess\\(\\) \\?`), `direct URL for ${id} is gated too`);
-  assert.match(live, /if \(!tabs\.length\) return noAccess[\s\S]*libraryAccess\(\) && \['catalog'[\s\S]*productAccess\(\) && \['pricing'[\s\S]*wmsAccess\(\) && \['stock'[\s\S]*productAccess\(\) && \['supply'/, 'each module shows only the tabs the person may see');
+  assert.match(live, /'product-cost': \(\) => productAccess\(\) \?/, 'direct URL for product-cost is gated too');
+  assert.match(live, /'supply-chain': \(\) => productAccess\(\) \|\| supplyAccess\(\) \?/, 'direct URL for supply-chain is gated too');
+  assert.match(live, /if \(!tabs\.length\) return noAccess[\s\S]*libraryAccess\(\) && \['catalog'[\s\S]*productAccess\(\) && \['pricing'[\s\S]*wmsAccess\(\) && \['stock'[\s\S]*\(productAccess\(\) \|\| supplyAccess\(\)\) && \['supply'/, 'each module shows only the tabs the person may see');
   assert.match(live, /function integrationPage\(\) \{ return state\.actor\?\.isAdmin===true/, 'integrations page is admin-only');
 });
 
