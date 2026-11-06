@@ -71,7 +71,7 @@ test('editor: groups, requirement badges by family, visibility chips; everyone s
   assert.equal(document.querySelector('[data-pl-f="series"]').closest('.pl-fld').classList.contains('miss'), true, 'missing required field is highlighted');
   fire(document.querySelector('[data-pl="mode"][data-v="pricing"]'), 'click');
   const html = document.getElementById('app').innerHTML;
-  for (const g of ['定价（零售）', '定价（批发）']) assert.match(html, new RegExp(g));
+  assert.match(html, /pl-pricing/); assert.match(skuHtml, /data-pl-f="msrp"/, 'SKU 管理 shows the MSRP');
   assert.doesNotMatch(html, /产品基本参数|包装与物流/, '定价管理 shows prices only');
   assert.equal(W._state.mode, 'pricing');
   assert.doesNotMatch(html, /受限区域|测试原型|DEMO-HYD|示例 · 60W/, 'no demo banner or sample rows');
@@ -86,7 +86,8 @@ test('cost access: worksheet, CM warnings, wholesale tiers with override and fre
   fire(document.querySelector('[data-pl="mode"][data-v="pricing"]'), 'click');
   const html = skuHtml + document.getElementById('app').innerHTML;
   W._state.mode = 'sku'; await show();
-  for (const t of ['送达成本', '\\$1,100', '零售档位', '\\$1,699', 'NPCR 价格阶梯', 'Amazon / eBay', '低于官网底线 10%', '经销商每台利润', '我们付运费', '说明书', 'manual.pdf', '常用备件清单', '价格参数还没有设置']) assert.match(html, new RegExp(t), t);
+  for (const t of ['送达成本', '\\$1,100', 'MSRP 贡献利润', '批发价', '我们付运费', '说明书', 'manual.pdf', '常用备件清单']) assert.match(html, new RegExp(t), t);
+  assert.doesNotMatch(html, /零售档位|NPCR 价格阶梯|价格参数还没有设置/, '定价管理 is compact');
   assert.equal(document.querySelector('[data-pl-upload="spareParts"]').getAttribute('accept'), '.pdf', 'PDF-only slot');
   const w = document.querySelector('[data-pl-f="netWeight"]'); w.value = '38'; fire(w, 'change'); await tick(); await tick();
   assert.deepEqual(j(calls.find(c => c[0] === 'PATCH')), ['PATCH', '/products/library/ODL-DEMO-1', { values:{ netWeight:'38' } }]);
@@ -136,12 +137,6 @@ test('nothing is written when the admin cancels the confirm dialog; settings pag
   W._state.view = 'import'; W._state.preview = j(PREVIEW); W._state.skipErrors = true; await show();
   fire(document.querySelector('[data-pl="confirm"]'), 'click'); await tick();
   assert.equal(calls.some(c => c[1].endsWith('/confirm')), false);
-  W._state.view = 'products'; W._state.mode = 'pricing'; W._state.pview = 'settings'; W._state.draft = null; let html = await show();
-  assert.match(html, /价格参数还是空的/); assert.doesNotMatch(html, /\b17%|\b7%/, 'no company numbers in the page');
-  fire(document.querySelector('[data-pl-sadd="dtcItems"]'), 'click');
-  const name = document.querySelector('[data-pl-s="dtcItems.0.name"]'); name.value = '示例费用'; fire(name, 'change');
-  const rate = document.querySelector('[data-pl-s="dtcItems.0.pct"]'); rate.value = '12'; fire(rate, 'change');
-  html = document.getElementById('app').innerHTML; assert.match(html, /12\.0%/);
-  fire(document.querySelector('[data-pl="settings-save"]'), 'click'); await tick();
-  const put = calls.find(c => c[0] === 'PUT'); assert.equal(put[1], '/products/worksheet-settings'); assert.deepEqual(j(put[2].dtcItems), [{ name:'示例费用', pct:12 }]);
+  W._state.view = 'products'; W._state.mode = 'pricing'; const html = await show();
+  assert.doesNotMatch(html, /价格参数|公司定价规则/, '定价管理 is a single page without settings tabs');
 });

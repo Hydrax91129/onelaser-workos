@@ -231,7 +231,7 @@
     else if (P.actualTier === 'major') flags.push(['warn', tr(`真实售价落在大促档（${rules.tiers.major.join('–')}%）。大促每年最多 ${rules.majorPerYear} 次，不宜作为长期售价。`, `Actual price sits in the major-promotion tier (${rules.tiers.major.join('–')}%), allowed up to ${rules.majorPerYear} times a year — not a long-term price.`)]);
     if (P.missing.length) flags.push(['warn', tr(`请补齐：${P.missing.join('、')}。${P.landedSet ? '' : '到岸价暂按成本模型估算（产品 + 最便宜的头程）。'}`, `Please fill in: ${P.missing.join(', ')}.${P.landedSet ? '' : ' Landed cost is estimated by the cost model for now.'}`)]);
     const kpi = (label, value, note, tone = '') => `<div class="pd-kpi"><span>${label}</span><strong class="${tone}">${value}</strong><em>${note}</em></div>`;
-    if (ui.embedded) return `${flags.map(([t, m]) => `<div class="pd-flag ${t}">${icon(t === 'bad' ? 'warning-octagon' : 'warning')} ${esc(m)}</div>`).join('')}${channelPanel(P)}${planInputs(P)}${historyCard(P.p.sku, Object.keys(TARGET_LABEL), false)}`;
+    if (ui.embedded) return `${channelPanel(P)}${historyCard(P.p.sku, Object.keys(TARGET_LABEL), false)}`;
     return `<section class="pd-card pd-cost-hero"><div class="pd-prod"><span class="pd-thumb big">${icon(P.p.icon)}</span><div><strong>${esc(L(P.p.name))}</strong><span>${esc(P.p.sku)} · ${esc(P.p.type || '')} · ${esc(tr(CLASS[P.cls][0], CLASS[P.cls][1]))}</span></div>${pill(P.p.status)}</div>
       <div class="pd-kpis">
         ${kpi(tr('送达成本', 'Delivered cost'), money0(P.delivered), tr(`到岸 ${money0(P.landed)} + 尾程 ${money0(P.lastMile)}`, `landed ${money0(P.landed)} + last mile ${money0(P.lastMile)}`))}
@@ -518,8 +518,8 @@
       ${detail && ui.costView === 'rules' && !ui.embedded ? rulesPanel() : `
       ${p && detail ? priceSystem(p) : ''}
       ${p ? `
-        ${detail && c.missing.length && p.landedUsd == null ? `<div class="pd-warn">${icon('warning')} ${tr('缺少数据，结果不完整：', 'Missing data, result incomplete: ')}${esc(c.missing.join('、'))}</div>` : ''}
-        ${detail ? `<details class="pd-estimate" ${p.landedUsd == null ? 'open' : ''}><summary>${icon('calculator')} ${p.landedUsd == null ? tr('到岸价估算（按工厂价和头程计算，尚未填写到岸价）', 'Landed cost estimate (from factory price and freight; no landed cost entered yet)') : tr('到岸价估算（已填写到岸价，以下仅供参考）', 'Landed cost estimate (a landed cost is entered; for reference only)')}</summary><div class="pd-cost-grid"><section class="pd-card"><div class="pd-card-head"><h3>${tr('到岸价估算（每台，USD）', 'Landed cost estimate (per unit, USD)')}</h3></div><table class="pd-table pd-breakdown"><tbody>
+        ${detail && !ui.embedded && c.missing.length && p.landedUsd == null ? `<div class="pd-warn">${icon('warning')} ${tr('缺少数据，结果不完整：', 'Missing data, result incomplete: ')}${esc(c.missing.join('、'))}</div>` : ''}
+        ${detail ? `<details class="pd-estimate" ${p.landedUsd == null && !ui.embedded ? 'open' : ''}><summary>${icon('calculator')} ${p.landedUsd == null ? tr('到岸价估算（按工厂价和头程计算，尚未填写到岸价）', 'Landed cost estimate (from factory price and freight; no landed cost entered yet)') : tr('到岸价估算（已填写到岸价，以下仅供参考）', 'Landed cost estimate (a landed cost is entered; for reference only)')}</summary><div class="pd-cost-grid"><section class="pd-card"><div class="pd-card-head"><h3>${tr('到岸价估算（每台，USD）', 'Landed cost estimate (per unit, USD)')}</h3></div><table class="pd-table pd-breakdown"><tbody>
             ${line(tr('产品成本', 'Product cost'), p.factoryUsd != null ? tr('工厂美元报价', 'factory USD quote') : p.factoryRmb != null ? `¥${int(p.factoryRmb)} × ${(1 + A.exportMarkup / 100).toFixed(2)} ÷ ${A.fx}` : '', c.productUsd)}
             ${line(`${tr('头程到仓', 'Freight to warehouse')} · ${c.mode === 'hybrid' ? 'Hybrid' : 'DDP'}`, c.mode === 'hybrid' ? `(${c.hybNote}) ÷ ${A.fx}` : `(${c.ddpNote}) ÷ ${A.fx}`, c.ship)}
             ${line(tr('到岸价估算', 'Estimated landed cost'), tr('产品 + 头程（填写到岸价后以填写为准）', 'product + freight (an entered landed cost takes priority)'), c.hard, 'pd-total')}

@@ -148,6 +148,24 @@
       <tbody>${rows || `<tr><td colspan="7" class="l">${tr('还没有设置批发档位', 'No wholesale tiers yet')}</td></tr>`}</tbody></table></div>${note}</div></div></details>`;
   }
 
+  /* ---------- 定价管理: one compact card per SKU ---------- */
+  function pricingCard(it) {
+    if (it.values.family === 'mat') return `<div class="pl-card pl-note">${tr('内部物料不对外销售，没有价格。', 'Internal material is not sold; no prices.')}</div>`;
+    const pr = it.pricing || {}, fx = pr.fixed || [], cost = sees('sens'), s = D().settings || {};
+    const out = (k, v, p, cls = '') => `<div class="pl-out ${cls}"><div class="k">${k}</div><div class="v">${usd(v)}${p !== undefined ? ` <span style="font-size:12px">${pct(p)}</span>` : ''}</div></div>`;
+    const lbl = { msrp:tr('MSRP 贡献利润', 'MSRP contribution'), map:tr('MAP 贡献利润', 'MAP contribution'), promoFloor:tr('促销底价贡献利润', 'Promo floor contribution') };
+    const prices = `<div class="pl-fields pl-price-row">${cost ? pin('landed', it) + pin('lastMile', it) : ''}${pin('msrp', it)}${pin('map', it)}${pin('promoFloor', it)}</div>
+      ${cost ? `<div class="pl-calc pl-calc-tight">${out(tr('送达成本', 'Delivered cost'), pr.delivered, undefined, 'key')}${fx.map(x => out(lbl[x.key] || x.key, x.cm, x.cmPct, tone(x.cmPct, s.dtcFloor))).join('')}</div>` : ''}`;
+    const wf = it.values.whFreight === 'us' ? 'us' : 'dealer', canFreight = fieldOf('whFreight')?.writable, ws = pr.wholesale || [];
+    const whRows = ws.map((w, i) => { const f = fieldOf('whOv' + i), m = wf === 'dealer' ? [w.cmDealerFreight, w.cmDealerFreightPct] : [w.cmOurFreight, w.cmOurFreightPct];
+      return `<tr><td>${esc(w.name)}</td><td class="num">${w.discount != null ? w.discount.toFixed(1) + '%' : '—'}</td><td class="num"><b>${usd(w.price)}</b></td>
+        <td><input type="text" class="n" inputmode="decimal" style="width:90px" data-pl-f="whOv${i}" value="${esc(it.values['whOv' + i])}" placeholder="${tr('自动', 'Auto')}" ${f?.writable ? '' : 'disabled'} aria-label="${esc(w.name)} ${tr('手动价', 'override')}"></td>
+        ${cost ? `<td class="num ${tone(m[1], s.whFloor)}">${usd(m[0])}<span class="p">${pct(m[1])}</span></td>` : ''}</tr>`; }).join('');
+    const wholesale = ws.length ? `<div class="pl-subhead">${tr('批发价', 'Wholesale')}${cost ? ` <span class="pl-seg" role="group" aria-label="${tr('运费承担方', 'Freight paid by')}"><button data-pl-freight="dealer" aria-pressed="${wf === 'dealer'}" ${canFreight ? '' : 'disabled'}>${tr('经销商付运费', 'Dealer pays freight')}</button><button data-pl-freight="us" aria-pressed="${wf === 'us'}" ${canFreight ? '' : 'disabled'}>${tr('我们付运费', 'We pay freight')}</button></span>` : ''}</div>
+      <div class="pl-tbl"><table><thead><tr><th>${tr('档位', 'Tier')}</th><th>${tr('折扣', 'Off MSRP')}</th><th>${tr('批发价', 'Price')}</th><th>${tr('手动价', 'Override')}</th>${cost ? `<th>${tr('我们的贡献利润', 'Our contribution')}</th>` : ''}</tr></thead><tbody>${whRows}</tbody></table></div>` : '';
+    return `<div class="pl-card pl-pricing">${prices}${wholesale}</div>`;
+  }
+
   /* ---------- editor ---------- */
   function editor() {
     if (S.creating) return createForm();
@@ -163,17 +181,17 @@
       <div>${!viewer().editCatalog && !viewer().editCost && !viewer().editPrices ? '' : `<span class="pl-status ${Object.keys(S.errs).length ? 'err' : 'ok'}">${Object.values(S.saving).some(Boolean) ? tr('保存中…', 'Saving…') : Object.keys(S.errs).length ? tr('有字段没有保存，请看红色提示', 'Some fields were not saved; see the red notes') : S.savedAt ? tr(`已自动保存 ${S.savedAt}`, `Saved automatically ${S.savedAt}`) : tr('修改会自动保存', 'Changes save automatically')}</span>`}</div></div>`;
     const pricing = S.mode === 'pricing';
     const groups = spec().groups.map(g => {
-      if (pricing !== (g.no === '4' || g.no === '5')) return '';
-      if (g.no === '4') return retailHTML(g, it);
-      if (g.no === '5') return wholesaleHTML(g, it);
+      if (g.no === '4' || g.no === '5') return '';
+      if (pricing) return '';
       const list = fs.filter(f => f.group === g.no && !(g.no === '4' || f.key.startsWith('whOv') || f.key === 'whFreight'));
+      if (g.no === '1' && P('msrp')) list.push(P('msrp')); // SKU 管理 shows the MSRP next to the basics
       const body = `<div class="pl-fields">${list.map(f => fieldHTML(f, it)).join('')}</div>`;
       if (g.no === '3') return `<details class="pl-grp" open>${grpHead(g.no, L(g), `<span class="cnt">${groupCount(list, it)}</span>`)}${body}<div class="pl-subhead">${tr('文件上传', 'Files')} ${visChip('sens')}</div>${filesBody(it)}</details>`;
       if (!list.length) return '';
       return `<details class="pl-grp" open>${grpHead(g.no, L(g), `<span class="cnt">${groupCount(list, it)}</span>`)}${body}</details>`;
     }).join('');
     const more = pricing && window.WorkOSProducts?.pricingFor ? window.WorkOSProducts.pricingFor(it.sku) : '';
-    return sum + groups + (more ? `<details class="pl-grp" open>${grpHead('$', tr('渠道价格、定价输入与成本明细', 'Channel prices, pricing inputs and cost detail'), '')}<div class="pl-more">${more}</div></details>` : '') + historyHTML(it);
+    return sum + (pricing ? pricingCard(it) + (more ? `<div class="pl-card pl-more">${more}</div>` : '') : groups) + historyHTML(it);
   }
   function historyHTML(it) {
     const h = S.history[it.sku], src = { create:tr('新建', 'created'), edit:tr('编辑', 'edit'), import:tr('批量导入', 'import'), undo:tr('撤销导入', 'undo'), price:tr('价格', 'price'), status:tr('状态', 'status') };
@@ -270,8 +288,6 @@
     load();
     if (!S.data) return `<div class="pl"><p class="pl-note" role="status">${S.error ? esc(S.error) : tr('正在读取产品资料…', 'Loading the product library…')}</p></div>`;
     const v = viewer(), sp = spec(), inc = items().filter(i => !i.completeness?.done).length;
-    const canRules = !!window.WorkOSProducts?.canDetail?.();
-    if (S.mode === 'pricing' && !(S.pview === 'sku' || (S.pview === 'settings' && sees('sens')) || (S.pview === 'rules' && canRules))) S.pview = 'sku';
     const importing = S.view === 'import' || S.view === 'imports';
     const opt = (list, cur, all) => `<option value="">${all}</option>${list.map(o => `<option value="${esc(o.key)}" ${cur === o.key ? 'selected' : ''}>${esc(L(o))}</option>`).join('')}`;
     const goods = fieldOf('goodsType')?.opts || [];
@@ -287,12 +303,9 @@
         ${v.canImport ? `<button class="pl-btn" data-pl="view" data-v="import" aria-pressed="${importing}">${tr('批量更新', 'Bulk update')}</button>` : ''}
         ${v.editCatalog && S.mode === 'sku' && !importing ? `<button class="pl-btn primary" data-pl="new">＋ ${tr('新建产品', 'New product')}</button>` : ''}
       </div></div>`;
-    const modes = `<div class="pl-bar"><div class="pl-tabs" role="tablist">${[['sku', tr('SKU 管理', 'SKU management')], ['pricing', tr('定价管理', 'Pricing')]].map(([k, n]) => `<button role="tab" aria-selected="${!importing && S.mode === k}" data-pl="mode" data-v="${k}">${n}</button>`).join('')}</div>
-      ${!importing && S.mode === 'pricing' ? `<div class="pl-tabs sub" role="tablist">${[['sku', tr('单个 SKU', 'One SKU')], sees('sens') && ['settings', tr('价格参数', 'Pricing settings')], canRules && ['rules', tr('公司定价规则', 'Company pricing rules')]].filter(Boolean).map(([k, n]) => `<button role="tab" aria-selected="${S.pview === k}" data-pl="pview" data-v="${k}">${n}</button>`).join('')}</div>` : ''}</div>`;
+    const modes = `<div class="pl-bar"><div class="pl-tabs" role="tablist">${[['sku', tr('SKU 管理', 'SKU management')], ['pricing', tr('定价管理', 'Pricing')]].map(([k, n]) => `<button role="tab" aria-selected="${!importing && S.mode === k}" data-pl="mode" data-v="${k}">${n}</button>`).join('')}</div></div>`;
     const ro = !v.editCatalog && !v.editCost && !v.editPrices ? `<div class="pl-notice">${tr('你目前只有查看权限。', 'You have view access only.')}</div>` : '';
     const body = importing ? `<p><button class="pl-btn" data-pl="view" data-v="products">← ${tr('返回', 'Back')}</button></p>${S.view === 'import' ? importView() : importsView()}`
-      : S.mode === 'pricing' && S.pview === 'settings' ? settingsView()
-      : S.mode === 'pricing' && S.pview === 'rules' ? window.WorkOSProducts.rulesFor()
       : `${ro}<div class="pl-layout">${rail()}<main class="pl-editor" id="pl-editor">${editor()}</main></div>`;
     return `<div class="pl">${top}${modes}${body}</div>`;
   }
