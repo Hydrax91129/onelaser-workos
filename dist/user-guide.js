@@ -70,7 +70,7 @@
       ${list([
         tr('任务立即出现在对方的个人任务和工作中心，标注“由你下达”。', 'The task appears at once in their Task Center and Work Center, marked as assigned by you.'),
         tr('AI 会跟踪进度：快到期、已逾期或 3 天没有更新时，通过系统内提醒和钉钉工作通知催办。', 'AI follows up: when it is due soon, overdue or has had no update for 3 days, it sends in-app and DingTalk reminders.'),
-        tr('对方提交完成结果后，你作为审核人确认。', 'When they submit the result, you review it as the reviewer.')
+        tr('对方提交成果后，你作为验收人确认或退回。确认后任务自动算完成，按你的评分计入排行榜；3 天内没处理会自动通过，由 AI 评分。', 'When they submit the result, you accept it or send it back. Accepting marks it done and counts your score; with no decision in 3 days it is accepted automatically and the AI scores it.')
       ])}
       ${note('截止日期一旦下达，执行人不能自己改。需要延期，请对方在任务里写更新说明，由你来调整。', 'Once assigned, the owner cannot move the due date. If more time is needed, they explain it in an update and you adjust it.')}`],
 

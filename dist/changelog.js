@@ -22,6 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.42', date:'2026-11-05T18:38:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
+      short:c('别人下达的任务：提交成果、验收人确认后才算完成；3 天没人验收自动通过', 'Work someone else gave you is done once the reviewer accepts it; auto-accepted after 3 days'),
+      title:c('验收确认才算完成', 'Done means accepted'),
+      changes:[c('别人下达给你的任务，不能再直接点“完成”：请在任务详情里提交成果，验收人确认后自动算完成，并按验收评分计入排行榜；退回就修改后重新提交。', 'Work someone else gave you can no longer be marked done directly: submit your deliverable in the task details. Once the reviewer accepts it, it counts as done with their score; if it is returned, revise and resubmit.'),
+        c('验收人 3 天内既不确认也不退回，系统自动通过，算完成，由 AI 评分；负责人、验收人和下达人都会收到提醒。', 'If the reviewer neither accepts nor returns it within 3 days, it is accepted automatically and the AI scores it; the owner, reviewer and assigner are notified.'),
+        c('下达任务的同事即使不是经理，也能验收自己下达的任务。之前非经理下达的任务看不到确认按钮。', 'Colleagues who assigned a task can review it even if they are not managers; before, non-managers saw no accept button.'),
+        c('自己给自己建的任务不变：标记完成即算完成，24 小时内由领导评分，否则 AI 评分。', 'Tasks you create for yourself work as before: marking done counts at once, and your leader scores within 24 hours, otherwise the AI.')] },
     { version:'1.41', date:'2026-11-05T07:13:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
       short:c('提交新成果版本后，旧版本的说明和附件仍能查看；成果图片最多可传 100 张', 'Earlier deliverable versions keep their text and files visible; a deliverable can carry up to 100 images'),
       title:c('历史成果版本和更多图片', 'Earlier versions and more images'),

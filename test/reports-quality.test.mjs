@@ -110,7 +110,7 @@ test('team leaderboard counts every completion this month, scored or not, and la
   r.home(); await new Promise(res => setTimeout(res, 0));
   const html = r.home();
   assert.match(html, /本月完成的任务数量/);
-  assert.match(html, /完成即上榜；完成后 24 小时内由验收人或下达人评分，没人评分则由 AI 自动评分/);
+  assert.match(html, /别人下达的任务验收确认后上榜，按验收评分计（3 天没人验收自动通过、AI 评分）；自己的任务标记完成即上榜/);
   assert.doesNotMatch(html, /AI 评分通过|只统计 AI 已评分|还没有 AI 评分的完成任务/);
   assert.doesNotMatch(html, /还没有人完成/, 'completions count without a score');
   assert.match(html, /你本月已完成 2 项，2 项等待评分/);
@@ -133,4 +133,13 @@ test('without the leaderboard API the fallback counts done tasks this month and 
   const html = r.home();
   assert.match(html, /You have completed 2 this month, average score 6 \(1 by a person · 0 by AI\), 1 awaiting a score/);
   assert.match(html, /Tasks completed this month/);
+});
+
+test('work someone else gave you goes through review: the board sends "done" to the task details instead of the completion form', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const board = await readFile(new URL('../dist/task-board.js', import.meta.url), 'utf8');
+  const live = await readFile(new URL('../dist/live-app.js', import.meta.url), 'utf8');
+  assert.match(board, /needsReview=t=>!!t&&t\.reviewer_id!==t\.owner_id&&\(t\.assigned_by_id\|\|t\.created_by\)!==t\.owner_id/);
+  assert.equal((board.match(/needsReview\((target|task)\)\)\{reviewInstead/g) || []).length, 2, 'both the status menu and drag-to-done route to review');
+  assert.match(live, /canReview = task\.reviewer_id === state\.actor\.id && task\.owner_id !== state\.actor\.id/, 'any designated reviewer, not only managers');
 });
