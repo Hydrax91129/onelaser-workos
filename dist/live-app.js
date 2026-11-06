@@ -249,8 +249,9 @@
     return `<div class="ps-tabs" role="tablist" aria-label="${esc(label)}">${tabs.map(([id, ic, name]) => `<button role="tab" aria-selected="${id === active}" class="${id === active ? 'on' : ''}" data-live-ptab="${id}"><i class="ph ph-${ic}" aria-hidden="true"></i>${name}</button>`).join('')}</div>${tabs.find(t => t[0] === active)[3]()}`;
   };
   function productStockPage(force) {
-    return tabsPage('productTab', tr('产品 PIM','Product PIM'), [libraryAccess() && ['catalog', 'package', tr('产品资料','Catalog'), () => window.WorkOSProducts.render('catalog')],
-      productAccess() && ['pricing', 'currency-dollar', tr('定价','Pricing'), () => window.WorkOSProducts.render('cost')],
+    // SKU 管理 and 定价管理 are sub-pages of the product library (shared search and filters); 定价 is no longer a separate tab.
+    return tabsPage('productTab', tr('产品 PIM','Product PIM'), [libraryAccess() && ['catalog', 'package', tr('SKU 与定价','SKUs & pricing'), () => window.WorkOSProducts.render('catalog')],
+      !window.WorkOSProductLibrary && productAccess() && ['pricing', 'currency-dollar', tr('定价','Pricing'), () => window.WorkOSProducts.render('cost')],
       dealersAccess() && ['dealers', 'storefront', tr('经销商订单','Dealer orders'), () => window.WorkOSDealers.render()]], force);
   }
   function wmsPage(force) {

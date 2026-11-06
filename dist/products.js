@@ -231,6 +231,7 @@
     else if (P.actualTier === 'major') flags.push(['warn', tr(`真实售价落在大促档（${rules.tiers.major.join('–')}%）。大促每年最多 ${rules.majorPerYear} 次，不宜作为长期售价。`, `Actual price sits in the major-promotion tier (${rules.tiers.major.join('–')}%), allowed up to ${rules.majorPerYear} times a year — not a long-term price.`)]);
     if (P.missing.length) flags.push(['warn', tr(`请补齐：${P.missing.join('、')}。${P.landedSet ? '' : '到岸价暂按成本模型估算（产品 + 最便宜的头程）。'}`, `Please fill in: ${P.missing.join(', ')}.${P.landedSet ? '' : ' Landed cost is estimated by the cost model for now.'}`)]);
     const kpi = (label, value, note, tone = '') => `<div class="pd-kpi"><span>${label}</span><strong class="${tone}">${value}</strong><em>${note}</em></div>`;
+    if (ui.embedded) return `${channelPanel(P)}${historyCard(P.p.sku, Object.keys(TARGET_LABEL), false)}`;
     return `<section class="pd-card pd-cost-hero"><div class="pd-prod"><span class="pd-thumb big">${icon(P.p.icon)}</span><div><strong>${esc(L(P.p.name))}</strong><span>${esc(P.p.sku)} · ${esc(P.p.type || '')} · ${esc(tr(CLASS[P.cls][0], CLASS[P.cls][1]))}</span></div>${pill(P.p.status)}</div>
       <div class="pd-kpis">
         ${kpi(tr('送达成本', 'Delivered cost'), money0(P.delivered), tr(`到岸 ${money0(P.landed)} + 尾程 ${money0(P.lastMile)}`, `landed ${money0(P.landed)} + last mile ${money0(P.lastMile)}`))}
@@ -506,19 +507,19 @@
     const line = (label, formula, v, cls = '') => `<tr class="${cls}"><td>${label}</td><td class="pd-formula">${esc(formula)}</td><td class="num">${v == null ? '—' : usd(v)}</td><td class="pd-share">${v != null && c.revenue ? `<i style="width:${Math.min(100, Math.max(0, Math.round(v / c.revenue * 100)))}%"></i>` : ''}</td></tr>`;
     const A = p ? assumeFor(p) : assumptions; loadFx();
     return `<div class="pd-cost">
-      <div class="pd-cost-search"><label class="pd-search big">${icon('magnifying-glass')}<input data-pd-cost placeholder="${tr('输入 SKU 或产品名称，例如 Cobra 或 OCL-CBR', 'Enter a SKU or name, e.g. Cobra or OCL-CBR')}" value="${esc(ui.costQuery)}" autocomplete="off"></label>
+      ${ui.embedded ? '' : `<div class="pd-cost-search"><label class="pd-search big">${icon('magnifying-glass')}<input data-pd-cost placeholder="${tr('输入 SKU 或产品名称，例如 Cobra 或 OCL-CBR', 'Enter a SKU or name, e.g. Cobra or OCL-CBR')}" value="${esc(ui.costQuery)}" autocomplete="off"></label>
         ${matches.length ? `<div class="pd-suggest">${matches.map(m => `<button data-pd="pick-cost" data-sku="${esc(m.sku)}"><span class="pd-thumb">${icon(m.icon)}</span><strong>${esc(m.sku)}</strong> ${esc(L(m.name))}</button>`).join('')}</div>` : ''}
-        ${previewSwitch}</div>
+        ${previewSwitch}</div>`}
       ${p && !detail ? `<section class="pd-card pd-cost-hero basic"><div class="pd-prod"><span class="pd-thumb big">${icon(p.icon)}</span><div><strong>${esc(L(p.name))}</strong><span>${esc(p.type || '')}</span></div>${pill(p.status)}</div>
         <div class="pd-final"><span>SKU</span><strong class="mono">${esc(p.sku) || '—'}</strong></div>
         <div class="pd-final"><span>${tr('零售价', 'Retail price')}</span><strong>${p.msrp ? usd(p.msrp) : '—'}</strong></div></section>` : ''}
       ${detail ? approvalsPanel() : ''}
-      ${detail ? `<div class="pd-seg pd-viewseg">${[['sku', tr('单个 SKU 定价', 'Price one SKU')], ['rules', tr('公司定价规则', 'Company pricing rules')]].map(([k, l]) => `<button class="${ui.costView === k ? 'active' : ''}" data-pd="cost-view" data-v="${k}">${l}</button>`).join('')}</div>` : ''}
-      ${detail && ui.costView === 'rules' ? rulesPanel() : `
+      ${detail && !ui.embedded ? `<div class="pd-seg pd-viewseg">${[['sku', tr('单个 SKU 定价', 'Price one SKU')], ['rules', tr('公司定价规则', 'Company pricing rules')]].map(([k, l]) => `<button class="${ui.costView === k ? 'active' : ''}" data-pd="cost-view" data-v="${k}">${l}</button>`).join('')}</div>` : ''}
+      ${detail && ui.costView === 'rules' && !ui.embedded ? rulesPanel() : `
       ${p && detail ? priceSystem(p) : ''}
       ${p ? `
-        ${detail && c.missing.length && p.landedUsd == null ? `<div class="pd-warn">${icon('warning')} ${tr('缺少数据，结果不完整：', 'Missing data, result incomplete: ')}${esc(c.missing.join('、'))}</div>` : ''}
-        ${detail ? `<details class="pd-estimate" ${p.landedUsd == null ? 'open' : ''}><summary>${icon('calculator')} ${p.landedUsd == null ? tr('到岸价估算（按工厂价和头程计算，尚未填写到岸价）', 'Landed cost estimate (from factory price and freight; no landed cost entered yet)') : tr('到岸价估算（已填写到岸价，以下仅供参考）', 'Landed cost estimate (a landed cost is entered; for reference only)')}</summary><div class="pd-cost-grid"><section class="pd-card"><div class="pd-card-head"><h3>${tr('到岸价估算（每台，USD）', 'Landed cost estimate (per unit, USD)')}</h3></div><table class="pd-table pd-breakdown"><tbody>
+        ${detail && !ui.embedded && c.missing.length && p.landedUsd == null ? `<div class="pd-warn">${icon('warning')} ${tr('缺少数据，结果不完整：', 'Missing data, result incomplete: ')}${esc(c.missing.join('、'))}</div>` : ''}
+        ${detail ? `<details class="pd-estimate" ${p.landedUsd == null && !ui.embedded ? 'open' : ''}><summary>${icon('calculator')} ${p.landedUsd == null ? tr('到岸价估算（按工厂价和头程计算，尚未填写到岸价）', 'Landed cost estimate (from factory price and freight; no landed cost entered yet)') : tr('到岸价估算（已填写到岸价，以下仅供参考）', 'Landed cost estimate (a landed cost is entered; for reference only)')}</summary><div class="pd-cost-grid"><section class="pd-card"><div class="pd-card-head"><h3>${tr('到岸价估算（每台，USD）', 'Landed cost estimate (per unit, USD)')}</h3></div><table class="pd-table pd-breakdown"><tbody>
             ${line(tr('产品成本', 'Product cost'), p.factoryUsd != null ? tr('工厂美元报价', 'factory USD quote') : p.factoryRmb != null ? `¥${int(p.factoryRmb)} × ${(1 + A.exportMarkup / 100).toFixed(2)} ÷ ${A.fx}` : '', c.productUsd)}
             ${line(`${tr('头程到仓', 'Freight to warehouse')} · ${c.mode === 'hybrid' ? 'Hybrid' : 'DDP'}`, c.mode === 'hybrid' ? `(${c.hybNote}) ÷ ${A.fx}` : `(${c.ddpNote}) ÷ ${A.fx}`, c.ship)}
             ${line(tr('到岸价估算', 'Estimated landed cost'), tr('产品 + 头程（填写到岸价后以填写为准）', 'product + freight (an entered landed cost takes priority)'), c.hard, 'pd-total')}
@@ -892,5 +893,15 @@
     if (el.closest('#pd-replen')) { const v = Math.max(0, Number(el.value) || 0); ui[el.name] = v; rerender(); }
   });
 
-  window.WorkOSProducts = { configure(next) { ctx = next; window.WorkOSProductLibrary?.configure(next); }, render, _data:{ products, assumptions, cost, supply, source, OPEX, ladder, ov, fxState, plan, get rules() { return rules; } }, _ui:ui };
+  /* 定价管理 in 产品 PIM: the library shows the SKU's 零售 / 批发 sections; this adds channel prices, pricing inputs, the
+   * landed-cost estimate, price approvals and history for the same SKU, without this page's own search. */
+  function pricingFor(sku) {
+    if (!ctx) return ''; loadServer();
+    if (!canDetail()) return '';
+    if (!sku || !bySku(sku)) return `<p class="pd-hint">${tr('这个 SKU 还没有成本数据。', 'No cost data for this SKU yet.')}</p>`;
+    ui.embedded = true; ui.tab = 'cost'; ui.costSku = sku; ui.costView = 'sku';
+    try { return `<div class="pd pd-embedded">${costBoard()}</div>`; } finally { ui.embedded = false; }
+  }
+  const rulesFor = () => { if (!ctx) return ''; loadServer(); return canDetail() ? `<div class="pd pd-embedded">${rulesPanel()}</div>` : ''; };
+  window.WorkOSProducts = { configure(next) { ctx = next; window.WorkOSProductLibrary?.configure(next); }, render, pricingFor, rulesFor, canDetail:() => !!ctx && canDetail(), _data:{ products, assumptions, cost, supply, source, OPEX, ladder, ov, fxState, plan, get rules() { return rules; } }, _ui:ui };
 })();

@@ -27,7 +27,7 @@
   };
   const toast = m => ctx?.toast?.(m);
 
-  const S = { data:null, loading:false, error:'', view:'products', cur:null, q:'', fam:'', onlyReq:false, creating:false, saving:{}, errs:{}, savedAt:null,
+  const S = { data:null, loading:false, error:'', view:'products', mode:'sku', pview:'sku', cur:null, q:'', fam:'', status:'', goods:'', onlyReq:false, creating:false, saving:{}, errs:{}, savedAt:null,
     history:{}, histOpen:false, preview:null, pvFilter:'all', skipErrors:false, imports:null, draft:null, busy:'' };
   const D = () => S.data || {};
   const spec = () => D().spec || { fields:[], slots:[], groups:[], families:[], statuses:[], visNames:{} };
@@ -53,16 +53,16 @@
   const replaceItem = it => { const list = items(), i = list.findIndex(x => x.sku === it.sku); if (i >= 0) list[i] = { ...list[i], ...it }; else list.push(it); };
 
   /* ---------- rail ---------- */
+  // One filter for both sub-pages (SKU 管理 / 定价管理): search and filters apply as you type.
+  const filtered = () => { const q = S.q.trim().toLowerCase();
+    return items().filter(i => (!S.fam || i.values.family === S.fam) && (!S.status || i.values.status === S.status) && (!S.goods || (i.values.goodsType || 'new') === S.goods)
+      && (!q || `${i.sku} ${i.values.nameZh || ''} ${i.values.nameEn || ''} ${i.values.model || ''} ${i.values.series || ''}`.toLowerCase().includes(q)) && (!S.onlyReq || !i.completeness?.done))
+      .sort((a, b) => a.sku.localeCompare(b.sku)); };
   function rail() {
-    const q = S.q.trim().toLowerCase();
-    const inc = items().filter(i => !i.completeness?.done).length;
-    const list = items().filter(i => (!S.fam || i.values.family === S.fam) && (!q || `${i.sku} ${i.values.nameZh || ''} ${i.values.nameEn || ''}`.toLowerCase().includes(q)) && (!S.onlyReq || !i.completeness?.done))
-      .sort((a, b) => a.sku.localeCompare(b.sku));
-    return `<aside class="pl-rail"><div class="head">
-      <input type="search" data-pl-q placeholder="${tr('搜索 SKU / 名称', 'Search SKU / name')}" value="${esc(S.q)}" aria-label="${tr('搜索产品', 'Search products')}">
-      <select data-pl-fam aria-label="${tr('按产品族筛选', 'Filter by family')}"><option value="">${tr('全部产品族', 'All families')}</option>${spec().families.map(f => `<option value="${esc(f.key)}" ${S.fam === f.key ? 'selected' : ''}>${esc(L(f))}</option>`).join('')}</select>
-      <label class="pl-chk"><input type="checkbox" data-pl-onlyreq ${S.onlyReq ? 'checked' : ''}> ${tr('仅看必填未完成', 'Only incomplete')} ${inc ? `<span class="pl-chip req">${tr(`${inc} 个待补`, `${inc} to fill`)}</span>` : ''}</label>
-    </div><div class="pl-list">${list.length ? list.map(i => {
+    const list = filtered();
+    // The editor always shows a SKU from the current results: when a filter hides the open one, the first match opens.
+    if (list.length && !S.creating && !list.some(i => i.sku === S.cur)) S.cur = list[0].sku;
+    return `<aside class="pl-rail"><div class="head pl-count">${tr(`${list.length} / ${items().length} 个 SKU`, `${list.length} of ${items().length} SKUs`)}    </div><div class="pl-list">${list.length ? list.map(i => {
       const m = i.pricing?.fixed ? i.pricing.fixed[0] : null, msrp = i.pricing?.fixed ? m.price : i.pricing?.msrp;
       return `<button class="pl-item" data-pl-pick="${esc(i.sku)}" aria-current="${i.sku === S.cur}"><span class="sku">${i.completeness?.done ? '' : `<span class="pl-dot" title="${tr('必填未完成', 'Required fields missing')}"></span>`}${esc(i.sku)}</span><span class="pr">${msrp != null ? usd(msrp) : ''}</span>
         <span class="nm">${esc((lang() === 'en' ? i.values.nameEn : i.values.nameZh) || i.values.nameZh || i.values.nameEn || tr('未命名', 'Unnamed'))}${i.values.family ? ' · ' + esc(famName(i.values.family)) : ''}</span><span class="cm ${m ? tone(m.cmPct, D().settings?.dtcFloor) : ''}">${m && m.cmPct != null ? 'CM ' + pct(m.cmPct) : ''}</span></button>`;
@@ -148,6 +148,79 @@
       <tbody>${rows || `<tr><td colspan="7" class="l">${tr('还没有设置批发档位', 'No wholesale tiers yet')}</td></tr>`}</tbody></table></div>${note}</div></div></details>`;
   }
 
+  /* ---------- 定价管理: one compact card per SKU ---------- */
+  // 价格计算器 rates: only on this page (remembered in this browser), filled from the saved settings when there are any.
+  const CALC_KEY = 'workos.pl.calc';
+  const calcRates = () => { if (!S.calc) { let saved = {}; try { saved = JSON.parse(localStorage.getItem(CALC_KEY) || '{}'); } catch { saved = {}; }
+    const st = D().settings || {}, pc = v => v == null || !isFinite(v) ? '' : String(Math.round(v * 1000) / 10);
+    S.calc = { sales:saved.sales ?? pc(st.dtcRate ?? itemsRate('dtcRate')), wh:saved.wh ?? pc(st.whRate ?? itemsRate('whRate')), p1:'', s1:'', p2:'', s2:'' }; } return S.calc; };
+  const itemsRate = k => items().find(i => i.pricing?.[k] != null)?.pricing?.[k];
+  const stock = {};
+  function loadStock(sku) {
+    if (stock[sku] || !ctx?.api?.get) return;
+    stock[sku] = { loading:true };
+    ctx.api.get('/wms/stock/' + encodeURIComponent(sku)).then(r => { stock[sku] = r; }).catch(e => { stock[sku] = { error:e?.status === 403 || /403|权限|access/i.test(e?.message || '') ? 'forbidden' : (e?.message || 'error') }; }).finally(rerender);
+  }
+  function stockCard(it) {
+    loadStock(it.sku); const st = stock[it.sku] || {};
+    if (st.error === 'forbidden') return '';
+    const body = st.loading ? `<p class="pl-note">${tr('正在读取库存…', 'Loading stock…')}</p>` : st.error ? `<p class="pl-note">${esc(st.error)}</p>`
+      : `<div class="pl-stock">${(st.locations || []).map(l => `<div class="pl-out ${l.qty ? '' : 'zero'}"><div class="k">${esc(lang() === 'en' ? l.en : l.zh)}</div><div class="v">${l.qty}</div></div>`).join('')}<div class="pl-out key"><div class="k">${tr('可售合计（不含在途）', 'Total on hand (excl. transit)')}</div><div class="v">${st.total ?? 0}</div></div></div>`;
+    return `<div class="pl-card pl-pricing"><div class="pl-subhead" style="margin-top:0">${tr('各仓库存', 'Stock by warehouse')} <small class="pl-note">${tr('来自 WMS，只读', 'From WMS, read only')}</small></div>${body}</div>`;
+  }
+  /* ---------- 定价管理: prices, calculator and stock for one SKU ---------- */
+  function pricingCard(it) {
+    if (it.values.family === 'mat') return `<div class="pl-card pl-note">${tr('内部物料不对外销售，没有价格。', 'Internal material is not sold; no prices.')}</div>`;
+    const v = it.values, cost = sees('sens');
+    const prices = `<div class="pl-card pl-pricing"><div class="pl-subhead" style="margin-top:0">${tr('售价', 'Prices')} <small class="pl-note">${tr('MSRP 和 MSRP 运费需要确认；大促、小促、清货是三档活动价', 'Confirm the MSRP and its shipping; major promotion, minor promotion and clearance are the three sale prices')}</small></div>
+      <div class="pl-fields pl-price-row">${pin('msrp', it)}${pin('shipFee', it)}${pin('map', it)}${pin('promoFloor', it)}</div>
+      <div class="pl-fields pl-price-row">${pin('priceMajor', it)}${pin('priceMinor', it)}${pin('priceClear', it)}</div></div>`;
+    return prices + (cost ? calculator(it) : '') + wholesaleCard(it) + stockCard(it);
+  }
+  function calculator(it) {
+    const v = it.values, c = calcRates(), n = x => x == null || x === '' || !isFinite(Number(x)) ? null : Number(x);
+    const landed = n(v.landed), last = n(v.lastMile) ?? 0, ship = n(v.shipFee) ?? 0, sales = n(c.sales), wh = n(c.wh);
+    const delivered = landed == null ? null : landed + last;
+    const calc = (price, kind = 'retail', shipping = ship) => {
+      price = n(price); if (price == null || price <= 0) return null;
+      const rate = kind === 'retail' ? sales : wh, fee = rate == null ? null : price * rate / 100;
+      const costBase = kind === 'retail' ? delivered : (v.whFreight === 'us' ? delivered : landed);
+      const cm = fee == null || costBase == null ? null : (kind === 'retail' ? price + shipping : price) - fee - costBase;
+      return { price, fee, costBase, cm, npcr:cm == null ? null : cm / price, shipping };
+    };
+    const tryRow = (name, p, sh) => { const r = calc(p, 'retail', n(sh) ?? 0); if (!r) return ''; return `<tr class="pl-try"><td>${esc(name)}</td><td class="num"><b>${usd(r.price)}</b>${r.shipping ? `<span class="p">+${usd(r.shipping)} ${tr('运费', 'ship')}</span>` : `<span class="p">${tr('包邮', 'free shipping')}</span>`}</td><td class="num">${usd(r.fee)}</td><td class="num">${usd(r.costBase)}</td><td class="num ${tone(r.npcr, null)}">${usd(r.cm)}</td><td class="num ${tone(r.npcr, null)}"><b>${pct(r.npcr)}</b></td></tr>`; };
+    const t1 = calc(c.p1, 'retail', n(c.s1) ?? 0), t2 = calc(c.p2, 'retail', n(c.s2) ?? 0);
+    const diff = t1 && t2 && t1.cm != null && t2.cm != null ? `<tr class="pl-try diff"><td>${tr('差额（试算 2 − 试算 1）', 'Difference (2 − 1)')}</td><td class="num">${usd(t2.price - t1.price)}</td><td class="num">${usd(t2.fee - t1.fee)}</td><td></td><td class="num ${t2.cm - t1.cm < 0 ? 'bad' : 'good'}"><b>${t2.cm - t1.cm >= 0 ? '+' : ''}${usd(t2.cm - t1.cm)}</b></td><td class="num">${t1.npcr != null && t2.npcr != null ? ((t2.npcr - t1.npcr) * 100 >= 0 ? '+' : '') + ((t2.npcr - t1.npcr) * 100).toFixed(1) + ' pt' : '—'}</td></tr>` : '';
+    const row = (name, price, kind = 'retail') => {
+      price = n(price); if (price == null || price <= 0) return '';
+      const rate = kind === 'retail' ? sales : wh, fee = rate == null ? null : price * rate / 100;
+      const costBase = kind === 'retail' ? delivered : (v.whFreight === 'us' ? delivered : landed);
+      const income = kind === 'retail' ? price + ship : price;
+      const cm = fee == null || costBase == null ? null : income - fee - costBase, npcr = cm == null ? null : cm / price;
+      return `<tr><td>${esc(name)}</td><td class="num"><b>${usd(price)}</b>${kind === 'retail' && ship ? `<span class="p">+${usd(ship)} ${tr('运费', 'ship')}</span>` : ''}</td><td class="num">${usd(fee)}</td><td class="num">${usd(costBase)}</td><td class="num ${tone(npcr, null)}">${usd(cm)}</td><td class="num ${tone(npcr, null)}"><b>${pct(npcr)}</b></td></tr>`;
+    };
+    const ws = (it.pricing?.wholesale || []).map(w => row(`${tr('批发', 'Wholesale')} · ${w.name}`, n(v['whOv' + (it.pricing.wholesale.indexOf(w))]) ?? w.price, 'wh')).join('');
+    const rateIn = (k, label) => `<div class="pl-fld"><label for="pl-calc-${k}"><b>${label}</b></label><div style="display:flex;gap:6px;align-items:center"><input type="text" class="n" inputmode="decimal" id="pl-calc-${k}" data-pl-calc="${k}" value="${esc(c[k])}" placeholder="%"><span>%</span></div></div>`;
+    return `<div class="pl-card pl-pricing"><div class="pl-subhead" style="margin-top:0">${tr('价格计算器', 'Price calculator')} ${visChip('sens')} <small class="pl-note">${tr('只用到岸价、尾程运费和两个费用比率；NPCR = 贡献利润 ÷ 售价', 'Uses only landed cost, last mile and the two cost rates; NPCR = contribution ÷ price')}</small></div>
+      <div class="pl-fields pl-price-row">${pin('landed', it)}${pin('lastMile', it)}${rateIn('sales', tr('销售费用比率', 'Selling-cost rate'))}${rateIn('wh', tr('批发费用比率', 'Wholesale-cost rate'))}</div>
+      <div class="pl-calc pl-calc-tight"><div class="pl-out key"><div class="k">${tr('送达成本 = 到岸 + 尾程', 'Delivered = landed + last mile')}</div><div class="v">${usd(delivered)}</div></div>
+      </div>
+      <div class="pl-tries">${[1, 2].map(i => `<div class="pl-out"><div class="k">${tr(`试算 ${i}`, `Test ${i}`)}</div><div class="pl-try-in"><label>${tr('售价', 'Price')}<input type="text" class="n" inputmode="decimal" id="pl-calc-p${i}" data-pl-calc="p${i}" value="${esc(c['p' + i])}" placeholder="USD"></label><label>${tr('运费', 'Shipping')}<input type="text" class="n" inputmode="decimal" id="pl-calc-s${i}" data-pl-calc="s${i}" value="${esc(c['s' + i])}" placeholder="${tr('0 = 包邮', '0 = free')}"></label></div></div>`).join('')}</div>
+      ${landed == null ? `<p class="pl-note">${tr('先填到岸价，才能算贡献利润和 NPCR。', 'Enter the landed cost to see contribution and NPCR.')}</p>` : ''}
+      <div class="pl-tbl"><table><thead><tr><th>${tr('价格', 'Price')}</th><th>${tr('售价', 'Price')}</th><th>${tr('费用', 'Cost of sale')}</th><th>${tr('成本', 'Cost')}</th><th>${tr('贡献利润', 'Contribution')}</th><th>NPCR</th></tr></thead><tbody>
+        ${tryRow(tr('试算 1', 'Test 1'), c.p1, c.s1)}${tryRow(tr('试算 2', 'Test 2'), c.p2, c.s2)}${diff}${row('MSRP', v.msrp)}${row('MAP', v.map)}${row(tr('官网促销底价', 'Promo floor'), v.promoFloor)}${row(tr('大促价', 'Major promotion'), v.priceMajor)}${row(tr('小促价', 'Minor promotion'), v.priceMinor)}${row(tr('清货价', 'Clearance'), v.priceClear)}${ws}
+      </tbody></table></div></div>`;
+  }
+  function wholesaleCard(it) {
+    const pr = it.pricing || {}, ws = pr.wholesale || []; if (!ws.length) return '';
+    const wf = it.values.whFreight === 'us' ? 'us' : 'dealer', canFreight = fieldOf('whFreight')?.writable, cost = sees('sens');
+    const rows = ws.map((w, i) => { const f = fieldOf('whOv' + i);
+      return `<tr><td>${esc(w.name)}</td><td class="num">${w.discount != null ? w.discount.toFixed(1) + '%' : '—'}</td><td class="num"><b>${usd(w.price)}</b></td>
+        <td><input type="text" class="n" inputmode="decimal" style="width:90px" data-pl-f="whOv${i}" value="${esc(it.values['whOv' + i])}" placeholder="${tr('自动', 'Auto')}" ${f?.writable ? '' : 'disabled'} aria-label="${esc(w.name)} ${tr('手动价', 'override')}"></td></tr>`; }).join('');
+    return `<div class="pl-card pl-pricing"><div class="pl-subhead" style="margin-top:0">${tr('批发价', 'Wholesale')}${cost ? ` <span class="pl-seg" role="group" aria-label="${tr('运费承担方', 'Freight paid by')}"><button data-pl-freight="dealer" aria-pressed="${wf === 'dealer'}" ${canFreight ? '' : 'disabled'}>${tr('经销商付运费', 'Dealer pays freight')}</button><button data-pl-freight="us" aria-pressed="${wf === 'us'}" ${canFreight ? '' : 'disabled'}>${tr('我们付运费', 'We pay freight')}</button></span>` : ''}</div>
+      <div class="pl-tbl"><table><thead><tr><th>${tr('档位', 'Tier')}</th><th>${tr('折扣', 'Off MSRP')}</th><th>${tr('批发价', 'Price')}</th><th>${tr('手动价', 'Override')}</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }
+
   /* ---------- editor ---------- */
   function editor() {
     if (S.creating) return createForm();
@@ -157,20 +230,22 @@
     const pending = (it.pendingPrices || []).map(p => `<span class="pl-chip warn">${esc(fieldName(p.target === 'promo_floor' ? 'promoFloor' : /^wh\d+$/.test(p.target) ? 'whOv' + p.target.slice(2) : p.target))} ${usd(p.price)} ${tr('待审批', 'awaiting approval')}</span>`).join('');
     const status = spec().statuses.find(s => s.key === v.status);
     const sum = `<div class="pl-card pl-summary"><div style="min-width:0"><h2>${esc(it.sku)} <span style="font-weight:500;color:var(--pl-mute);font-size:15px">${esc(v.nameZh || v.nameEn || '')}</span></h2>
-      <div class="sub">${v.family ? `<span class="pl-chip">${esc(famName(v.family))}</span>` : `<span class="pl-chip warn">${tr('先选择产品族', 'Choose a family first')}</span>`}${status ? `<span class="pl-chip ${v.status === 'live' ? 'ok' : ''}">${esc(L(status))}</span>` : ''}${v.goodsType === 'refb' ? `<span class="pl-chip warn">${tr('退货', 'Returned')}</span>` : ''}
+      <div class="sub"><span class="pl-chip ok" title="${tr('零售价 MSRP 与 MSRP 运费', 'MSRP and its shipping')}">MSRP ${v.msrp != null ? usd(Number(v.msrp)) : '—'} · ${tr('运费', 'Shipping')} ${v.shipFee != null ? (Number(v.shipFee) ? usd(Number(v.shipFee)) : tr('包邮', 'free')) : '—'}</span>${v.family ? `<span class="pl-chip">${esc(famName(v.family))}</span>` : `<span class="pl-chip warn">${tr('先选择产品族', 'Choose a family first')}</span>`}${status ? `<span class="pl-chip ${v.status === 'live' ? 'ok' : ''}">${esc(L(status))}</span>` : ''}${v.goodsType === 'refb' ? `<span class="pl-chip warn">${tr('退货', 'Returned')}</span>` : ''}
       ${v.family ? `<span>${tr(`必填 ${c.got} / ${c.need}`, `Required ${c.got} / ${c.need}`)}</span><span class="pl-meter" aria-hidden="true"><i style="width:${c.need ? Math.round(c.got / c.need * 100) : 0}%"></i></span>` : ''}
       ${it.duplicate ? `<span class="pl-chip req">${tr('SKU 与其他产品重复（只差大小写）', 'SKU duplicates another product (letter case only)')}</span>` : ''}${pending}</div></div>
       <div>${!viewer().editCatalog && !viewer().editCost && !viewer().editPrices ? '' : `<span class="pl-status ${Object.keys(S.errs).length ? 'err' : 'ok'}">${Object.values(S.saving).some(Boolean) ? tr('保存中…', 'Saving…') : Object.keys(S.errs).length ? tr('有字段没有保存，请看红色提示', 'Some fields were not saved; see the red notes') : S.savedAt ? tr(`已自动保存 ${S.savedAt}`, `Saved automatically ${S.savedAt}`) : tr('修改会自动保存', 'Changes save automatically')}</span>`}</div></div>`;
+    const pricing = S.mode === 'pricing';
     const groups = spec().groups.map(g => {
-      if (g.no === '4') return retailHTML(g, it);
-      if (g.no === '5') return wholesaleHTML(g, it);
+      if (g.no === '4' || g.no === '5') return '';
+      if (pricing) return '';
       const list = fs.filter(f => f.group === g.no && !(g.no === '4' || f.key.startsWith('whOv') || f.key === 'whFreight'));
+      if (g.no === '1') list.push(...['msrp', 'shipFee'].map(P).filter(Boolean)); // SKU 管理 shows the MSRP and its shipping next to the basics
       const body = `<div class="pl-fields">${list.map(f => fieldHTML(f, it)).join('')}</div>`;
       if (g.no === '3') return `<details class="pl-grp" open>${grpHead(g.no, L(g), `<span class="cnt">${groupCount(list, it)}</span>`)}${body}<div class="pl-subhead">${tr('文件上传', 'Files')} ${visChip('sens')}</div>${filesBody(it)}</details>`;
       if (!list.length) return '';
       return `<details class="pl-grp" open>${grpHead(g.no, L(g), `<span class="cnt">${groupCount(list, it)}</span>`)}${body}</details>`;
     }).join('');
-    return sum + groups + historyHTML(it);
+    return sum + (pricing ? pricingCard(it) : groups) + historyHTML(it);
   }
   function historyHTML(it) {
     const h = S.history[it.sku], src = { create:tr('新建', 'created'), edit:tr('编辑', 'edit'), import:tr('批量导入', 'import'), undo:tr('撤销导入', 'undo'), price:tr('价格', 'price'), status:tr('状态', 'status') };
@@ -266,14 +341,27 @@
     if (!ctx) return '';
     load();
     if (!S.data) return `<div class="pl"><p class="pl-note" role="status">${S.error ? esc(S.error) : tr('正在读取产品资料…', 'Loading the product library…')}</p></div>`;
-    const v = viewer(), tabs = [['products', tr('产品资料', 'Products')], sees('sens') && ['settings', tr('价格参数', 'Pricing settings')], v.canImport && ['import', tr('批量更新', 'Bulk update')]].filter(Boolean);
-    if (!tabs.some(t => t[0] === (S.view === 'imports' ? 'import' : S.view))) S.view = 'products';
-    const bar = `<div class="pl-bar"><div class="pl-tabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" aria-selected="${S.view === k || (k === 'import' && S.view === 'imports')}" data-pl="view" data-v="${k}">${n}</button>`).join('')}</div><span class="pl-sp"></span>
-      <button class="pl-btn" data-pl="template" data-format="xlsx" title="${tr('导出你有权限查看的全部列', 'Export every column you may see')}">${tr('下载标准模板', 'Download template')}</button>
-      ${v.editCatalog && S.view === 'products' ? `<button class="pl-btn primary" data-pl="new">＋ ${tr('新建产品', 'New product')}</button>` : ''}</div>`;
+    const v = viewer(), sp = spec(), inc = items().filter(i => !i.completeness?.done).length;
+    const importing = S.view === 'import' || S.view === 'imports';
+    const opt = (list, cur, all) => `<option value="">${all}</option>${list.map(o => `<option value="${esc(o.key)}" ${cur === o.key ? 'selected' : ''}>${esc(L(o))}</option>`).join('')}`;
+    const goods = fieldOf('goodsType')?.opts || [];
+    const top = `<div class="pl-top"><div class="pl-find">
+        <input type="search" class="pl-q" data-pl-q placeholder="${tr('搜索 SKU、名称、型号、系列', 'Search SKU, name, model, series')}" value="${esc(S.q)}" aria-label="${tr('搜索产品', 'Search products')}">
+        <select data-pl-fam aria-label="${tr('产品族', 'Family')}">${opt(sp.families, S.fam, tr('全部产品族', 'All families'))}</select>
+        <select data-pl-status aria-label="${tr('状态', 'Status')}">${opt(sp.statuses, S.status, tr('全部状态', 'All statuses'))}</select>
+        ${goods.length ? `<select data-pl-goods aria-label="${tr('大货 / 退货', 'New / returned')}">${opt(goods, S.goods, tr('大货 + 退货', 'New + returned'))}</select>` : ''}
+        <label class="pl-chk"><input type="checkbox" data-pl-onlyreq ${S.onlyReq ? 'checked' : ''}> ${tr('仅看必填未完成', 'Only incomplete')} ${inc ? `<span class="pl-chip req">${inc}</span>` : ''}</label>
+        ${S.q || S.fam || S.status || S.goods || S.onlyReq ? `<button class="pl-btn" data-pl="clear">${tr('清除筛选', 'Clear')}</button>` : ''}
+      </div><div class="pl-acts">
+        <button class="pl-btn" data-pl="template" data-format="xlsx" title="${S.mode === 'pricing' ? tr('定价模板：SKU、名称和你能看到的全部价格列', 'Pricing template: SKU, names and every price column you may see') : tr('SKU 资料模板：除价格以外你能看到的全部列', 'SKU template: every non-price column you may see')}">${S.mode === 'pricing' ? tr('下载定价模板', 'Download pricing template') : tr('下载 SKU 模板', 'Download SKU template')}</button>
+        ${v.canImport ? `<button class="pl-btn" data-pl="view" data-v="import" aria-pressed="${importing}">${tr('批量更新', 'Bulk update')}</button>` : ''}
+        ${v.editCatalog && S.mode === 'sku' && !importing ? `<button class="pl-btn primary" data-pl="new">＋ ${tr('新建产品', 'New product')}</button>` : ''}
+      </div></div>`;
+    const modes = `<div class="pl-bar"><div class="pl-tabs" role="tablist">${[['sku', tr('SKU 管理', 'SKU management')], ['pricing', tr('定价管理', 'Pricing')]].map(([k, n]) => `<button role="tab" aria-selected="${!importing && S.mode === k}" data-pl="mode" data-v="${k}">${n}</button>`).join('')}</div></div>`;
     const ro = !v.editCatalog && !v.editCost && !v.editPrices ? `<div class="pl-notice">${tr('你目前只有查看权限。', 'You have view access only.')}</div>` : '';
-    const body = S.view === 'settings' ? settingsView() : S.view === 'import' ? importView() : S.view === 'imports' ? importsView() : `<div class="pl-layout">${rail()}<main class="pl-editor" id="pl-editor">${editor()}</main></div>`;
-    return `<div class="pl">${bar}${S.view === 'products' ? ro : ''}${body}</div>`;
+    const body = importing ? `<p><button class="pl-btn" data-pl="view" data-v="products">← ${tr('返回', 'Back')}</button></p>${S.view === 'import' ? importView() : importsView()}`
+      : `${ro}<div class="pl-layout">${rail()}<main class="pl-editor" id="pl-editor">${editor()}</main></div>`;
+    return `<div class="pl">${top}${modes}${body}</div>`;
   }
 
   /* ---------- saving ---------- */
@@ -353,6 +441,9 @@
     if (t.dataset.plUndo) { if (!window.confirm?.(tr('撤销这次导入？导入之前的值会恢复；之后又被别人修改过的字段会保留并列出。', 'Undo this import? The earlier values come back; fields changed since are kept and listed.'))) return;
       t.disabled = true; ctx.api.post(`/products/library/imports/${encodeURIComponent(t.dataset.plUndo)}/undo`, {}).then(r => { toast(tr(`已撤销：恢复 ${r.restored} 处，移除新增产品 ${r.removed} 个${r.kept.length ? `，保留 ${r.kept.length} 项` : ''}`, `Undone: ${r.restored} values restored, ${r.removed} new products removed${r.kept.length ? `, ${r.kept.length} kept` : ''}`)); loadImports(); load(true); }).catch(x => { toast(x.message); t.disabled = false; }); return; }
     const a = t.dataset.pl;
+    if (a === 'mode') { S.mode = t.dataset.v; S.view = 'products'; S.creating = false; return rerender(); }
+    if (a === 'pview') { S.pview = t.dataset.v; if (S.pview === 'settings') S.draft = null; return rerender(); }
+    if (a === 'clear') { S.q = ''; S.fam = ''; S.status = ''; S.goods = ''; S.onlyReq = false; return rerender(); }
     if (a === 'view') { S.view = t.dataset.v; if (S.view === 'imports' && !S.imports) loadImports(); if (S.view === 'settings') S.draft = null; return rerender(); }
     if (a === 'new') { S.creating = true; S.errs = {}; return rerender(); }
     if (a === 'create-cancel') { S.creating = false; return rerender(); }
@@ -360,7 +451,7 @@
       const sku = val('sku'); if (!sku) { S.errs._new = tr('请填写 SKU', 'Enter a SKU'); return rerender(); }
       const values = Object.fromEntries(['family', 'nameZh', 'nameEn'].map(k => [k, val(k)]).filter(([, v]) => v));
       t.disabled = true; ctx.api.post('/products/library', { sku, values }).then(r => { S.creating = false; S.cur = r.sku; S.errs = {}; toast(tr('已创建，继续补齐其他字段', 'Created; fill in the other fields')); load(true); }).catch(x => { S.errs._new = x.message; t.disabled = false; rerender(); }); return; }
-    if (a === 'template') return download(`/products/library/template?format=${t.dataset.format === 'csv' ? 'csv' : 'xlsx'}`, `OneLaser_产品资料.${t.dataset.format === 'csv' ? 'csv' : 'xlsx'}`);
+    if (a === 'template') { const f = t.dataset.format === 'csv' ? 'csv' : 'xlsx', sc = S.mode === 'pricing' ? 'pricing' : 'sku'; return download(`/products/library/template?format=${f}&scope=${sc}`, `OneLaser_${sc === 'pricing' ? '定价' : 'SKU资料'}.${f}`); }
     if (a === 'report' && S.preview) return download(`/products/library/import/${encodeURIComponent(S.preview.id)}/report`, '导入预览报告.csv');
     if (a === 'preview-cancel') { S.preview = null; return rerender(); }
     if (a === 'confirm') return confirmImport(t);
@@ -376,6 +467,8 @@
     if (el.matches('[data-pl-upload]')) { const files = [...(el.files || [])]; el.value = ''; return upload(el.dataset.plUpload, files); }
     if (el.matches('[data-pl-import]')) { const f = el.files?.[0]; el.value = ''; return previewFile(f); }
     if (el.matches('[data-pl-fam]')) { S.fam = el.value; return rerender(); }
+    if (el.matches('[data-pl-status]')) { S.status = el.value; return rerender(); }
+    if (el.matches('[data-pl-goods]')) { S.goods = el.value; return rerender(); }
     if (el.matches('[data-pl-onlyreq]')) { S.onlyReq = el.checked; return rerender(); }
     if (el.matches('[data-pl-skip]')) { S.skipErrors = el.checked; return rerender(); }
     if (el.matches('[data-pl-s]')) { const path = el.dataset.plS, d = S.draft; if (!d) return;
@@ -386,7 +479,9 @@
       return rerender(); }
   });
   document.addEventListener('input', e => {
-    const el = e.target; if (!inPl(el) || !el.matches('[data-pl-q]')) return;
+    const el = e.target; if (inPl(el) && el.matches('[data-pl-calc]')) { const c = calcRates(); c[el.dataset.plCalc] = el.value.trim();
+      try { localStorage.setItem(CALC_KEY, JSON.stringify({ sales:c.sales, wh:c.wh })); } catch { /* private mode */ } rerender(); return; }
+    if (!inPl(el) || !el.matches('[data-pl-q]')) return;
     S.q = el.value; const pos = el.selectionStart; rerender();
     requestAnimationFrame(() => { const n = document.querySelector('[data-pl-q]'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch { /* ignore */ } } });
   });
