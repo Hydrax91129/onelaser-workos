@@ -22,6 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.47', date:'2026-11-06T13:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('项目：附件按分类统一存放、AI 拆任务、阶段可改名删除和拖动任务、概览显示项目动态', 'Projects: shared files by category, AI task split, rename/delete stages and drag tasks, activity on the overview'),
+      title:c('项目附件、AI 拆任务和项目动态', 'Project files, AI task split and activity'),
+      changes:[c('项目概览新增“项目附件”：方案、设计素材、合同报价、报告复盘按分类存放，支持粘贴、拖拽和点击上传（PDF、Word、Excel、PPT、图片，单个 20 MB 以内）；成员都能下载，上传人和项目管理员可以删除。', 'The project overview has a Project files section: briefs, designs, contracts and reports sorted by category, uploaded by paste, drag or click (PDF, Word, Excel, PowerPoint, images, up to 20 MB each); every member can download, the uploader or project admin can delete.'),
+        c('表格视图新增“AI 拆任务”：用几句话说要做什么、谁负责，AI 按阶段拆成任务并配好负责人和截止日期，确认后才创建。', 'The table view has AI task split: describe the work and AI drafts tasks with stages, owners and due dates; nothing is created until you confirm.'),
+        c('阶段可以改名、删除（里面的任务自动移到第一个阶段，不会丢）、添加；任务可以拖到其他阶段，或点任务左边的箭头选择阶段。', 'Stages can be renamed, deleted (their tasks move to the first stage) and added; drag a task to another stage or use the arrow next to it.'),
+        c('“动态”记录新建任务、改状态 / 负责人 / 阶段 / 截止日期、进展、完成与评分、附件和阶段变化，概览页下方也能看到最新动态。', 'Activity records new tasks, status / owner / stage / due changes, progress notes, completion and scores, files and stage changes; the latest entries also show at the bottom of the overview.')] },
     { version:'1.46', date:'2026-11-06T11:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('“我下达的任务”和“别人给我下达的任务”显示全部任务，可在卡片里往下翻', 'Assigned by me / Assigned to me now list every task and scroll inside the card'),
       title:c('下达的任务能看全', 'See all assigned tasks'),
