@@ -113,3 +113,5 @@ details.pl-grp>summary .no{font-family:var(--pl-num);font-size:12px;color:var(--
 .pl-calc-tight{margin-top:10px}.pl-calc-tight .pl-out{padding:8px 12px}.pl-calc-tight .pl-out .v{font-size:17px}
 .pl-pricing .pl-subhead{margin:14px 0 6px;padding:0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .pl-card.pl-more{padding:8px 12px}.pl-more .pd-card{margin-bottom:10px}
+.pl-stock{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}.pl-stock .pl-out{padding:8px 12px}.pl-stock .pl-out.zero .v{color:var(--pl-faint)}
+.pl-tbl td .p{display:block;font-size:11px;color:var(--pl-mute)}

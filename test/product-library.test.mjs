@@ -86,7 +86,7 @@ test('cost access: worksheet, CM warnings, wholesale tiers with override and fre
   fire(document.querySelector('[data-pl="mode"][data-v="pricing"]'), 'click');
   const html = skuHtml + document.getElementById('app').innerHTML;
   W._state.mode = 'sku'; await show();
-  for (const t of ['送达成本', '\\$1,100', 'MSRP 贡献利润', '批发价', '我们付运费', '说明书', 'manual.pdf', '常用备件清单']) assert.match(html, new RegExp(t), t);
+  for (const t of ['送达成本', '价格计算器', '销售费用比率', '批发费用比率', 'NPCR', '批发价', '我们付运费', '说明书', 'manual.pdf', '常用备件清单']) assert.match(html, new RegExp(t), t);
   assert.doesNotMatch(html, /零售档位|NPCR 价格阶梯|价格参数还没有设置/, '定价管理 is compact');
   assert.equal(document.querySelector('[data-pl-upload="spareParts"]').getAttribute('accept'), '.pdf', 'PDF-only slot');
   const w = document.querySelector('[data-pl-f="netWeight"]'); w.value = '38'; fire(w, 'change'); await tick(); await tick();
