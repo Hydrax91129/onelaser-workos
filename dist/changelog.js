@@ -22,6 +22,12 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.49', date:'2026-11-06T16:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('产品 PIM 改为“SKU 管理 + 定价管理”：顶部统一搜索和筛选，模板按页面下载', 'Product PIM is now SKU management + Pricing, with one search and filter bar and a template per page'),
+      title:c('产品 PIM：SKU 管理与定价管理', 'Product PIM: SKUs and pricing'),
+      changes:[c('进入产品 PIM 先看到搜索和筛选：输入 SKU、名称、型号或系列，或选产品族、状态、大货 / 退货、必填未完成，结果马上出来；两个子页面共用同一组筛选。', 'Product PIM opens with search and filters: type a SKU, name, model or series, or pick family, status, new / returned or incomplete, and results update right away; both sub-pages share them.'),
+        c('“SKU 管理”只放产品资料；“定价管理”集中显示和修改所有价格：零售、批发、渠道价格、定价输入、到岸价估算、调价审批，以及价格参数和公司定价规则。原来单独的“定价”标签合并进来。', 'SKU management holds product data only; Pricing shows and edits every price: retail, wholesale, channel prices, pricing inputs, landed-cost estimate and approvals, plus pricing settings and company rules. The separate Pricing tab is merged in.'),
+        c('“下载标准模板”按当前页面下载：SKU 管理下载不含价格的 SKU 模板，定价管理下载含 SKU、名称和全部价格列的定价模板；两种文件都能用“批量更新”上传。', 'The template follows the page: SKU management downloads a template without prices, Pricing one with SKU, names and every price column; both can be uploaded with Bulk update.')] },
     { version:'1.48', date:'2026-11-06T15:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('项目附件点开先预览（PDF、图片），下载、新窗口打开、删除都在预览窗口里', 'Project files open in a preview window (PDF, images) with download, open in new tab and delete'),
       title:c('项目附件先预览再下载', 'Preview project files before downloading'),

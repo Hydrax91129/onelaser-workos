@@ -62,29 +62,40 @@ function load(data, { confirm = true, prompt = '' } = {}) {
 }
 
 test('editor: groups, requirement badges by family, visibility chips; everyone sees public prices only', async () => {
-  const { document, show } = load(library(false));
-  const html = await show();
-  for (const g of ['产品基本参数', '生命周期', '产品详细信息与文件', '定价（零售）', '定价（批发）', '包装与物流']) assert.match(html, new RegExp(g));
-  assert.doesNotMatch(html, /受限区域|测试原型|DEMO-HYD|示例 · 60W/, 'no demo banner or sample rows');
-  assert.match(html, /全员/); assert.match(html, /必填/); assert.match(html, /选填/);
-  assert.match(html, /文件是敏感信息/); assert.doesNotMatch(html, /到岸价|送达成本|贡献利润|NPCR|示例工厂/);
-  assert.match(html, /\$1,600/, 'public wholesale price');
-  assert.equal(document.querySelector('[data-pl-f="series"]').closest('.pl-fld').classList.contains('miss'), true, 'missing required field is highlighted');
-  assert.match(html, /仅看必填未完成[\s\S]*1 个待补/);
+  const { W, document, show, fire } = load(library(false));
+  const skuHtml = await show();
+  for (const g of ['产品基本参数', '生命周期', '产品详细信息与文件', '包装与物流']) assert.match(skuHtml, new RegExp(g));
+  assert.doesNotMatch(skuHtml, /定价（零售）|定价（批发）/, 'SKU 管理 has no pricing sections');
+  assert.match(skuHtml, /仅看必填未完成[\s\S]*>1</);
   assert.equal(document.querySelector('[data-pl="new"]'), null, 'view-only people cannot add products');
+  assert.equal(document.querySelector('[data-pl-f="series"]').closest('.pl-fld').classList.contains('miss'), true, 'missing required field is highlighted');
+  fire(document.querySelector('[data-pl="mode"][data-v="pricing"]'), 'click');
+  const html = document.getElementById('app').innerHTML;
+  for (const g of ['定价（零售）', '定价（批发）']) assert.match(html, new RegExp(g));
+  assert.doesNotMatch(html, /产品基本参数|包装与物流/, '定价管理 shows prices only');
+  assert.equal(W._state.mode, 'pricing');
+  assert.doesNotMatch(html, /受限区域|测试原型|DEMO-HYD|示例 · 60W/, 'no demo banner or sample rows');
+  assert.match(skuHtml, /全员/); assert.match(skuHtml, /必填/); assert.match(skuHtml + html, /选填/);
+  assert.match(skuHtml, /文件是敏感信息/); assert.doesNotMatch(skuHtml + html, /到岸价|送达成本|贡献利润|NPCR|示例工厂/);
+  assert.match(html, /\$1,600/, 'public wholesale price');
 });
 
 test('cost access: worksheet, CM warnings, wholesale tiers with override and freight, file slots; autosave per field', async () => {
-  const { document, calls, show, fire, toasts } = load(library(true), { prompt:'新款上市' });
-  const html = await show();
+  const { W, document, calls, show, fire, toasts } = load(library(true), { prompt:'新款上市' });
+  const skuHtml = await show();
+  fire(document.querySelector('[data-pl="mode"][data-v="pricing"]'), 'click');
+  const html = skuHtml + document.getElementById('app').innerHTML;
+  W._state.mode = 'sku'; await show();
   for (const t of ['送达成本', '\\$1,100', '零售档位', '\\$1,699', 'NPCR 价格阶梯', 'Amazon / eBay', '低于官网底线 10%', '经销商每台利润', '我们付运费', '说明书', 'manual.pdf', '常用备件清单', '价格参数还没有设置']) assert.match(html, new RegExp(t), t);
   assert.equal(document.querySelector('[data-pl-upload="spareParts"]').getAttribute('accept'), '.pdf', 'PDF-only slot');
   const w = document.querySelector('[data-pl-f="netWeight"]'); w.value = '38'; fire(w, 'change'); await tick(); await tick();
   assert.deepEqual(j(calls.find(c => c[0] === 'PATCH')), ['PATCH', '/products/library/ODL-DEMO-1', { values:{ netWeight:'38' } }]);
+  fire(document.querySelector('[data-pl="mode"][data-v="pricing"]'), 'click');
   const ov = document.querySelector('[data-pl-f="whOv0"]'); ov.value = '1500'; fire(ov, 'change'); await tick(); await tick();
   assert.deepEqual(j(calls.filter(c => c[0] === 'PATCH').at(-1)[2]), { values:{ whOv0:'1500' } });
   fire(document.querySelector('[data-pl-freight="us"]'), 'click'); await tick(); await tick();
   assert.deepEqual(j(calls.filter(c => c[0] === 'PATCH').at(-1)[2]), { values:{ whFreight:'us' } });
+  fire(document.querySelector('[data-pl="mode"][data-v="sku"]'), 'click');
   const st = document.querySelector('[data-pl-f="status"]'); st.querySelectorAll('option').forEach(o => o.removeAttribute('selected')); st.querySelector('option[value="clearance"]').setAttribute('selected', ''); fire(st, 'change'); await tick(); await tick();
   assert.deepEqual(j(calls.filter(c => c[0] === 'PATCH').at(-1)[2]), { values:{ status:'clearance' }, note:'新款上市' }, 'clearance asks for a reason');
   const s = document.querySelector('[data-pl-f="series"]'); s.value = ''; fire(s, 'change'); await tick();
@@ -96,7 +107,10 @@ test('template download, upload preview with before/after and analysis, skip-err
   const { W, document, calls, fetches, show, fire } = load(library(true, true));
   await show();
   fire(document.querySelector('[data-pl="template"]'), 'click'); await tick();
-  assert.equal(fetches.at(-1), '/api/products/library/template?format=xlsx');
+  assert.equal(fetches.at(-1), '/api/products/library/template?format=xlsx&scope=sku', 'SKU 管理 downloads the SKU template');
+  fire(document.querySelector('[data-pl="mode"][data-v="pricing"]'), 'click');
+  fire(document.querySelector('[data-pl="template"]'), 'click'); await tick();
+  assert.equal(fetches.at(-1), '/api/products/library/template?format=xlsx&scope=pricing', '定价管理 downloads the pricing template');
   fire(document.querySelector('[data-pl="view"][data-v="import"]'), 'click');
   const inp = document.querySelector('[data-pl-import]'); assert.equal(inp.getAttribute('accept'), '.xlsx,.csv');
   Object.defineProperty(inp, 'files', { value:[{ name:'update.xlsx', size:10, text:'x' }] }); fire(inp, 'change');
@@ -122,7 +136,7 @@ test('nothing is written when the admin cancels the confirm dialog; settings pag
   W._state.view = 'import'; W._state.preview = j(PREVIEW); W._state.skipErrors = true; await show();
   fire(document.querySelector('[data-pl="confirm"]'), 'click'); await tick();
   assert.equal(calls.some(c => c[1].endsWith('/confirm')), false);
-  W._state.view = 'settings'; W._state.draft = null; let html = await show();
+  W._state.view = 'products'; W._state.mode = 'pricing'; W._state.pview = 'settings'; W._state.draft = null; let html = await show();
   assert.match(html, /价格参数还是空的/); assert.doesNotMatch(html, /\b17%|\b7%/, 'no company numbers in the page');
   fire(document.querySelector('[data-pl-sadd="dtcItems"]'), 'click');
   const name = document.querySelector('[data-pl-s="dtcItems.0.name"]'); name.value = '示例费用'; fire(name, 'change');
