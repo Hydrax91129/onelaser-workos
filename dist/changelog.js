@@ -22,6 +22,10 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.48', date:'2026-11-06T15:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('项目附件点开先预览（PDF、图片），下载、新窗口打开、删除都在预览窗口里', 'Project files open in a preview window (PDF, images) with download, open in new tab and delete'),
+      title:c('项目附件先预览再下载', 'Preview project files before downloading'),
+      changes:[c('点项目附件的文件名会弹出预览窗口：PDF 和图片直接显示，Word / Excel / PPT 等提示下载后打开；下载、新窗口打开、删除都在这个窗口里。', 'Clicking a project file opens a preview window: PDFs and images show directly, Word / Excel / PowerPoint ask you to download; download, open in a new tab and delete are in that window.')] },
     { version:'1.47', date:'2026-11-06T13:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('项目：附件按分类统一存放、AI 拆任务、阶段可改名删除和拖动任务、概览显示项目动态', 'Projects: shared files by category, AI task split, rename/delete stages and drag tasks, activity on the overview'),
       title:c('项目附件、AI 拆任务和项目动态', 'Project files, AI task split and activity'),
