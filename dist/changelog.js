@@ -22,6 +22,11 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.44', date:'2026-11-06T10:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('OKR 团队页新增“一键催办”', 'OKR team view: one-click nudge'),
+      title:c('OKR 一键催办', 'Nudge the team on OKRs'),
+      changes:[c('在 OKR 团队页“每人三个状态”下面有“一键催办”按钮（只有带团队的人能看到）。点开会列出团队里当前阶段还没完成的人：没发布 OKR、没自评、或者下属还没打领导分，逾期的标红。', 'In the OKR team view, “Nudge the team” (for people who lead someone) lists who has not finished the current stage: OKR not published, not self-scored, or a leader who has not scored their people; overdue ones are red.'),
+        c('点“发送催办”后，每人收到一条站内提醒和钉钉消息，写明是谁催的、截止日期。同一个人同一阶段每天最多催一次。', 'Sending gives each person an in-app reminder and a DingTalk message naming who sent it and the deadline; at most once per person and stage per day.')] },
     { version:'1.43', date:'2026-11-05T21:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('侧边栏改为“产品 PIM”和“WMS”两个模块；成本核算改名“定价”', 'Sidebar: Product PIM and WMS modules; the cost calculator is now Pricing'),
       title:c('产品 PIM 与 WMS 分开', 'Product PIM and WMS'),

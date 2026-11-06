@@ -379,3 +379,12 @@ html[data-theme=dark] .okb-ai{border-color:#35508f;background:linear-gradient(18
 html[data-theme=dark] .okb-save.saved{color:#6fd3a0}html[data-theme=dark] .okb-save.error{color:#ffab8a}html[data-theme=dark] .okb-save.unsaved{color:#f2c46d}
 html[data-theme=dark] .okb-save-restored{background:#1f2c4d;color:#a9c2ff}html[data-theme=dark] .okb-remove:hover{background:#3a2621;color:#ffab8a}
 html[data-theme=dark] .okb-undo-item{background:#ebebeb;color:#1f2329}html[data-theme=dark] .okb-undo-item .okb-btn{background:#1f2329;color:#fff;border-color:#1f2329}
+/* 一键催办 */
+.okb-nudge-btn{width:100%;justify-content:center;margin-top:8px;font-size:13px}
+.okb-nudge-list{list-style:none;margin:10px 0 14px;padding:0;display:flex;flex-direction:column}
+.okb-nudge-list li{display:grid;grid-template-columns:minmax(90px,1.2fr) 80px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border,#e4e7ef);font-size:13px}
+.okb-nudge-list li:first-child{border-top:0}
+.okb-nudge-stage{font-size:12px;font-weight:600;color:#a15c00;background:#fff4e0;border-radius:10px;padding:1px 8px;justify-self:start}
+.okb-nudge-late{color:#c62a43;font-weight:600}
+@media(max-width:600px){.okb-nudge-list li{grid-template-columns:1fr auto}}
+html[data-theme=dark] .okb-nudge-list li{border-color:#2c3341}html[data-theme=dark] .okb-nudge-stage{background:#3a2a10;color:#f3c27a}
