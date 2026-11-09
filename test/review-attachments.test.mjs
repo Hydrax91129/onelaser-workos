@@ -71,7 +71,7 @@ test('409 errors explain the actual reason instead of always saying the record c
 });
 
 test('a submission sends attachment ids rather than writing file names into the text', () => {
-  assert.match(liveSource, /description:values\.description\.trim\(\),\.\.\.\(attachmentIds\.length \? \{attachmentIds\} : \{\}\)/);
+  assert.match(liveSource, /'\/complete',\{expectedVersion:Number\(values\.expectedVersion\),result:values\.description\.trim\(\),attachmentIds\}/, 'finishing completes the task right away');
   assert.doesNotMatch(liveSource, /tr\('附件：','Attachments: '\)\+names/);
 });
 

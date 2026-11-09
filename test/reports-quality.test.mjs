@@ -143,11 +143,11 @@ test('without the leaderboard API the fallback counts done tasks this month and 
   assert.match(html, /Tasks completed this month/);
 });
 
-test('work someone else gave you goes through review: the board sends "done" to the task details instead of the completion form', async () => {
+test('work someone else gave you completes like any task: the board opens the completion form', async () => {
   const { readFile } = await import('node:fs/promises');
   const board = await readFile(new URL('../dist/task-board.js', import.meta.url), 'utf8');
   const live = await readFile(new URL('../dist/live-app.js', import.meta.url), 'utf8');
   assert.match(board, /needsReview=t=>!!t&&t\.reviewer_id!==t\.owner_id&&\(t\.assigned_by_id\|\|t\.created_by\)!==t\.owner_id/);
-  assert.equal((board.match(/needsReview\((target|task)\)\)\{reviewInstead/g) || []).length, 2, 'both the status menu and drag-to-done route to review');
+  assert.doesNotMatch(board, /reviewInstead/, 'the status menu and drag-to-done no longer route to review');
   assert.match(live, /canReview = task\.reviewer_id === state\.actor\.id && task\.owner_id !== state\.actor\.id/, 'any designated reviewer, not only managers');
 });

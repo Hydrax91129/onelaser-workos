@@ -22,6 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.51', date:'2026-11-09T16:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('点“完成”就算完成：别人派的任务也不再等验收；评分可选，低于 5 分退回未完成', 'Completing counts right away, also for work someone else gave you; scoring is optional, below 5 sends it back'),
+      title:c('完成不再等验收', 'Done without waiting for review'),
+      changes:[c('负责人点“完成”，任务马上算完成，进度、OKR 和排行榜都按完成计算；别人派的任务也一样，不再停在“待审批”。', 'When the owner completes a task it counts as done right away, also for work someone else gave you; it no longer waits in review.'),
+        c('验收人、派任务的人、直属领导或管理员可以在 24 小时内给成果打 0–10 分；不打分也算完成，没人打分时由 AI 评分。', 'The reviewer, assigner, manager or an administrator can score the result 0–10 within 24 hours; it is done either way, and the AI scores it if nobody does.'),
+        c('人打分低于 5 分，任务退回“未完成”，负责人会收到“去修改”提醒；改完再点完成，可以重新评分。', 'A score below 5 sends the task back to not done and the owner gets a to-do; completing it again opens a new score.'),
+        c('原来停在“待审批”的任务，这次更新时一次性转为已完成，并开放 24 小时评分。', 'Tasks that were waiting for review become done with this update, open for scoring for 24 hours.')] },
     { version:'1.50', date:'2026-11-09T14:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('退货维修：按状态管理（等待维修、等待配件、完成维修、完成上架、售出），成色决定折扣，售出自动出库，退货 SKU 统一用 REF- 开头', 'Returns by status (waiting for repair, waiting for parts, repaired, listed, sold); the grade sets the discount; sold goes out of stock; return SKUs start with REF-'),
       title:c('退货维修改版', 'Returns & repairs'),
