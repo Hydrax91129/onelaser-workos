@@ -22,6 +22,15 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.50', date:'2026-11-09T14:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('退货维修：按状态管理（等待维修、等待配件、完成维修、完成上架、售出），成色决定折扣，售出自动出库，退货 SKU 统一用 REF- 开头', 'Returns by status (waiting for repair, waiting for parts, repaired, listed, sold); the grade sets the discount; sold goes out of stock; return SKUs start with REF-'),
+      title:c('退货维修改版', 'Returns & repairs'),
+      changes:[c('登记退货只做退货记录：SKU、类别（机器、配件、材料、其他，机器必须填序列号）、数量（默认 1）、收货日期、退货原因 + 退款情况、退货外观与配件情况、收货照片；渠道、客户、订单号选填。', 'Registering a return records it only: SKU, item class (machines need a serial), quantity (1 by default), received date, reason + refund, condition, photos on receipt; channel, customer and order are optional.'),
+        c('退货 SKU 统一以 REF- 开头，后面接机器型号（例如 REF-XRF38），退货登记和产品资料库用同一规则；物料表里还没有时登记会自动新建，原来以 REFB- 开头的退货 SKU 会自动改成 REF-。', 'Return SKUs start with REF- and the model (e.g. REF-XRF38) in both returns and the product library; missing ones are created on registration, and old REFB- SKUs are renamed.'),
+        c('每件退货按状态走：等待维修 → 等待配件（要写清楚等什么配件）→ 完成维修 → 已入库待上架 → 完成上架 → 售出；列表按这些状态分栏。是否可维修、维修人员在维修环节填写。', 'Each return moves through: waiting for repair → waiting for parts (name the parts) → repaired → in stock, to list → listed → sold; the list has a tab for each. Repairable and technician are set in the repair step.'),
+        c('入库时选成色就定了折扣：A 品原封不动当新货卖（不打折，默认入美国仓），B 品 10% off，C 品 20% off。', 'The grade chosen when restocking sets the discount: A untouched, sold as new (no discount, US stock), B 10% off, C 20% off.'),
+        c('每件退货三组照片：收货照片（登记时拍）、问题诊断照片（维修时拍）、上架照片（修好后拍）；标记维修完成要至少一张问题诊断照片。', 'Three photo groups per return: on receipt, diagnosis and listing; marking it repaired needs at least one diagnosis photo.'),
+        c('标记“售出”会自动记一条库存出库（单号即 RMA 编号）；改回未售出会退回库存。', 'Marking it sold records a goods-out with the RMA number; undoing it puts the unit back.')] },
     { version:'1.49', date:'2026-11-09T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('顶栏通知分成两个：眼睛 = 需要你处理，铃铛 = 动态', 'Notifications split in two: eye = needs you, bell = updates'),
       title:c('通知分为“需要你处理”和“动态”', 'Notifications: needs you vs updates'),
