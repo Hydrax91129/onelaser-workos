@@ -67,7 +67,7 @@
   const FACTS = {
     home() {
       const mine = taskFacts(S().tasks.filter(t => t.owner_id === me().id));
-      const toReview = S().tasks.filter(t => t.reviewer_id === me().id && t.status === 'submitted').length;
+      const toReview = (S().toReview || []).length;
       const objs = myObjectives(), period = objs[0]?.planning?.period;
       const pj = projectRows().filter(r => r.mine);
       const pjTasks = window.WorkOSProjects?._data?.sample === true ? 0 : window.WorkOSProjects?._data?.tasks.filter(t => t.owner === me().id && t.status !== 'done').length || 0;
@@ -220,6 +220,13 @@
     } catch (x) { ctx.toast?.(x.message || tr('催办失败', 'Could not send the reminder')); }
     ctx.rerender();
   }, true);
+  /* Work colleagues submitted for me to accept: first thing on the home page, because it auto-accepts after 3 days. */
+  function reviewNow() {
+    const list = S().toReview || [];
+    if (!list.length) return '';
+    return `<section class="ri-panel ri-review-now"><h3>${icon('seal-check')} ${tr('等我验收', 'Awaiting my review')} <b>${list.length}</b><span>${tr('3 天内没有确认或退回，系统会自动通过', 'Auto-accepted if not accepted or returned within 3 days')}</span></h3><div class="ri-review-list">${list.map(t => `<button class="ri-row" data-live-task="${esc(t.id)}"><i style="background:#579bfc"></i><span class="ri-title">${esc(t.title)}</span><span class="ri-meta">${esc(nameOf(t.owner_id))} · ${tr('提交于', 'submitted')} ${fmtDate(t.submitted_at)} · ${tr('自动通过', 'auto-accepts')} ${fmtDate(t.auto_accept_at)}</span></button>`).join('')}</div></section>`;
+  }
+
   function assignPanel() {
     if (!S().capabilities?.assignTasks) return '';
     loadAssign();
@@ -291,7 +298,7 @@
     const pace = f.monthElapsedPct;
     const attention = [
       ...tf.overdueList.map(t => ['#e2445c', tr('逾期', 'Overdue'), t]),
-      ...S().tasks.filter(t => t.reviewer_id === a.id && t.status === 'submitted').map(t => ['#579bfc', tr('待验收', 'Review'), t]),
+      ...(S().toReview || []).map(t => ['#579bfc', tr('待验收', 'Review'), t]),
       ...mine.filter(t => t.status === 'revision' && !tf.overdueList.includes(t)).map(t => ['#a25ddc', tr('被退回', 'Returned'), t]),
       ...tf.dueSoonList.map(t => ['#fdab3d', tr('即将到期', 'Due soon'), t]),
     ].slice(0, 8);
@@ -301,6 +308,7 @@
           <h1>${esc(greet)}${lang() === 'en' ? ', ' : '，'}${esc(a.display_name)} 👋</h1><p>${esc(tr(cheer[0], cheer[1]))}</p>
           <div class="ri-hero-actions"><button class="btn primary" data-live-action="new-task">${icon('plus')} ${tr('新建个人任务', 'New task for me')}</button>${S().capabilities?.assignTasks ? `<button class="btn ri-assign-btn" data-live-action="assign-task" title="${tr('给公司任何同事下达任务，你是验收人', 'Give a task to any colleague; you review it')}">${icon('paper-plane-tilt')} ${tr('下达任务给同事', 'Assign Task')}</button>` : ''}<button class="btn" data-live-page="tasks">${icon('list-checks')} ${tr('去个人任务', 'Open Task hub')}</button><button class="btn" data-live-page="okr">${icon('target')} ${tr('更新 OKR', 'Update OKRs')}</button></div></div>
         <div class="ri-hero-rings"><div>${ring(f.completionPct, 112, '#00c875', tr('任务完成', 'Tasks done'))}<span>${tf.accepted}/${tf.total} ${tr('已验收', 'accepted')}</span></div><div>${ring(f.okrPct, 112, toneFor(f.okrPct, pace), 'OKR')}<span>${tr(`目标周期已过 ${pace}%`, `${pace}% of objective cycle elapsed`)}</span></div><div>${ring(f.onTimePct, 112, '#579bfc', tr('准时率', 'On time'))}<span>${f.onTimeUnknown ? tr(`验收时间覆盖 ${f.onTimeKnown}/${f.onTimeKnown + f.onTimeUnknown}`, `Acceptance time coverage ${f.onTimeKnown}/${f.onTimeKnown + f.onTimeUnknown}`) : tr('按时验收的比例', 'Accepted by due date')}</span></div></div></section>
+      ${reviewNow()}
       ${slot('home')}
       ${assignPanel()}
       ${leaderboards()}

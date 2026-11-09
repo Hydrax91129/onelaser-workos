@@ -1,12 +1,15 @@
 'use strict';
-/* Inbox bell: a red dot with the number of new items (new tasks, progress updates, submissions,
- * reviews, completions, reminders). Clicking an item marks it read and opens the task it is about.
+/* Two buttons in the top bar:
+ *   eye  — 需要你处理: things only I can move forward (a result to review, a new task to pick up, rework, reminders).
+ *          An item stays here until it is handled, not just read.
+ *   bell — 动态: updates for information only (progress, accepted, completed, scores).
+ * Clicking an item marks it read and opens the task it is about.
  * Polls /inbox every minute while the page is visible; opening a task clears its items. */
 (() => {
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   // Task titles and messages people wrote are shown in the interface language (translate.js).
   const tx = v => window.WorkOSTranslate ? window.WorkOSTranslate.html(v) : esc(v);
-  let ctx = null, data = { items:[], unread:0 }, open = false, loading = false, timer = null;
+  let ctx = null, data = { items:[], unread:0 }, open = null, loading = false, timer = null; // open: null | 'action' | 'update'
   const lang = () => ctx?.lang?.() === 'en' ? 'en' : 'zh';
   const tr = (zh, en) => lang() === 'en' ? en : zh;
   const KIND = {
@@ -27,16 +30,28 @@
     loading = true;
     ctx.api.get('/inbox').then(r => { data = { items:r.items || [], unread:r.unread || 0 }; }).catch(() => {}).finally(() => { loading = false; paint(); });
   }
+  const CTA = { submission:['去验收', 'Review'], completion:['去验收', 'Review'], task_new:['去领取', 'Pick up'], assigned:['去领取', 'Pick up'], review_revise:['去修改', 'Rework'] };
+  const isAction = i => i.action === true || (i.action === undefined && ['submission', 'nudge', 'okr', 'hr_reminder', 'it_reminder', 'quality', 'task_new', 'assigned', 'review_revise'].includes(i.kind));
+  const REMINDER = ['nudge', 'okr', 'hr_reminder', 'it_reminder', 'quality'];
+  const isDone = i => i.done !== undefined ? i.done : REMINDER.includes(i.kind) ? i.read : false;
+  const actions = () => data.items.filter(i => isAction(i) && !isDone(i));
+  const updates = () => data.items.filter(i => !isAction(i));
+  const updatesUnread = () => updates().filter(i => !i.read).length;
   function item(i) {
-    const k = KIND[i.kind] || KIND.nudge, name = who(i);
-    return `<button class="inbox-item ${i.read ? '' : 'unread'}" data-inbox-open="${esc(i.id)}"><span class="inbox-ico" style="--c:${k[3]}"><i class="ph ph-${k[0]}" aria-hidden="true"></i></span><span class="inbox-text"><span class="inbox-line"><b>${tr(k[1], k[2])}</b>${name ? ` · ${esc(name)}` : ''}<em>${ago(i.createdAt)}</em></span>${i.title ? `<strong>${tx(i.title)}</strong>` : ''}${i.body ? `<span class="inbox-body">${tx(String(i.body).slice(0, 140))}</span>` : ''}</span>${i.read ? '' : '<span class="inbox-unread-dot" aria-hidden="true"></span>'}</button>`;
+    const k = KIND[i.kind] || KIND.nudge, name = who(i), cta = isAction(i) ? (CTA[i.kind] || ['去处理', 'Open']) : null;
+    return `<button class="inbox-item ${i.read ? '' : 'unread'} ${cta ? 'act' : ''}" data-inbox-open="${esc(i.id)}"><span class="inbox-ico" style="--c:${k[3]}"><i class="ph ph-${k[0]}" aria-hidden="true"></i></span><span class="inbox-text"><span class="inbox-line"><b>${tr(k[1], k[2])}</b>${name ? ` · ${esc(name)}` : ''}<em>${ago(i.createdAt)}</em></span>${i.title ? `<strong>${tx(i.title)}</strong>` : ''}${i.body ? `<span class="inbox-body">${tx(String(i.body).slice(0, 140))}</span>` : ''}${cta ? `<span class="inbox-cta">${tr(cta[0], cta[1])} →</span>` : ''}</span>${i.read ? '' : '<span class="inbox-unread-dot" aria-hidden="true"></span>'}</button>`;
   }
   function html() {
     if (!ctx?.state().actor) return '';
-    const n = data.unread, label = n ? tr(`${n} 条新消息`, `${n} new`) : tr('消息', 'Inbox');
-    return `<div class="inbox-wrap"><button class="icon-btn inbox-btn ${open ? 'on' : ''}" data-inbox-toggle aria-haspopup="true" aria-expanded="${open}" aria-label="${esc(label)}" title="${esc(label)}"><i class="ph ph-bell" aria-hidden="true"></i>${n ? `<span class="inbox-dot">${n > 99 ? '99+' : n}</span>` : ''}</button>
-      ${open ? `<div class="inbox-panel" role="dialog" aria-label="${tr('消息', 'Inbox')}"><div class="inbox-head"><strong>${tr('消息', 'Inbox')}</strong>${n ? `<button class="inbox-link" data-inbox-readall>${tr('全部标为已读', 'Mark all read')}</button>` : ''}</div>
-        <div class="inbox-list">${data.items.length ? data.items.map(item).join('') : `<p class="inbox-empty">${tr('最近 30 天没有新消息。', 'Nothing new in the last 30 days.')}</p>`}</div></div>` : ''}</div>`;
+    const a = actions().length, u = updatesUnread();
+    const btn = (mode, icon, n, zh, en, cls) => { const label = n ? tr(`${zh} ${n}`, `${en} ${n}`) : tr(zh, en);
+      return `<button class="icon-btn inbox-btn ${cls} ${open === mode ? 'on' : ''}" data-inbox-toggle="${mode}" aria-haspopup="true" aria-expanded="${open === mode}" aria-label="${esc(label)}" title="${esc(label)}"><i class="ph ph-${icon}" aria-hidden="true"></i>${n ? `<span class="inbox-dot">${n > 99 ? '99+' : n}</span>` : ''}</button>`; };
+    const list = open === 'action' ? actions() : updates();
+    const panel = !open ? '' : `<div class="inbox-panel ${open}" role="dialog" aria-label="${open === 'action' ? tr('需要你处理', 'Needs you') : tr('动态', 'Updates')}">
+      <div class="inbox-head"><strong>${open === 'action' ? `<i class="ph ph-eye" aria-hidden="true"></i> ${tr('需要你处理', 'Needs you')}` : `<i class="ph ph-bell" aria-hidden="true"></i> ${tr('动态', 'Updates')}`}</strong>${open === 'update' && u ? `<button class="inbox-link" data-inbox-readall>${tr('全部标为已读', 'Mark all read')}</button>` : ''}</div>
+      ${open === 'action' ? `<p class="inbox-sub">${tr('验收成果、领取新任务、按意见修改、催办和提醒。处理完会自动消失。', 'Results to review, new tasks to pick up, rework, reminders. Each one disappears once handled.')}</p>` : `<p class="inbox-sub">${tr('进展、验收结果、完成和评分，只需知道，不用回复。', 'Progress, review results, completions and scores. For information only.')}</p>`}
+      <div class="inbox-list">${list.length ? list.map(item).join('') : `<p class="inbox-empty">${open === 'action' ? tr('没有需要你处理的事。', 'Nothing needs you right now.') : tr('最近 30 天没有新动态。', 'No updates in the last 30 days.')}</p>`}</div></div>`;
+    return `<div class="inbox-wrap">${btn('action', 'eye', a, '需要你处理', 'Needs you', 'act')}${btn('update', 'bell', u, '动态', 'Updates', '')}${panel}</div>`;
   }
   function paint() {
     document.querySelectorAll('.inbox-wrap').forEach(el => { el.outerHTML = html(); });
@@ -52,12 +67,12 @@
   document.addEventListener('click', e => {
     if (!ctx) return;
     const t = e.target.closest?.('[data-inbox-toggle],[data-inbox-open],[data-inbox-readall]');
-    if (!t) { if (open && !e.target.closest?.('.inbox-panel')) { open = false; paint(); } return; }
+    if (!t) { if (open && !e.target.closest?.('.inbox-panel')) { open = null; paint(); } return; }
     e.preventDefault();
-    if (t.matches('[data-inbox-toggle]')) { open = !open; paint(); if (open) load(); return; }
-    if (t.matches('[data-inbox-readall]')) { data.items.forEach(i => { i.read = true; }); data.unread = 0; paint(); ctx.api.post('/inbox/read', { all:true }).catch(() => {}); return; }
+    if (t.matches('[data-inbox-toggle]')) { const m = t.dataset.inboxToggle || 'update'; open = open === m ? null : m; paint(); if (open) load(); return; }
+    if (t.matches('[data-inbox-readall]')) { const ids = updates().filter(i => !i.read).map(i => i.id); ids.length && markRead(ids); return; }
     const it = data.items.find(i => i.id === t.dataset.inboxOpen); if (!it) return;
-    open = false;
+    open = null;
     markRead(data.items.filter(i => i.id === it.id || (it.taskId && i.taskId === it.taskId)).map(i => i.id));
     if (it.taskId) ctx.openTask?.(it.taskId);
     else if (it.kind === 'okr') { window.location.hash = '#okr'; }
@@ -66,7 +81,7 @@
     else if (it.kind === 'quality') { window.location.hash = '#quality'; if (it.issueId) window.WorkOSQuality?.open(it.issueId); }
     else paint();
   });
-  document.addEventListener('keydown', e => { if (open && e.key === 'Escape') { open = false; paint(); } });
+  document.addEventListener('keydown', e => { if (open && e.key === 'Escape') { open = null; paint(); } });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') load(); });
 
   window.WorkOSInbox = {
@@ -74,7 +89,7 @@
     button: html,
     /** Opening a task from anywhere clears that task's unread items. */
     taskOpened(id) { if (!ctx || !id) return; const ids = data.items.filter(i => i.taskId === id && !i.read).map(i => i.id); if (ids.length) { data.items.forEach(i => { if (ids.includes(i.id)) i.read = true; }); data.unread = data.items.filter(i => !i.read).length; paint(); } ctx.api.post('/inbox/read-task/' + encodeURIComponent(id), {}).catch(() => {}); },
-    reset() { data = { items:[], unread:0 }; open = false; if (timer) clearInterval(timer); timer = null; ctx = null; },
+    reset() { data = { items:[], unread:0 }; open = null; if (timer) clearInterval(timer); timer = null; ctx = null; },
     _state: () => ({ data, open }),
   };
 })();

@@ -90,6 +90,7 @@ test('team analysis empty state explains reporting lines; workbench lists items 
   const actor = { id:'u1', display_name:'KC', isAdmin:true };
   const { window } = load(['people.js'], baseState(actor, { tasks:[
     { id:'a', title:'Overdue thing', owner_id:'u1', reviewer_id:'u2', status:'planned', due_at:'2020-01-01T00:00:00Z' },
+  ], toReview:[
     { id:'b', title:'Review me', owner_id:'u2', reviewer_id:'u1', status:'submitted', due_at:'2099-01-01T00:00:00Z' },
   ] }));
   window.WorkOSPeople._ui.team = { members:[], canViewAll:true, scope:'reports' };
