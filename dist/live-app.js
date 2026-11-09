@@ -441,9 +441,10 @@
   /** Images show inline as thumbnails that open full size; other files are download links. */
   function attachmentsView(taskId, files) {
     if (!files?.length) return '';
-    return `<div class="artifact-files">${files.map(f => { const url = esc(attachmentUrl(taskId, f)); return /^image\/(png|jpeg|webp|gif)$/.test(f.mime) ? `<button type="button" class="artifact-thumb" data-live-action="att-view" data-src="${url}" data-name="${esc(f.name)}" title="${esc(f.name)}" aria-label="${tr('查看大图：','View full size: ')}${esc(f.name)}"><img src="${url}" alt="${esc(f.name)}" loading="lazy"></button>` : `<a class="artifact-file" href="${url}" target="_blank" rel="noopener noreferrer">${icon('file')}<span>${esc(f.name)}</span><small>${kb(f.size)}</small></a>`; }).join('')}</div>`;
+    return `<div class="artifact-files">${files.map(f => { const url = esc(attachmentUrl(taskId, f)); return /^image\/(png|jpeg|webp|gif)$/.test(f.mime) ? `<button type="button" class="artifact-thumb" data-live-action="att-view" data-src="${url}" data-name="${esc(f.name)}" title="${esc(f.name)}" aria-label="${tr('查看大图：','View full size: ')}${esc(f.name)}"><img src="${url}" alt="${esc(f.name)}" loading="lazy"></button>` : `<a class="artifact-file" href="${url}" target="_blank" rel="noopener noreferrer" data-preview-name="${esc(f.name)}" data-preview-mime="${esc(f.mime || '')}">${icon('file')}<span>${esc(f.name)}</span><small>${kb(f.size)}</small></a>`; }).join('')}</div>`;
   }
   function viewAttachment(src, name) {
+    if (window.WorkOSPreview) { window.WorkOSPreview.open({ url:src, name }); return; }
     closeAttachment();
     const box = document.createElement('div'); box.className = 'att-lightbox'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', name);
     box.innerHTML = `<figure><img src="${esc(src)}" alt="${esc(name)}"><figcaption><span>${esc(name)}</span><a href="${esc(src)}" target="_blank" rel="noopener noreferrer">${tr('新窗口打开','Open in new tab')}</a></figcaption></figure><button type="button" class="icon-btn att-lightbox-close" aria-label="${tr('关闭','Close')}">${icon('close')}</button>`;

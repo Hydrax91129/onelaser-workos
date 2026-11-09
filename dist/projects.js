@@ -454,8 +454,13 @@
   const fileUrl = fid => `${apiBase()}/projects/files/${encodeURIComponent(fid)}`;
   async function openFile(p, fid) {
     const f = (p?.files || []).find(x => x.id === fid); if (!f) return;
-    const canShow = f.mime === 'application/pdf' || f.mime.startsWith('image/');
     const cat = FILE_CATS[f.category] || FILE_CATS.other;
+    if (window.WorkOSPreview) {
+      window.WorkOSPreview.open({ url:fileUrl(fid), name:f.name, mime:f.mime, meta:`${tr(cat[0], cat[1])} · ${fsize(f.size)} · ${person(f.uploadedBy).name} · ${fmt(day(f.at))}`,
+        actions:f.canDelete ? [{ label:tr('删除', 'Delete'), icon:'trash', onClick:close => { close(); deleteFile(f.id, f.name); } }] : [] });
+      return;
+    }
+    const canShow = f.mime === 'application/pdf' || f.mime.startsWith('image/');
     ctx.modal(esc(f.name), `<div class="pj-fview">
       <p class="pj-fview-meta">${icon(cat[2])} ${tr(cat[0], cat[1])} · ${fsize(f.size)} · ${esc(person(f.uploadedBy).name)} · ${fmt(day(f.at))}</p>
       <div class="pj-fview-box" id="pj-fview-box">${canShow ? `<p class="pj-muted">${tr('正在打开…', 'Opening…')}</p>` : `<div class="pj-fview-none">${icon('file')}<p>${tr('这种文件（Word / Excel / PPT / CSV / TXT）不能在网页里直接预览，请下载后打开。', 'Word, Excel, PowerPoint, CSV and text files cannot be previewed here; download to open.')}</p></div>`}</div>

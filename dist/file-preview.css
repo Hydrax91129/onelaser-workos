@@ -1,0 +1,17 @@
+/* File preview window (file-preview.js): above every other window. */
+.wo-preview{position:fixed;inset:0;z-index:400;background:#151515b3;display:flex;align-items:center;justify-content:center;padding:24px;animation:overlay-in .15s ease}
+.wo-preview-card{background:var(--surface,#fff);color:var(--ink,#1f1f1f);width:min(1000px,100%);max-height:calc(100vh - 48px);display:flex;flex-direction:column;border-radius:14px;box-shadow:0 24px 60px #0000004d;overflow:hidden}
+.wo-preview-card header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 18px 10px;border-bottom:1px solid var(--border,#ececec)}
+.wo-preview-card header h2{font-size:16px;line-height:1.4;margin:0;word-break:break-all}.wo-preview-card header p{margin:3px 0 0;font-size:12px;color:var(--muted,#8a8a94)}
+.wo-preview-body{flex:1;min-height:160px;overflow:auto;display:flex;align-items:center;justify-content:center;background:rgba(127,127,127,.06)}
+.wo-preview-body iframe{width:100%;height:72vh;border:0;background:#fff}
+.wo-preview-body img{max-width:100%;max-height:72vh;display:block}
+.wo-preview-body video{max-width:100%;max-height:72vh}
+.wo-preview-body:has(.wo-preview-text){display:block}
+.wo-preview-text{margin:0;padding:14px 16px;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;max-height:72vh;overflow:auto}
+.wo-preview-wait{color:var(--muted,#8a8a94);font-size:13px;padding:16px;text-align:center}
+.wo-preview-none{text-align:center;padding:40px 16px;color:var(--muted,#8a8a94)}.wo-preview-none .ph{font-size:42px}.wo-preview-none p{margin:10px auto 0;max-width:420px;line-height:1.7}
+.wo-preview-card footer{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:12px 18px;border-top:1px solid var(--border,#ececec)}
+.wo-preview-card footer a.btn{text-decoration:none}
+html[data-theme=dark] .wo-preview-card{background:#1f1f22;color:#eee}
+@media (max-width:640px){.wo-preview{padding:0}.wo-preview-card{max-height:100vh;height:100%;border-radius:0}.wo-preview-body iframe{height:calc(100vh - 150px)}}
