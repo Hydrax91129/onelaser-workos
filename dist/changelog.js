@@ -22,7 +22,7 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
-    { version:'1.51', date:'2026-11-09T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+    { version:'1.49', date:'2026-11-09T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('顶栏通知分成两个：眼睛 = 需要你处理，铃铛 = 动态', 'Notifications split in two: eye = needs you, bell = updates'),
       title:c('通知分为“需要你处理”和“动态”', 'Notifications: needs you vs updates'),
       changes:[c('眼睛图标是“需要你处理”：等你验收的成果、新任务待领取、按意见修改、催办和各类提醒，每条都有“去验收 / 去领取 / 去修改”按钮；处理完（比如成果验收了）才会消失，光点开不算。', 'The eye is “needs you”: results to review, new tasks to pick up, rework, reminders, each with a button; an item leaves only once it is handled, not just opened.'),
