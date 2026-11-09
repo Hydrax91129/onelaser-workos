@@ -435,7 +435,7 @@
     return `<section class="pj-panel pj-files" data-upload-scope="pj-files"><div class="pj-panel-head"><h3>${icon('folder-simple')} ${tr('项目附件', 'Project files')} <b class="pj-count">${files.length}</b></h3></div>
       <p class="pj-muted">${tr('方案、设计、合同报价、报告都放这里，按分类整理，所有成员看到的是同一份最新文件。', 'Plans, designs, contracts and reports live here, sorted by category, so every member works from the same latest file.')}</p>
       ${cats.map(c => `<div class="pj-file-cat"><h4>${icon(FILE_CATS[c][2])} ${tr(FILE_CATS[c][0], FILE_CATS[c][1])}</h4><ul class="pj-file-list">${files.filter(f => f.category === c).map(f => `<li>
-        <button class="plain pj-file-name" data-pj="file-download" data-id="${esc(f.id)}" data-name="${esc(f.name)}" title="${tr('下载', 'Download')}">${icon(f.mime.startsWith('image/') ? 'image' : f.mime === 'application/pdf' ? 'file-pdf' : 'file')} <span>${esc(f.name)}</span></button>
+        <button class="plain pj-file-name" data-pj="file-open" data-id="${esc(f.id)}" title="${tr('预览', 'Preview')}">${icon(f.mime.startsWith('image/') ? 'image' : f.mime === 'application/pdf' ? 'file-pdf' : 'file')} <span>${esc(f.name)}</span></button>
         <small>${fsize(f.size)} · ${esc(person(f.uploadedBy).name)} · ${fmt(day(f.at))}</small>
         ${f.canDelete ? `<button class="plain pj-file-del" data-pj="file-delete" data-id="${esc(f.id)}" data-name="${esc(f.name)}" title="${tr('删除', 'Delete')}" aria-label="${tr('删除文件', 'Delete file')}">${icon('trash')}</button>` : ''}</li>`).join('')}</ul></div>`).join('')}
       ${files.length ? '' : `<p class="pj-empty-line">${tr('还没有附件。', 'No files yet.')}</p>`}
@@ -450,6 +450,30 @@
     await reloadLive();
     return '';
   }
+  // Click a file: a window with the preview (PDF, image, text) and the actions; download is one of them.
+  const fileUrl = fid => `${apiBase()}/projects/files/${encodeURIComponent(fid)}`;
+  async function openFile(p, fid) {
+    const f = (p?.files || []).find(x => x.id === fid); if (!f) return;
+    const cat = FILE_CATS[f.category] || FILE_CATS.other;
+    if (window.WorkOSPreview) {
+      window.WorkOSPreview.open({ url:fileUrl(fid), name:f.name, mime:f.mime, meta:`${tr(cat[0], cat[1])} · ${fsize(f.size)} · ${person(f.uploadedBy).name} · ${fmt(day(f.at))}`,
+        actions:f.canDelete ? [{ label:tr('删除', 'Delete'), icon:'trash', onClick:close => { close(); deleteFile(f.id, f.name); } }] : [] });
+      return;
+    }
+    const canShow = f.mime === 'application/pdf' || f.mime.startsWith('image/');
+    ctx.modal(esc(f.name), `<div class="pj-fview">
+      <p class="pj-fview-meta">${icon(cat[2])} ${tr(cat[0], cat[1])} · ${fsize(f.size)} · ${esc(person(f.uploadedBy).name)} · ${fmt(day(f.at))}</p>
+      <div class="pj-fview-box" id="pj-fview-box">${canShow ? `<p class="pj-muted">${tr('正在打开…', 'Opening…')}</p>` : `<div class="pj-fview-none">${icon('file')}<p>${tr('这种文件（Word / Excel / PPT / CSV / TXT）不能在网页里直接预览，请下载后打开。', 'Word, Excel, PowerPoint, CSV and text files cannot be previewed here; download to open.')}</p></div>`}</div>
+      <div class="pj-fview-actions">
+        ${f.canDelete ? `<button class="btn" data-pj="file-delete" data-id="${esc(f.id)}" data-name="${esc(f.name)}">${icon('trash')} ${tr('删除', 'Delete')}</button>` : ''}
+        ${canShow ? `<button class="btn" data-pj="file-newtab" data-id="${esc(f.id)}">${icon('arrow-square-out')} ${tr('新窗口打开', 'Open in new tab')}</button>` : ''}
+        <button class="btn primary" data-pj="file-download" data-id="${esc(f.id)}" data-name="${esc(f.name)}">${icon('download-simple')} ${tr('下载', 'Download')}</button>
+      </div></div>`);
+    if (!canShow) return;
+    const box = document.getElementById('pj-fview-box'); if (!box) return;
+    box.innerHTML = f.mime.startsWith('image/') ? `<img src="${fileUrl(fid)}" alt="${esc(f.name)}">` : `<iframe src="${fileUrl(fid)}" title="${esc(f.name)}"></iframe>`;
+  }
+  function fileNewTab(fid) { window.open(fileUrl(fid), '_blank', 'noopener'); }
   async function downloadFile(fid, name) {
     try {
       const r = await fetch(`${apiBase()}/projects/files/${encodeURIComponent(fid)}`, { credentials:'same-origin', cache:'no-store' });
@@ -460,7 +484,7 @@
   }
   async function deleteFile(fid, name) {
     if (!window.confirm(tr(`删除文件「${name}」？删除后其他成员也看不到了。`, `Delete “${name}”? Other members will no longer see it.`))) return;
-    try { await ctx.api.request('/projects/files/' + encodeURIComponent(fid), { method:'DELETE' }); ctx.toast(tr('文件已删除', 'File deleted')); } catch (e) { failed(e); }
+    try { await ctx.api.request('/projects/files/' + encodeURIComponent(fid), { method:'DELETE' }); ctx.toast(tr('文件已删除', 'File deleted')); if (document.getElementById('pj-fview-box')) ctx.closeOverlay(); } catch (e) { failed(e); }
     await reloadLive();
   }
 
@@ -642,7 +666,9 @@
       case 'add-stage': ui.adding = 'stage'; return rerender();
       case 'stage-rename': ui.adding = 'stage:' + t.dataset.group; return rerender();
       case 'stage-delete': return deleteStage(proj(ui.project), t.dataset.group);
+      case 'file-open': return openFile(proj(ui.project), t.dataset.id);
       case 'file-download': return downloadFile(t.dataset.id, t.dataset.name);
+      case 'file-newtab': return fileNewTab(t.dataset.id);
       case 'file-delete': return deleteFile(t.dataset.id, t.dataset.name);
       case 'feed-all': ui.tab = 'activity'; return rerender();
       case 'ai-plan': return aiDialog(proj(ui.project));

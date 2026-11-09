@@ -22,6 +22,11 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.52', date:'2026-11-09T17:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('全站附件点开先预览：PDF、图片、文本、视频直接看，下载在预览窗口里', 'Every attachment opens in a preview first: PDFs, images, text and video show right away; download is in the window'),
+      title:c('附件先预览再下载', 'Preview attachments before downloading'),
+      changes:[c('任务、项目、产品资料、退货照片、人事文档、Bug 截图里的附件，点开都会弹出预览窗口：PDF 和图片直接显示，文本文件显示内容，视频可以播放；Word / Excel / PPT 提示下载后打开。下载、新窗口打开（项目附件还有删除）都在这个窗口里。', 'Attachments in tasks, projects, the product library, return photos, HR documents and bug reports open in a preview window: PDFs and images show directly, text shows its contents, video plays; Word, Excel and PowerPoint ask you to download. Download and open in a new tab (and Delete for project files) are in the window.'),
+        c('修复：任务附件里的 PDF 在 Chrome 里打开显示“craftos.app is blocked”。', 'Fixed: PDFs attached to tasks showed “craftos.app is blocked” in Chrome.')] },
     { version:'1.51', date:'2026-11-09T16:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('点“完成”就算完成：别人派的任务也不再等验收；评分可选，低于 5 分退回未完成', 'Completing counts right away, also for work someone else gave you; scoring is optional, below 5 sends it back'),
       title:c('完成不再等验收', 'Done without waiting for review'),

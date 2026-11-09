@@ -224,7 +224,11 @@
     if (a === 'view') { ui.view = el.dataset.v; ctx.rerender(); return; }
     if (a === 'new') { newDialog(); return; }
     if (a === 'open') { openCase(el.dataset.id); return; }
-    if (a === 'zoom') { e.preventDefault(); const src = photoCache.get(el.dataset.id); if (src) { const w2 = window.open(); if (w2) { w2.document.title = 'photo'; w2.document.body.style.margin = '0'; const im = w2.document.createElement('img'); im.src = src; im.style.maxWidth = '100%'; w2.document.body.appendChild(im); } } return; }
+    if (a === 'zoom') {
+      e.preventDefault(); const p = detail?.photos.find(x => x.id === el.dataset.id); if (!p) return;
+      if (window.WorkOSPreview) { window.WorkOSPreview.open({ url:`${apiBase()}/rma/${encodeURIComponent(detail.id)}/photos/${encodeURIComponent(p.id)}`, name:p.name, meta:`${w(PHOTO[p.kind])} · ${p.byName}` }); return; }
+      return;
+    }
     if (a === 'repaired') {
       const f = document.getElementById('rma-work'), err = f?.querySelector('.wms-error'); const at = document.querySelector('[data-rma-repaired-date]')?.value || today();
       try { await saveWork(f, true); await ctx.api.post(`/rma/${encodeURIComponent(detail.id)}/repaired`, { repairedAt:at }); ctx.toast?.(tr('已标记维修完成', 'Marked repaired')); await refresh(); }

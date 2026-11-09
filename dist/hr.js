@@ -449,7 +449,11 @@
       return;
     }
     if (a === 'export-us') { exportUs(); return; }
-    if (a === 'doc') { download(el.dataset.id); return; }
+    if (a === 'doc') {
+      const doc = detail.documents.find(d => d.id === el.dataset.id);
+      if (doc && window.WorkOSPreview) { window.WorkOSPreview.open({ url:`${apiBase()}/hr/people/${encodeURIComponent(detail.person.id)}/documents/${encodeURIComponent(doc.id)}`, name:doc.name, mime:doc.mime }); return; }
+      download(el.dataset.id); return;
+    }
     if (a === 'doc-delete') {
       if (busy || !window.confirm(tr('删除这份文件？删除后无法恢复。', 'Delete this document? This cannot be undone.'))) return;
       busy = true;
