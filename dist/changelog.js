@@ -22,7 +22,7 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
-    { version:'1.52', date:'2026-11-09T14:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+    { version:'1.50', date:'2026-11-09T14:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('退货维修：按状态管理（等待维修、等待配件、完成维修、完成上架、售出），成色决定折扣，售出自动出库，退货 SKU 统一用 REF- 开头', 'Returns by status (waiting for repair, waiting for parts, repaired, listed, sold); the grade sets the discount; sold goes out of stock; return SKUs start with REF-'),
       title:c('退货维修改版', 'Returns & repairs'),
       changes:[c('登记退货只做退货记录：SKU、类别（机器、配件、材料、其他，机器必须填序列号）、数量（默认 1）、收货日期、退货原因 + 退款情况、退货外观与配件情况、收货照片；渠道、客户、订单号选填。', 'Registering a return records it only: SKU, item class (machines need a serial), quantity (1 by default), received date, reason + refund, condition, photos on receipt; channel, customer and order are optional.'),
