@@ -22,6 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.52', date:'2026-11-09T14:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('登记退货：选类别（机器必须填序列号）、是否可维修、翻新折扣，可直接上传上架照片，退货 SKU 用 RE- 开头自动新建', 'Register a return: item class (machines need a serial), repairable, refurbished discount, listing photos, and RE- return SKUs created on the spot'),
+      title:c('登记退货改版', 'Return registration'),
+      changes:[c('“类型”改为“类别”：机器、配件、材料、其他（必填），选“机器”时序列号必填；数量默认 1；渠道、客户、订单号选填。', 'Type becomes item class: machine, accessory, material, other (required); machines need a serial; quantity defaults to 1; channel, customer and order are optional.'),
+        c('“退货原因 + 退款情况描述”和“退货外观与配件情况”必填；新增“是否可以维修”（可维修 / 不可维修）和“翻新折扣”（10% / 20% / 30% off）。', 'Return reason + refund details and condition are required; new choices for repairable and refurbished discount (10 / 20 / 30% off).'),
+        c('登记时可以直接粘贴、拖入或上传“上架照片”，提示拍好看一点，之后上架使用。', 'Listing photos can be pasted, dropped or uploaded while registering.'),
+        c('退货 SKU 以 RE- 开头（例如 RE-XRF38），物料表里还没有时登记会自动新建。', 'Return SKUs start with RE- (e.g. RE-XRF38) and are created on registration when missing.')] },
     { version:'1.48', date:'2026-11-08T18:00:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
       short:c('有人提交成果时，验收人会收到钉钉和邮件；首页顶部显示“等我验收”', 'Reviewers get DingTalk and email when work is submitted; Awaiting my review now tops the home page'),
       title:c('待验收提醒', 'Review reminders'),
