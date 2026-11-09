@@ -23,10 +23,12 @@
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
     { version:'1.52', date:'2026-11-09T14:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
-      short:c('登记退货：选类别（机器必须填序列号）、是否可维修、翻新折扣，可直接上传上架照片，退货 SKU 统一用 REF- 开头', 'Register a return: item class (machines need a serial), repairable, refurbished discount, listing photos, and REF- return SKUs'),
+      short:c('退货维修：按状态管理（等待维修、等待配件、完成维修、完成上架、售出），登记时选类别和是否可维修，退货 SKU 统一用 REF- 开头', 'Returns by status (waiting for repair, waiting for parts, repaired, listed, sold); item class and repairable at registration; return SKUs start with REF-'),
       title:c('登记退货改版', 'Return registration'),
       changes:[c('“类型”改为“类别”：机器、配件、材料、其他（必填），选“机器”时序列号必填；数量默认 1；渠道、客户、订单号选填。', 'Type becomes item class: machine, accessory, material, other (required); machines need a serial; quantity defaults to 1; channel, customer and order are optional.'),
-        c('“退货原因 + 退款情况描述”和“退货外观与配件情况”必填；新增“是否可以维修”（可维修 / 不可维修）和“翻新折扣”（10% / 20% / 30% off）。', 'Return reason + refund details and condition are required; new choices for repairable and refurbished discount (10 / 20 / 30% off).'),
+        c('“退货原因 + 退款情况描述”和“退货外观与配件情况”必填；新增“是否可以维修”（可维修 / 不可维修）。', 'Return reason + refund details and condition are required; new choice for repairable.'),
+        c('每件退货按状态走：等待维修 → 等待配件（要写清楚等什么配件）→ 完成维修 → 已入库待上架 → 完成上架 → 售出；列表按这些状态分栏。', 'Each return moves through: waiting for repair → waiting for parts (name the parts) → repaired → in stock, to list → listed → sold; the list has a tab for each.'),
+        c('翻新折扣（10% / 20% / 30% off）在完成维修之后才能选。', 'The refurbished discount (10 / 20 / 30% off) can be chosen only once the repair is done.'),
         c('登记时可以直接粘贴、拖入或上传“上架照片”，提示拍好看一点，之后上架使用。', 'Listing photos can be pasted, dropped or uploaded while registering.'),
         c('退货 SKU 统一以 REF- 开头（例如 REF-XRF38），退货登记和产品资料库用同一规则；物料表里还没有时登记会自动新建，原来以 REFB- 开头的退货 SKU 会自动改成 REF-。', 'Return SKUs start with REF- (e.g. REF-XRF38) in both returns and the product library; missing ones are created on registration, and old REFB- SKUs are renamed to REF-.')] },
     { version:'1.48', date:'2026-11-08T18:00:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
