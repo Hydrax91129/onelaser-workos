@@ -600,8 +600,9 @@
     window.WorkOSOkrBoard?.refreshed();
   }
   async function refreshData() {
-    if (factoryOnly()) { state.tasks = []; state.objectives = []; state.krs = []; state.directory = [state.actor]; state.reviewers = []; state.former = []; state.appraisals = {}; state.executive = null; return; }
-    const [tasks, objectives, krs, directory] = await Promise.all([api.get('/tasks'),api.get('/objectives'),api.get('/key-results'),api.get('/directory')]);
+    if (factoryOnly()) { state.toReview = []; state.tasks = []; state.objectives = []; state.krs = []; state.directory = [state.actor]; state.reviewers = []; state.former = []; state.appraisals = {}; state.executive = null; return; }
+    const [tasks, objectives, krs, directory, toReview] = await Promise.all([api.get('/tasks'),api.get('/objectives'),api.get('/key-results'),api.get('/directory'),api.get('/tasks/awaiting-my-review').catch(() => ({ items:[] }))]);
+    state.toReview = toReview.items || [];
     state.tasks = tasks.items || []; state.objectives = objectives.items || []; state.krs = krs.items || []; state.directory = directory.items || []; state.reviewers = directory.reviewers || []; state.former = directory.former || [];
     const reviewable=state.krs.filter(k=>k.department_id===state.actor.department_id&&(manager()||k.owner_id===state.actor.id));
     const appraisals=await Promise.allSettled(reviewable.map(k=>api.get('/key-results/'+encodeURIComponent(k.id)+'/appraisal')));

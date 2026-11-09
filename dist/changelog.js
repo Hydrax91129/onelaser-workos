@@ -22,6 +22,12 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.48', date:'2026-11-08T18:00:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
+      short:c('有人提交成果时，验收人会收到钉钉和邮件；首页顶部显示“等我验收”', 'Reviewers get DingTalk and email when work is submitted; Awaiting my review now tops the home page'),
+      title:c('待验收提醒', 'Review reminders'),
+      changes:[c('同事提交成果后，验收人除了铃铛消息，还会收到钉钉和邮件，写明谁提交了什么，以及 3 天内不处理会自动通过。', 'When a colleague submits work, the reviewer now also gets DingTalk and email saying who submitted what, and that it auto-accepts after 3 days.'),
+        c('首页最上方新增“等我验收”，列出提交人、提交日期和自动通过日期，点一下直接打开任务。', 'The home page now starts with Awaiting my review, showing who submitted, when, and the auto-accept date; click to open the task.'),
+        c('修复“等我验收”总是显示 0：之前首页只统计自己负责的任务，别人提交给你验收的任务没有算进去。', 'Fixed Awaiting my review always showing 0: the home page only counted tasks you own, so work others submitted to you was missed.')] },
     { version:'1.47', date:'2026-11-06T13:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('项目：附件按分类统一存放、AI 拆任务、阶段可改名删除和拖动任务、概览显示项目动态', 'Projects: shared files by category, AI task split, rename/delete stages and drag tasks, activity on the overview'),
       title:c('项目附件、AI 拆任务和项目动态', 'Project files, AI task split and activity'),
