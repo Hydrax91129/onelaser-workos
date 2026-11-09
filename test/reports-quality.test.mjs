@@ -19,12 +19,20 @@ function load(files, state, pre = {}) {
 const actor = { id:'u1', display_name:'KC', isAdmin:true, grants:['products', 'product_cost_detail'] };
 const base = (extra = {}) => ({ actor, capabilities:{ orgProfiles:true }, directory:[actor, { id:'u2', display_name:'Amy', manager_id:'u1', title:'Sales', location:'Irvine' }], tasks:[], objectives:[], krs:[], page:'overview', ...extra });
 
+test('the home page has no review panel when nothing awaits review', () => {
+  const { window } = load(['reports.js'], base({ tasks:[], toReview:[] }));
+  assert.doesNotMatch(window.WorkOSReports.home(), /ri-review-now/);
+});
+
 test('workbench home greets, shows what is undone and a 3–4 sentence analysis', () => {
   const { window } = load(['reports.js'], base({ tasks:[
     { id:'a', title:'Late report', owner_id:'u1', reviewer_id:'u2', status:'planned', due_at:'2020-01-01T00:00:00Z' },
-    { id:'b', title:'Check this', owner_id:'u2', reviewer_id:'u1', status:'submitted', due_at:'2099-01-01T00:00:00Z' },
+  ], toReview:[
+    { id:'b', title:'Check this', owner_id:'u2', reviewer_id:'u1', status:'submitted', due_at:'2099-01-01T00:00:00Z', submitted_at:'2026-11-06T08:00:00Z', auto_accept_at:'2026-11-09T08:00:00Z' },
   ] }));
   const html = window.WorkOSReports.home();
+  assert.ok(html.indexOf('ri-review-now') > 0 && html.indexOf('ri-review-now') < html.indexOf('还没做完的事'), 'awaiting review comes first');
+  assert.match(html, /ri-review-now[\s\S]*data-live-task="b"[\s\S]*Amy/);
   assert.match(html, /KC/); assert.match(html, /还没做完的事/); assert.match(html, /Late report/); assert.match(html, /Check this/);
   const items = html.match(/<ol class="ri-list">([\s\S]*?)<\/ol>/)[1].match(/<li>/g);
   assert.ok(items.length >= 3 && items.length <= 4, 'analysis has 3–4 sentences');

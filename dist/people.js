@@ -43,7 +43,7 @@
     const overdue = open.filter(t => new Date(t.due_at).getTime() < now);
     const dueSoon = open.filter(t => { const d = new Date(t.due_at).getTime(); return d >= now && d < soon; });
     const revision = mine.filter(t => t.status === 'revision');
-    const toReview = S().tasks.filter(t => t.reviewer_id === a.id && t.status === 'submitted');
+    const toReview = S().toReview || [];
     const accepted = mine.filter(t => t.status === 'accepted');
     const completion = mine.length ? Math.round(accepted.length / mine.length * 100) : null;
     const okrHelpers = window.WorkOSOkrBoard?._helpers;
