@@ -92,7 +92,7 @@
     window.WorkOSUpload?.register('rma-new-photos', { lang:lang(), accept:IMG_MIME, multiple:true, maxBytes:5 * 1024 * 1024, onFiles:files => { newPhotos.push(...files); paintNewPhotos(); return tr(`已选 ${newPhotos.length} 张`, `${newPhotos.length} selected`); } });
     ctx.modal(tr('登记退货', 'Register a return'), `<form id="rma-new" class="wms-form" data-upload-scope="rma-new-photos">
       <div class="form-grid">
-        <label class="field"><span>SKU</span><input name="sku" required list="rma-skus" autocomplete="off" placeholder="RE-XRF38"><datalist id="rma-skus">${skus}</datalist></label>
+        <label class="field"><span>SKU</span><input name="sku" required list="rma-skus" autocomplete="off" placeholder="REF-XRF38"><datalist id="rma-skus">${skus}</datalist></label>
         <label class="field"><span>${tr('类别', 'Item class')}</span><select name="productClass" required data-rma-class><option value="">${tr('请选择', 'Choose')}</option>${Object.entries(CLASS).map(([k, v]) => `<option value="${k}">${esc(w(v))}</option>`).join('')}</select></label>
         <label class="field"><span>${tr('序列号', 'Serial number')}</span><input name="serial" maxlength="80" placeholder="${tr('机器铭牌上的 SN（机器必填）', 'SN on the label (required for machines)')}"></label>
         <label class="field"><span>${tr('数量', 'Quantity')}</span><input name="qty" type="number" min="1" max="500" value="1" required></label>
@@ -107,7 +107,7 @@
         <label class="field"><span>${tr('维修人员（可稍后指定）', 'Technician (optional)')}</span><select name="technicianId"><option value="">${tr('稍后指定', 'Later')}</option>${techs}</select></label>
         <div class="field full"><span>${tr('上架照片', 'Listing photos')}</span><p class="wms-hint" style="margin:2px 0 6px">${tr('之后上架要用：请在光线好的地方、干净背景前拍正面、侧面和细节，画面清楚好看。', 'These are used for the listing: shoot the front, sides and details in good light on a clean background.')}</p>
           ${window.WorkOSUpload ? window.WorkOSUpload.html({ id:'rma-new-photos', lang:lang(), accept:IMG_MIME, multiple:true, maxBytes:5 * 1024 * 1024, hint:'PNG、JPG、WebP' }) : ''}<div class="rma-new-thumbs" data-rma-new-thumbs></div></div>
-      </div><p class="wms-hint">${tr('SKU 规则：退货的 SKU 以 RE- 开头，后面接原产品型号，例如 RE-XRF38；物料表里还没有时，登记会自动新建。大货 SKU 照常从列表里选。', 'SKU rule: a return SKU starts with RE- followed by the original model, e.g. RE-XRF38; if it is not in the item list yet, registering creates it. Pick regular SKUs from the list.')}</p><p class="wms-error" role="alert"></p></form>`,
+      </div><p class="wms-hint">${tr('SKU 规则：退货的 SKU 以 REF- 开头，后面接原产品型号，例如 REF-XRF38；物料表里还没有时，登记会自动新建。大货 SKU 照常从列表里选。', 'SKU rule: a return SKU starts with REF- followed by the original model, e.g. REF-XRF38; if it is not in the item list yet, registering creates it. Pick regular SKUs from the list.')}</p><p class="wms-error" role="alert"></p></form>`,
       `<button class="btn" data-live-action="close">${tr('取消', 'Cancel')}</button><button class="btn primary" type="submit" form="rma-new">${tr('登记', 'Register')}</button>`);
   }
   function paintNewPhotos() {

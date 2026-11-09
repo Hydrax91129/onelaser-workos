@@ -83,7 +83,7 @@
     const miss = (it.completeness?.missing || []).includes(f.key), err = S.errs[f.key];
     if (f.type === 'image') return `<div class="pl-fld wide ${code === 'na' ? 'na' : ''}"><label><b>${esc(L(f))}</b>${badge(code)}${visChip(f.vis)}</label>${imageBody(f, it)}</div>`;
     if (f.key === 'sku') return `<div class="pl-fld"><label><b>SKU</b>${badge(code)}${visChip(f.vis)}</label><input type="text" value="${esc(it.sku)}" disabled></div>`;
-    if (f.key === 'refbSku' && it.values.goodsType !== 'refb') return `<div class="pl-fld na"><label><b>${esc(L(f))}</b>${visChip(f.vis)}</label><div class="pl-note">${tr('仅退货产品需要（以 REFB- 打头）', 'Only for returned goods (starts with REFB-)')}</div></div>`;
+    if (f.key === 'refbSku' && it.values.goodsType !== 'refb') return `<div class="pl-fld na"><label><b>${esc(L(f))}</b>${visChip(f.vis)}</label><div class="pl-note">${tr('仅退货产品需要（以 REF- 开头）', 'Only for returned goods (starts with REF-)')}</div></div>`;
     return `<div class="pl-fld ${code === 'na' ? 'na' : ''} ${miss ? 'miss' : ''}"><label for="pl-i-${esc(f.key)}"><b>${esc(L(f))}</b>${badge(code)}${visChip(f.vis)}${S.saving[f.key] ? `<span class="pl-status">${tr('保存中…', 'Saving…')}</span>` : ''}</label>${input(f, it)}${err ? `<span class="err" role="alert">${esc(err)}</span>` : ''}</div>`;
   }
   function imageBody(f, it) {
