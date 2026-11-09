@@ -22,6 +22,11 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.51', date:'2026-11-09T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('顶栏通知分成两个：眼睛 = 需要你处理，铃铛 = 动态', 'Notifications split in two: eye = needs you, bell = updates'),
+      title:c('通知分为“需要你处理”和“动态”', 'Notifications: needs you vs updates'),
+      changes:[c('眼睛图标是“需要你处理”：等你验收的成果、新任务待领取、按意见修改、催办和各类提醒，每条都有“去验收 / 去领取 / 去修改”按钮；处理完（比如成果验收了）才会消失，光点开不算。', 'The eye is “needs you”: results to review, new tasks to pick up, rework, reminders, each with a button; an item leaves only once it is handled, not just opened.'),
+        c('铃铛图标是“动态”：进展、已验收、已完成、评分等只需知道的消息，点开或“全部标为已读”就清零。', 'The bell is updates: progress, accepted, completed and scored, cleared when read.')] },
     { version:'1.48', date:'2026-11-08T18:00:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
       short:c('有人提交成果时，验收人会收到钉钉和邮件；首页顶部显示“等我验收”', 'Reviewers get DingTalk and email when work is submitted; Awaiting my review now tops the home page'),
       title:c('待验收提醒', 'Review reminders'),
