@@ -29,7 +29,8 @@ test('sidebar sections follow the requested order, and restricted pages are gate
   assert.ok(ids('hidden').includes('product-cost') && ids('hidden').includes('supply-chain'), 'pricing and supply chain are tabs now; old links still open them');
   assert.deepEqual(ids('marketing'), ['kol'], 'KOL management sits in its own Marketing section');
   assert.deepEqual(ids('labs'), ['support', 'knowledge', 'quality']);
-  assert.deepEqual(ids('other'), ['settings', 'orgchart', 'hr', 'it', 'org', 'feedback', 'changelog']);
+  assert.deepEqual(ids('other'), ['settings', 'orgchart', 'hr', 'it', 'ai-connect', 'org', 'feedback', 'changelog']);
+  assert.match(live, /'ai-connect':!!window\.WorkOSMcpConnect && state\.actor\?\.executiveAccess===true/, 'AI connections: main admins only');
   assert.match(live, /it:!!window\.WorkOSIt && state\.capabilities\?\.itAssets===true/, 'IT accounts appear only when the server offers them');
   assert.match(live, /hr:!!window\.WorkOSHr && state\.capabilities\?\.hr===true/, 'HR records appear only when the server offers them');
   assert.ok(ids('hidden').includes('executive') && ids('hidden').includes('integrations'), 'executive board removed; integrations moved into settings');
