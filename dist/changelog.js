@@ -22,6 +22,12 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.53', date:'2026-11-10T09:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('产品资料取消所有必填，只保留“产品资料”和“批量更新”两个子页', 'Product library: nothing is required; only Products and Bulk update remain'),
+      title:c('产品资料不再有必填项', 'No required fields in the product library'),
+      changes:[c('产品资料里除了 SKU，所有字段都是选填：新建、编辑、批量导入都不会因为没填而报错，也不再显示“必填”“仅看必填未完成”和必填进度。', 'Apart from the SKU, every product field is optional: creating, editing and bulk import no longer stop on empty fields, and the required badges, filter and progress are gone.'),
+        c('退货产品可以先不填退货 SKU；填的话仍要以 REF- 开头。', 'A returned product may leave its return SKU empty; when filled it still starts with REF-.'),
+        c('去掉“价格参数”子页，产品资料只剩“产品资料”和“批量更新”。', 'The Pricing settings sub-page is gone; only Products and Bulk update remain.')] },
     { version:'1.52', date:'2026-11-09T17:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('全站附件点开先预览：PDF、图片、文本、视频直接看，下载在预览窗口里', 'Every attachment opens in a preview first: PDFs, images, text and video show right away; download is in the window'),
       title:c('附件先预览再下载', 'Preview attachments before downloading'),

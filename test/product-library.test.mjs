@@ -61,23 +61,23 @@ function load(data, { confirm = true, prompt = '' } = {}) {
   return { W, window, document, calls, toasts, fetches, show, fire };
 }
 
-test('editor: groups, requirement badges by family, visibility chips; everyone sees public prices only', async () => {
+test('editor: groups, no required fields, visibility chips; everyone sees public prices only', async () => {
   const { document, show } = load(library(false));
   const html = await show();
   for (const g of ['产品基本参数', '生命周期', '产品详细信息与文件', '定价（零售）', '定价（批发）', '包装与物流']) assert.match(html, new RegExp(g));
   assert.doesNotMatch(html, /受限区域|测试原型|DEMO-HYD|示例 · 60W/, 'no demo banner or sample rows');
-  assert.match(html, /全员/); assert.match(html, /必填/); assert.match(html, /选填/);
+  assert.match(html, /全员/); assert.doesNotMatch(html, /必填|选填/, 'nothing in the product library is required');
   assert.match(html, /文件是敏感信息/); assert.doesNotMatch(html, /到岸价|送达成本|贡献利润|NPCR|示例工厂/);
   assert.match(html, /\$1,600/, 'public wholesale price');
-  assert.equal(document.querySelector('[data-pl-f="series"]').closest('.pl-fld').classList.contains('miss'), true, 'missing required field is highlighted');
-  assert.match(html, /仅看必填未完成[\s\S]*1 个待补/);
+  assert.doesNotMatch(html, /仅看必填未完成|待补/);
   assert.equal(document.querySelector('[data-pl="new"]'), null, 'view-only people cannot add products');
 });
 
 test('cost access: worksheet, CM warnings, wholesale tiers with override and freight, file slots; autosave per field', async () => {
   const { document, calls, show, fire, toasts } = load(library(true), { prompt:'新款上市' });
   const html = await show();
-  for (const t of ['送达成本', '\\$1,100', '零售档位', '\\$1,699', 'NPCR 价格阶梯', 'Amazon / eBay', '低于官网底线 10%', '经销商每台利润', '我们付运费', '说明书', 'manual.pdf', '常用备件清单', '价格参数还没有设置']) assert.match(html, new RegExp(t), t);
+  for (const t of ['送达成本', '\\$1,100', '零售档位', '\\$1,699', 'NPCR 价格阶梯', 'Amazon / eBay', '低于官网底线 10%', '经销商每台利润', '我们付运费', '说明书', 'manual.pdf', '常用备件清单']) assert.match(html, new RegExp(t), t);
+  assert.doesNotMatch(html, /价格参数/, 'the pricing settings page is gone');
   assert.equal(document.querySelector('[data-pl-upload="spareParts"]').getAttribute('accept'), '.pdf', 'PDF-only slot');
   const w = document.querySelector('[data-pl-f="netWeight"]'); w.value = '38'; fire(w, 'change'); await tick(); await tick();
   assert.deepEqual(j(calls.find(c => c[0] === 'PATCH')), ['PATCH', '/products/library/ODL-DEMO-1', { values:{ netWeight:'38' } }]);
@@ -116,18 +116,12 @@ test('template download, upload preview with before/after and analysis, skip-err
   assert.ok(calls.some(c => c[1] === '/products/library/imports/imp1/undo'));
 });
 
-test('nothing is written when the admin cancels the confirm dialog; settings page starts empty and saves', async () => {
+test('nothing is written when the admin cancels the confirm dialog; only 产品资料 and 批量更新 sub-pages', async () => {
   const { W, document, calls, show, fire } = load(library(true, true), { confirm:false });
   await show();
   W._state.view = 'import'; W._state.preview = j(PREVIEW); W._state.skipErrors = true; await show();
   fire(document.querySelector('[data-pl="confirm"]'), 'click'); await tick();
   assert.equal(calls.some(c => c[1].endsWith('/confirm')), false);
-  W._state.view = 'settings'; W._state.draft = null; let html = await show();
-  assert.match(html, /价格参数还是空的/); assert.doesNotMatch(html, /\b17%|\b7%/, 'no company numbers in the page');
-  fire(document.querySelector('[data-pl-sadd="dtcItems"]'), 'click');
-  const name = document.querySelector('[data-pl-s="dtcItems.0.name"]'); name.value = '示例费用'; fire(name, 'change');
-  const rate = document.querySelector('[data-pl-s="dtcItems.0.pct"]'); rate.value = '12'; fire(rate, 'change');
-  html = document.getElementById('app').innerHTML; assert.match(html, /12\.0%/);
-  fire(document.querySelector('[data-pl="settings-save"]'), 'click'); await tick();
-  const put = calls.find(c => c[0] === 'PUT'); assert.equal(put[1], '/products/worksheet-settings'); assert.deepEqual(j(put[2].dtcItems), [{ name:'示例费用', pct:12 }]);
+  const html = await show();
+  assert.match(html, /产品资料/); assert.match(html, /批量更新/); assert.doesNotMatch(html, /data-v="settings"|价格参数/, 'no pricing settings sub-page');
 });
