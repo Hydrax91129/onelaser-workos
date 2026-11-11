@@ -38,7 +38,7 @@
   const itemOf = sku => items().find(i => i.sku === sku);
   const famName = k => L(spec().families.find(f => f.key === k)) || '';
   const visChip = vis => `<span class="pl-vis ${esc(vis)}">${esc(L({ zh:spec().visNames?.[vis]?.[0], en:spec().visNames?.[vis]?.[1] }))}</span>`;
-  const famCode = (code, fam) => { const i = spec().families.findIndex(f => f.key === fam); if (i < 0 || !code) return null; const c = code[i]; return c === 'n' ? 'na' : 'opt'; /* nothing in the product library is required */ };
+  const famCode = (code, fam) => { const i = spec().families.findIndex(f => f.key === fam); if (i < 0 || !code) return null; const c = code[i]; return c === 'r' ? 'req' : c === 'o' ? 'opt' : 'na'; };
   const badge = c => c === 'req' ? `<span class="pl-chip req">${tr('必填', 'Required')}</span>` : c === 'opt' ? '' : c === 'na' ? `<span class="pl-chip">${tr('不适用', 'N/A')}</span>` : '';
   const optLabel = (f, v) => { const o = (f?.opts || []).find(o => o.key === v); return o ? L(o) : v; };
   const show = (k, v) => { if (v == null || v === '') return tr('（空）', '(empty)'); const f = fieldOf(k); if (!f) return String(v); if (f.type === 'enum') return optLabel(f, v); if (f.type === 'price') return usd(Number(v)); if (f.type === 'number') return `${v} ${f.unit || ''}`.trim(); return String(v); };
@@ -61,10 +61,10 @@
     return `<aside class="pl-rail"><div class="head">
       <input type="search" data-pl-q placeholder="${tr('搜索 SKU / 名称', 'Search SKU / name')}" value="${esc(S.q)}" aria-label="${tr('搜索产品', 'Search products')}">
       <select data-pl-fam aria-label="${tr('按产品族筛选', 'Filter by family')}"><option value="">${tr('全部产品族', 'All families')}</option>${spec().families.map(f => `<option value="${esc(f.key)}" ${S.fam === f.key ? 'selected' : ''}>${esc(L(f))}</option>`).join('')}</select>
-
+      <label class="pl-chk"><input type="checkbox" data-pl-onlyreq ${S.onlyReq ? 'checked' : ''}> ${tr('仅看必填未完成', 'Only incomplete')} ${inc ? `<span class="pl-chip req">${tr(`${inc} 个待补`, `${inc} to fill`)}</span>` : ''}</label>
     </div><div class="pl-list">${list.length ? list.map(i => {
       const m = i.pricing?.fixed ? i.pricing.fixed[0] : null, msrp = i.pricing?.fixed ? m.price : i.pricing?.msrp;
-      return `<button class="pl-item" data-pl-pick="${esc(i.sku)}" aria-current="${i.sku === S.cur}"><span class="sku">${esc(i.sku)}</span><span class="pr">${msrp != null ? usd(msrp) : ''}</span>
+      return `<button class="pl-item" data-pl-pick="${esc(i.sku)}" aria-current="${i.sku === S.cur}"><span class="sku">${i.completeness?.done ? '' : `<span class="pl-dot" title="${tr('必填未完成', 'Required fields missing')}"></span>`}${esc(i.sku)}</span><span class="pr">${msrp != null ? usd(msrp) : ''}</span>
         <span class="nm">${esc((lang() === 'en' ? i.values.nameEn : i.values.nameZh) || i.values.nameZh || i.values.nameEn || tr('未命名', 'Unnamed'))}${i.values.family ? ' · ' + esc(famName(i.values.family)) : ''}</span><span class="cm ${m ? tone(m.cmPct, D().settings?.dtcFloor) : ''}">${m && m.cmPct != null ? 'CM ' + pct(m.cmPct) : ''}</span></button>`;
     }).join('') : `<div class="pl-empty">${S.onlyReq ? tr('没有必填未完成的产品', 'No incomplete products') : items().length ? tr('没有匹配的产品', 'No matching products') : tr('还没有产品。产品经理可以点“新建产品”录入第一个 SKU；主管理员可以下载标准模板批量导入。', 'No products yet. Product managers can add the first SKU; main admins can bulk-import with the standard template.')}</div>`}</div></aside>`;
   }
@@ -79,7 +79,7 @@
     return `<input type="text" ${a} value="${esc(v)}" placeholder="${esc(f.ph)}">`;
   }
   function fieldHTML(f, it) {
-    const fam = it.values.family, code = f.key === 'refbSku' ? (it.values.goodsType === 'refb' ? 'opt' : 'na') : famCode(f.code, fam);
+    const fam = it.values.family, code = f.key === 'refbSku' ? (it.values.goodsType === 'refb' ? 'req' : 'na') : famCode(f.code, fam);
     const miss = (it.completeness?.missing || []).includes(f.key), err = S.errs[f.key];
     if (f.type === 'image') return `<div class="pl-fld wide ${code === 'na' ? 'na' : ''}"><label><b>${esc(L(f))}</b>${badge(code)}${visChip(f.vis)}</label>${imageBody(f, it)}</div>`;
     if (f.key === 'sku') return `<div class="pl-fld"><label><b>SKU</b>${badge(code)}${visChip(f.vis)}</label><input type="text" value="${esc(it.sku)}" disabled></div>`;
@@ -158,7 +158,7 @@
     const status = spec().statuses.find(s => s.key === v.status);
     const sum = `<div class="pl-card pl-summary"><div style="min-width:0"><h2>${esc(it.sku)} <span style="font-weight:500;color:var(--pl-mute);font-size:15px">${esc(v.nameZh || v.nameEn || '')}</span></h2>
       <div class="sub">${v.family ? `<span class="pl-chip">${esc(famName(v.family))}</span>` : `<span class="pl-chip warn">${tr('先选择产品族', 'Choose a family first')}</span>`}${status ? `<span class="pl-chip ${v.status === 'live' ? 'ok' : ''}">${esc(L(status))}</span>` : ''}${v.goodsType === 'refb' ? `<span class="pl-chip warn">${tr('退货', 'Returned')}</span>` : ''}
-
+      ${v.family ? `<span>${tr(`必填 ${c.got} / ${c.need}`, `Required ${c.got} / ${c.need}`)}</span><span class="pl-meter" aria-hidden="true"><i style="width:${c.need ? Math.round(c.got / c.need * 100) : 0}%"></i></span>` : ''}
       ${it.duplicate ? `<span class="pl-chip req">${tr('SKU 与其他产品重复（只差大小写）', 'SKU duplicates another product (letter case only)')}</span>` : ''}${pending}</div></div>
       <div>${!viewer().editCatalog && !viewer().editCost && !viewer().editPrices ? '' : `<span class="pl-status ${Object.keys(S.errs).length ? 'err' : 'ok'}">${Object.values(S.saving).some(Boolean) ? tr('保存中…', 'Saving…') : Object.keys(S.errs).length ? tr('有字段没有保存，请看红色提示', 'Some fields were not saved; see the red notes') : S.savedAt ? tr(`已自动保存 ${S.savedAt}`, `Saved automatically ${S.savedAt}`) : tr('修改会自动保存', 'Changes save automatically')}</span>`}</div></div>`;
     const groups = spec().groups.map(g => {
