@@ -22,6 +22,17 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.54', date:'2026-11-11T09:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('AI 连接（MCP）；产品资料必填项；常规库存与退货维修分开；侧边栏和库位改名', 'New AI connections: your own Claude or Composio can read WorkOS'),
+      title:c('AI 连接（WorkOS MCP）', 'AI connections (WorkOS MCP)'),
+      changes:[c('新增 MCP 服务器 https://craftos.app/api/mcp：Claude 添加自定义连接器、在 WorkOS 授权页点“允许”就能用；Composio 等工具用“AI 连接”页生成的个人令牌。', 'New MCP server at https://craftos.app/api/mcp: add it as a custom connector in Claude and click Allow on the WorkOS page; Composio and other tools use a personal token made on the AI connections page.'),
+        c('只给主管理员本人用（部署配置 WORKOS_MCP_USER_IDS），其他人即使有令牌也不能连接。', 'For the main admin alone (deployment setting WORKOS_MCP_USER_IDS); nobody else can connect, even with a token.'),
+        c('全部只读：任务、OKR、项目、产品资料（全员字段）、库存、退货维修进度、消息和人员名单。成本、渠道价、供应商、人事薪资和客户资料一律不给 AI。', 'Read only: tasks, OKRs, projects, product data (company-wide fields), stock, returns, inbox and people. Costs, channel prices, suppliers, HR and customer details are never sent to the AI.'),
+        c('“AI 连接”页可以查看已连接的应用和最近调用，随时断开。', 'The AI connections page lists connected apps and recent calls; disconnect any time.'),
+        c('侧边栏改名：产品 PIM → SKU管理(PIM)，WMS → 库存管理(WMS)，ERP 权限 → 供应链权限管理。', 'Sidebar names: Product PIM → SKU management (PIM), WMS → Inventory (WMS), ERP permissions → Supply chain permissions.'),
+        c('产品资料必填：产品基本参数里除 UPC/EAN/GTIN 和产品主图以外都必填，另外到岸价、尾程运费必填；“型号”字段去掉。必填标记、红点、完整度和“仅看必填未完成”恢复。', 'Product library: every basic field except UPC/EAN/GTIN and the main image is required, plus landed cost and last mile; Model is removed. Required badges, red dots, completeness and the incomplete filter are back.'),
+        c('常规库存和退货维修分开：库存只管 美国LA仓、东莞工厂仓、济南工厂仓、在途运输中，不再有退货仓，也不显示任何 REF- 退货 SKU；退货的入库、上架、售出都只在“退货维修”里记录。', 'Regular stock and returns are separate: stock covers US LA, Dongguan, Jinan and In transit only, with no returns warehouse and no REF- SKUs; returns are put away, listed and sold inside Returns & repairs only.'),
+        c('退货登记的收货日期不能早于 2000 年；填错的收货日期管理员可以改。', 'Return received dates before 2000 are refused; managers can correct a wrong date.')] },
     { version:'1.53', date:'2026-11-10T09:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('产品资料取消所有必填，只保留“产品资料”和“批量更新”两个子页', 'Product library: nothing is required; only Products and Bulk update remain'),
       title:c('产品资料不再有必填项', 'No required fields in the product library'),

@@ -1,0 +1,24 @@
+/* AI connections (WorkOS MCP) */
+.mcpc{display:flex;flex-direction:column;gap:14px}
+.mcpc-card{border:1px solid var(--border,#e4e7ef);border-radius:12px;background:#fff;padding:16px 18px}
+.mcpc-card h2{font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:7px}.mcpc-card h2 i{color:#3c64f4}
+.mcpc-card ol,.mcpc-card ul{margin:0;padding-left:20px;font-size:13.5px;line-height:1.8}
+.mcpc-card code{font:12.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#f3f4f8;border-radius:5px;padding:1px 5px;word-break:break-all}
+.mcpc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.mcpc-hint{font-size:12.5px;color:var(--muted,#7a8096);margin:10px 0 0;display:flex;gap:6px;align-items:flex-start;line-height:1.6}
+.mcpc-alert{padding:10px 12px;border-radius:9px;background:#ffe9e9;color:#b42318}
+.mcpc-setup{display:flex;gap:14px;border-color:#f5c26b;background:#fffaf0}.mcpc-setup>i{font-size:28px;color:#b54708}.mcpc-setup h2{color:#b54708}.mcpc-setup p{margin:0 0 6px;font-size:13.5px}
+.mcpc-url{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.mcpc-url code{font-size:14px;padding:6px 10px;flex:1;min-width:0}
+.mcpc-copy{border:1px solid var(--border,#d7dbe7);background:#fff;border-radius:7px;padding:4px 10px;font:inherit;font-size:12.5px;cursor:pointer;display:inline-flex;gap:4px;align-items:center;color:inherit;white-space:nowrap}
+.mcpc-form{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}.mcpc-form input{flex:1;min-width:160px}
+.mcpc-form input,.mcpc-form select{height:34px;border:1px solid var(--border,#d7dbe7);border-radius:8px;padding:0 10px;font:inherit;background:#fff;color:inherit}
+.mcpc-fresh{margin-top:12px;padding:12px;border-radius:10px;background:#fff4e5;border:1px solid #f5c26b;display:flex;flex-direction:column;gap:8px}.mcpc-fresh b{color:#b54708;font-size:13px;display:flex;gap:6px}
+.mcpc-link{border:0;background:transparent;color:#3c64f4;cursor:pointer;font:inherit;font-size:12.5px;align-self:flex-start;padding:0}
+.mcpc-count{font-size:12px;background:#eef3ff;color:#245bdb;border-radius:10px;padding:0 8px}
+.mcpc-table{width:100%;border-collapse:collapse;font-size:13px}.mcpc-table th{text-align:left;color:#5b6170;font-weight:600;padding:7px 8px;border-bottom:1px solid var(--border,#e4e7ef)}.mcpc-table td{padding:8px;border-bottom:1px solid #f0f1f5}
+.mcpc-revoke{border:1px solid #f3b6b6;color:#b42318;background:#fff;border-radius:7px;padding:3px 10px;font:inherit;font-size:12.5px;cursor:pointer}
+.mcpc-list{list-style:none;padding:0!important}.mcpc-list li{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.mcpc-list li>i{color:#12a150}.mcpc-never .mcpc-list li>i{color:#b42318}
+.mcpc-calls{list-style:none;padding:0!important;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 16px}.mcpc-calls small{color:var(--muted,#9aa0b4)}.mcpc-calls .ok{color:#12a150}.mcpc-calls .bad{color:#b42318}
+@media (max-width:900px){.mcpc-grid,.mcpc-calls{grid-template-columns:1fr}.mcpc-table{display:block;overflow-x:auto}}
+html[data-theme=dark] .mcpc-card,html[data-theme=dark] .mcpc-copy,html[data-theme=dark] .mcpc-form input,html[data-theme=dark] .mcpc-form select,html[data-theme=dark] .mcpc-revoke{background:#1d1f27;border-color:#343745}
+html[data-theme=dark] .mcpc-card code{background:#2a2d38}html[data-theme=dark] .mcpc-setup,html[data-theme=dark] .mcpc-fresh{background:#2b2418;border-color:#6b5320}

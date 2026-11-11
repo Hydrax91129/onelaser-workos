@@ -61,15 +61,16 @@ function load(data, { confirm = true, prompt = '' } = {}) {
   return { W, window, document, calls, toasts, fetches, show, fire };
 }
 
-test('editor: groups, no required fields, visibility chips; everyone sees public prices only', async () => {
+test('editor: groups, 必填 badges where required (no 选填 noise), visibility chips; everyone sees public prices only', async () => {
   const { document, show } = load(library(false));
   const html = await show();
   for (const g of ['产品基本参数', '生命周期', '产品详细信息与文件', '定价（零售）', '定价（批发）', '包装与物流']) assert.match(html, new RegExp(g));
   assert.doesNotMatch(html, /受限区域|测试原型|DEMO-HYD|示例 · 60W/, 'no demo banner or sample rows');
-  assert.match(html, /全员/); assert.doesNotMatch(html, /必填|选填/, 'nothing in the product library is required');
+  assert.match(html, /全员/); assert.match(html, /必填/); assert.doesNotMatch(html, /选填/, 'only required fields carry a badge');
   assert.match(html, /文件是敏感信息/); assert.doesNotMatch(html, /到岸价|送达成本|贡献利润|NPCR|示例工厂/);
   assert.match(html, /\$1,600/, 'public wholesale price');
-  assert.doesNotMatch(html, /仅看必填未完成|待补/);
+  assert.equal(document.querySelector('[data-pl-f="series"]').closest('.pl-fld').classList.contains('miss'), true, 'missing required field is highlighted');
+  assert.match(html, /仅看必填未完成[\s\S]*1 个待补/);
   assert.equal(document.querySelector('[data-pl="new"]'), null, 'view-only people cannot add products');
 });
 
