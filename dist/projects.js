@@ -178,15 +178,17 @@
         <div class="pj-card-foot">${avs(p.members)}<span>${ts.filter(t => t.status === 'done').length}/${ts.length} ${tr('任务完成', 'done')}</span>${mine ? `<span class="pj-mine">${tr(`我有 ${mine} 项`, `${mine} mine`)}</span>` : ''}${od ? `<span class="pj-od">${icon('warning-circle')} ${od} ${tr('逾期', 'overdue')}</span>` : ''}</div>
       </button>`;
   }
-  function home() {
+  // analysisHtml: the 项目分析 tab (route #project-analysis) shown under the same heading and tabs.
+  function home(analysisHtml = null) {
+    const view = analysisHtml === null ? ui.view : 'analysis';
     const mine = projects.filter(p => p.members.includes(me()));
     const list = ui.filter === 'mine' ? mine : projects;
     const myOpen = tasks.filter(t => t.owner === me() && t.status !== 'done');
     return `<div class="pj">
       <div class="page-heading"><div><div class="eyebrow">WORK OS · PROJECTS</div><h1>${tr('项目管理', 'Projects')}</h1><p>${tr('项目里分派的任务，会自动出现在负责人的“我的任务”里。', 'Tasks assigned in a project automatically appear in the assignee’s My tasks.')}</p>${isLive() ? '' : `<div class="pj-sample">${icon('flask')} ${tr('测试版 · 示例数据：项目管理的后台还在开发，这里的项目和任务是示例，修改不会保存。', 'Test build · sample data: the projects backend is in development; projects and tasks here are examples and changes are not saved.')}</div>`}</div><div class="heading-actions"><button class="pj-btn primary" data-pj="new-project">${icon('plus')} ${tr('新建项目', 'New project')}</button></div></div>
       ${isLive() ? '' : `<div class="pj-proto">${icon('flask')} ${tr('界面原型 · 模拟数据，操作不会保存', 'UI prototype · sample data, nothing is saved')}</div>`}
-      <div class="pj-home-tabs"><button class="${ui.view === 'home' ? 'active' : ''}" data-pj="go-home">${icon('squares-four')} ${tr('全部项目', 'Projects')}</button><button class="${ui.view === 'my' ? 'active' : ''}" data-pj="go-my">${icon('check-square')} ${tr('我的任务', 'My tasks')} <b>${myOpen.length}</b></button></div>
-      ${ui.view === 'my' ? myTasks() : `
+      <div class="pj-home-tabs"><button class="${view === 'home' ? 'active' : ''}" data-pj="go-home">${icon('squares-four')} ${tr('全部项目', 'Projects')}</button><button class="${view === 'my' ? 'active' : ''}" data-pj="go-my">${icon('check-square')} ${tr('我的任务', 'My tasks')} <b>${myOpen.length}</b></button><button class="${view === 'analysis' ? 'active' : ''}" data-live-page="project-analysis">${icon('chart-bar')} ${tr('项目分析', 'Project analysis')}</button></div>
+      ${view === 'analysis' ? analysisHtml : view === 'my' ? myTasks() : `
       <div class="pj-toolbar"><div class="pj-seg"><button class="${ui.filter === 'mine' ? 'active' : ''}" data-pj="filter" data-v="mine">${tr('我参与的', 'Mine')} ${mine.length}</button><button class="${ui.filter === 'all' ? 'active' : ''}" data-pj="filter" data-v="all">${tr('全部', 'All')} ${projects.length}</button></div></div>
       ${portfolioSummary(list)}
       <div class="pj-cards">${list.map(projectCard).join('')}
@@ -587,8 +589,8 @@
     ui.tab = 'list'; await reloadLive();
   }
 
-  /* ---------- project analysis (reports area) ---------- */
-  function analysis() {
+  /* ---------- project analysis (a tab on Projects: #project-analysis) ---------- */
+  function analysis(embedded = false) {
     { const g = liveGate(); if (g) return g; }
     const rows = projects.map(p => {
       const ts = tasksOf(p), done = ts.filter(t => t.status === 'done').length, total = ts.length || 1;
@@ -603,8 +605,8 @@
     }).sort((a, b) => b.risk - a.risk);
     const lvl = r => r >= 60 ? ['高', 'High', 'bad'] : r >= 30 ? ['中', 'Medium', 'warn'] : ['低', 'Low', 'ok'];
     const totalTasks = rows.reduce((s, r) => s + r.ts.length, 0), totalDone = rows.reduce((s, r) => s + r.done, 0), totalOd = rows.reduce((s, r) => s + r.od.length, 0);
-    return `<div class="pj">
-      <div class="page-heading"><div><div class="eyebrow">WORK OS · REPORTS</div><h1>${tr('项目分析', 'Project analysis')}</h1><p>${tr('每个项目的进展、是否按时，以及延期的可能性。', 'Progress, timeliness and delay risk for every project.')}</p>${isLive() ? '' : `<div class="pj-sample">${icon('flask')} ${tr('测试版 · 示例数据：项目管理的后台还在开发，这里的项目和任务是示例，修改不会保存。', 'Test build · sample data: the projects backend is in development; projects and tasks here are examples and changes are not saved.')}</div>`}</div></div>
+    return `<div class="${embedded ? 'pj-an-embedded' : 'pj'}">
+      ${embedded ? '' : `<div class="page-heading"><div><div class="eyebrow">WORK OS · REPORTS</div><h1>${tr('项目分析', 'Project analysis')}</h1><p>${tr('每个项目的进展、是否按时，以及延期的可能性。', 'Progress, timeliness and delay risk for every project.')}</p>${isLive() ? '' : `<div class="pj-sample">${icon('flask')} ${tr('测试版 · 示例数据：项目管理的后台还在开发，这里的项目和任务是示例，修改不会保存。', 'Test build · sample data: the projects backend is in development; projects and tasks here are examples and changes are not saved.')}</div>`}</div></div>`}
       ${window.WorkOSInsights?.slot('project') || ''}
       ${isLive() ? '' : `<div class="pj-proto">${icon('flask')} ${tr('使用项目管理原型数据；项目管理接入后台后自动换成真实数据', 'Uses project prototype data; switches to real data once projects are connected')}</div>`}
       <div class="pj-an-stats">
@@ -630,6 +632,7 @@
   /* ---------- render & events ---------- */
   function liveGate() { if (!isLive()) return null; TODAY = new Date().toISOString().slice(0, 10); if (!liveState.loaded) { loadLive(); return `<div class="pj"><p class="pj-hint">${tr('正在读取项目…', 'Loading projects…')}</p></div>`; } if (liveState.error) return `<div class="pj"><div class="pj-proto">${esc(liveState.error)}</div></div>`; return null; }
   function render() { if (!ctx) return ''; const g = liveGate(); if (g) return g; const p = ui.project && proj(ui.project); return p ? projectPage(p) : home(); }
+  function analysisTab() { if (!ctx) return ''; const g = liveGate(); if (g) return g; return home(analysis(true)); }
   const rerender = () => { ctx.rerender(); requestAnimationFrame(() => document.querySelector('[data-pj-focus]')?.focus()); };
   document.addEventListener('click', e => {
     if (!ctx) return;
@@ -640,9 +643,9 @@
     if (a !== 'cell' && a !== 'set-cell') ui.cell = null;
     const task = tasks.find(x => x.id === id);
     switch (a) {
-      case 'go-home': ui.project = null; ui.view = 'home'; return rerender();
+      case 'go-home': ui.project = null; ui.view = 'home'; if (ctx.state().page !== 'projects' && globalThis.location) { globalThis.location.hash = 'projects'; return; } return rerender();
       case 'inbox-toggle': ui.inboxOpen = ui.inboxOpen === false; return rerender();
-      case 'go-my': ui.project = null; ui.view = 'my'; return rerender();
+      case 'go-my': ui.project = null; ui.view = 'my'; if (ctx.state().page !== 'projects' && globalThis.location) { globalThis.location.hash = 'projects'; return; } return rerender();
       case 'filter': ui.filter = t.dataset.v; return rerender();
       case 'open-project': ui.project = id; ui.tab = 'list'; ui.who = ''; ui.calMonth = 0; if (t.dataset.goto && ctx.state().page !== 'projects') { window.location.hash = 'projects'; return; } return rerender();
       case 'tab': ui.tab = t.dataset.v; ui.adding = null; return rerender();
@@ -714,5 +717,5 @@
 
   /* Task hub inbox: every open project task assigned to me shows up in the Task hub automatically. */
   function taskInbox() { return ''; } // Sample projects never become live assignments.
-  window.WorkOSProjects = { configure(next) { ctx = next; }, render, analysis, taskInbox, _data:{ sample:true, projects, tasks }, _ui:ui };
+  window.WorkOSProjects = { configure(next) { ctx = next; }, render, analysis, analysisTab, taskInbox, _data:{ sample:true, projects, tasks }, _ui:ui };
 })();

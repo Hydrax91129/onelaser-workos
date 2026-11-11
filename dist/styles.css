@@ -161,3 +161,5 @@ html[data-theme=dark] .review-done-card,html[data-theme=dark] .artifact-thumb,ht
 .inbox-sub{margin:0;padding:6px 16px 8px;font-size:12px;color:var(--muted,#8a8a94);border-bottom:1px solid var(--line,#eee)}
 .inbox-cta{display:inline-block;margin-top:4px;font-size:12px;font-weight:600;color:#ff7a00}
 .inbox-panel.action .inbox-item.act{border-left:3px solid #ff7a00}
+/* Analysis pages shown as a tab of their parent page (OKR / Projects / My tasks): keep only the analysis page's own actions. */
+.page-heading.page-heading-embedded{margin:0 0 14px;justify-content:flex-end}.page-heading-embedded>div:empty{display:none}.okb-analysis,.mb-analysis{margin-top:16px}
