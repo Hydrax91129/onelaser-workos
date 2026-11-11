@@ -602,27 +602,37 @@
     state.appraisals={};appraisals.forEach((result,i)=>{if(result.status==='fulfilled')state.appraisals[reviewable[i].id]=result.value;});
     window.WorkOSOkrBoard?.refreshed();
   }
-  async function refreshData() {
+  async function refreshData(firstLoad = false) {
     if (factoryOnly()) { state.toReview = []; state.tasks = []; state.objectives = []; state.krs = []; state.directory = [state.actor]; state.reviewers = []; state.former = []; state.appraisals = {}; state.executive = null; return; }
-    const [tasks, objectives, krs, directory, toReview] = await Promise.all([api.get('/tasks'),api.get('/objectives'),api.get('/key-results'),api.get('/directory'),api.get('/tasks/awaiting-my-review').catch(() => ({ items:[] }))]);
+    // Everything the first screen needs is requested at once (each wait is a round trip to the server), instead of one after another.
+    const configureBoard = () => window.WorkOSTaskBoard?.configure({api,actor:state.actor,directory:state.directory||[state.actor],former:state.former||[],language:i18n.lang,toast,newTask,assignTask:state.capabilities?.assignTasks?assignTask:null,openTask,onTasksChanged:items=>{state.tasks=items;}});
+    configureBoard();
+    window.CompanySupport?.configure({api,actor:state.actor,language:i18n.lang,changed:render,showModal:modal,active:state.page==='knowledge',view:state.page});
+    api.csrf?.().catch(() => {}); // the save token, ready before the first save
+    const board = window.WorkOSTaskBoard?.refresh();
+    const support = window.CompanySupport?.refresh().catch(()=>{});
+    const executive = state.actor.executiveAccess ? api.get('/executive/summary') : Promise.resolve(null);
+    const krsRequest = api.get('/key-results');
+    // KR appraisals start as soon as the KR list is back, while the rest is still loading.
+    const appraisalsRequest = krsRequest.then(krs => { const reviewable=(krs.items||[]).filter(k=>k.department_id===state.actor.department_id&&(manager()||k.owner_id===state.actor.id));
+      return Promise.allSettled(reviewable.map(k=>api.get('/key-results/'+encodeURIComponent(k.id)+'/appraisal'))).then(results => { const out={}; results.forEach((r,i)=>{if(r.status==='fulfilled')out[reviewable[i].id]=r.value;}); return out; }); });
+    // On the first load the page does not wait for KR appraisals (only the OKR page shows them); they fill in when they arrive.
+    const actorId = state.actor.id;
+    if (firstLoad) appraisalsRequest.then(a => { if (state.actor?.id === actorId) { state.appraisals = a; render(); } }).catch(() => {});
+    const [tasks, objectives, krs, directory, toReview, appraisals, executiveSummary] = await Promise.all([api.get('/tasks'),api.get('/objectives'),krsRequest,api.get('/directory'),api.get('/tasks/awaiting-my-review').catch(() => ({ items:[] })),firstLoad ? Promise.resolve(state.appraisals || {}) : appraisalsRequest,executive,board]);
     state.toReview = toReview.items || [];
     state.tasks = tasks.items || []; state.objectives = objectives.items || []; state.krs = krs.items || []; state.directory = directory.items || []; state.reviewers = directory.reviewers || []; state.former = directory.former || [];
-    const reviewable=state.krs.filter(k=>k.department_id===state.actor.department_id&&(manager()||k.owner_id===state.actor.id));
-    const appraisals=await Promise.allSettled(reviewable.map(k=>api.get('/key-results/'+encodeURIComponent(k.id)+'/appraisal')));
-    state.appraisals={};appraisals.forEach((result,i)=>{if(result.status==='fulfilled')state.appraisals[reviewable[i].id]=result.value;});
+    state.appraisals = appraisals;
     if (!state.directory.some(user => user.id === state.actor.id)) state.directory.push(state.actor);
-    window.WorkOSTaskBoard?.configure({api,actor:state.actor,directory:state.directory,former:state.former,language:i18n.lang,toast,newTask,assignTask:state.capabilities?.assignTasks?assignTask:null,openTask,onTasksChanged:items=>{state.tasks=items;}});
-    await window.WorkOSTaskBoard?.refresh();
+    configureBoard();
     state.details.clear();
-    state.executive = null;
-    if(state.actor.executiveAccess) state.executive = await api.get('/executive/summary');
-    window.CompanySupport?.configure({api,actor:state.actor,language:i18n.lang,changed:render,showModal:modal,active:state.page==='knowledge',view:state.page});
-    await window.CompanySupport?.refresh().catch(()=>{});
+    state.executive = executiveSummary;
+    await support;
   }
   async function bootstrap() {
     closeOverlay(); state.loading = true; state.error = ''; render();
     if (/[?&]login_error=disabled\b/.test(window.location.search||'')) { window.history.replaceState(null,'',window.location.pathname+window.location.hash); loginUi.error=tr('您的账号已被管理员停用。如有疑问请联系公司管理员。','Your account has been disabled by an administrator.'); }
-    try { state.capabilities = await api.get('/capabilities'); try { state.actor = await api.get('/me'); } catch (error) { if (error.status !== 401) throw error; clearPrivateData(); } if (state.actor) { if(state.page==='executive'&&!state.actor.executiveAccess)state.page='overview'; if(factoryOnly()){state.page='quality';if(routePage()!=='quality')window.history.replaceState(null,'','#quality');} await refreshData(); } }
+    try { const capsRequest = api.get('/capabilities'), meRequest = api.get('/me').catch(error => { if (error.status !== 401) throw error; return null; }); meRequest.catch(() => {}); state.capabilities = await capsRequest; state.actor = await meRequest; if (!state.actor) clearPrivateData(); if (state.actor) { if(state.page==='executive'&&!state.actor.executiveAccess)state.page='overview'; if(factoryOnly()){state.page='quality';if(routePage()!=='quality')window.history.replaceState(null,'','#quality');} await refreshData(true); } }
     catch (error) { if (!handleAuthError(error)) state.error = explainError(error); }
     finally { state.loading = false; render(); }
   }
