@@ -121,6 +121,6 @@ test('factory accounts only get product quality tracking and do not load workspa
   assert.match(live, /const navVisible = id => factoryOnly\(\) \? id === 'quality' :/, 'sidebar shows only quality tracking');
   assert.match(live, /state\.page=factoryOnly\(\)\?'quality':/, 'any route lands on quality tracking');
   assert.match(live, /function pageContent\(\) \{ if \(factoryOnly\(\)\) return window\.WorkOSQuality\?\.render\(\) \|\| '';/, 'the page body is always quality tracking');
-  const refresh = live.match(/async function refreshData\(\) \{\n([^\n]*)/)[1];
+  const refresh = live.match(/async function refreshData\(firstLoad = false\) \{\n([^\n]*)/)[1];
   assert.match(refresh, /^\s*if \(factoryOnly\(\)\) \{.*return; \}$/, 'tasks, OKRs and the directory are not requested');
 });

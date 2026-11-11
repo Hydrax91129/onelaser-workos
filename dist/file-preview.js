@@ -17,7 +17,7 @@
   const tr = (zh, e) => en() ? e : zh;
   const icon = n => `<i class="ph ph-${n}" aria-hidden="true"></i>`;
   // Paths that serve one stored file (after the API base, normally /api).
-  const FILE_PATH = /\/(projects\/files\/[^/]+|tasks\/[^/]+\/attachments\/[^/]+|products\/library\/files\/[^/]+|rma\/[^/]+\/photos\/[^/]+|hr\/people\/[^/]+\/documents\/[^/]+|feedback\/[^/]+\/images\/[^/]+)$/;
+  const FILE_PATH = /\/(projects\/files\/[^/]+|tasks\/[^/]+\/attachments\/[^/]+|products\/library\/files\/[^/]+|rma\/[^/]+\/photos\/[^/]+|finance\/receivables\/[^/]+\/files\/[^/]+|hr\/people\/[^/]+\/documents\/[^/]+|feedback\/[^/]+\/images\/[^/]+)$/;
   const EXT = { pdf:'application/pdf', png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', webp:'image/webp', gif:'image/gif', txt:'text/plain', csv:'text/csv', md:'text/plain', json:'application/json', log:'text/plain',
     doc:'application/msword', docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xls:'application/vnd.ms-excel', xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     ppt:'application/vnd.ms-powerpoint', pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation', zip:'application/zip',
