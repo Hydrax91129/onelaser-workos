@@ -76,7 +76,7 @@
     </div>`;
   }
   /* Filters: search, product type, location with stock, stock situation; any column can be sorted. */
-  const STOCK = [['', '全部', 'All'], ['us-out', '美国仓缺货', 'Out of stock in US'], ['us-low', '美国仓 ≤ 2 件', 'US ≤ 2'], ['transit', '有在途', 'In transit'], ['factory', '工厂有货', 'Stock at factory'], ['zero', '全部为 0', 'Zero everywhere']];
+  const STOCK = [['', '全部', 'All'], ['us-out', '美国LA仓缺货', 'Out of stock in US LA'], ['us-low', '美国LA仓 ≤ 2 件', 'US LA ≤ 2'], ['transit', '在途运输中有货', 'In transit'], ['factory', '东莞 / 济南工厂仓有货', 'Stock at a factory'], ['zero', '所有库位都为 0', 'Zero everywhere']];
   const n = (it, l) => Number(it.qty?.[l] || 0);
   const stockIs = (it, k) => !k || (k === 'us-out' ? n(it, 'us') === 0 && total(it) > 0 : k === 'us-low' ? n(it, 'us') <= 2 : k === 'transit' ? n(it, 'transit') > 0 : k === 'factory' ? n(it, 'dg') + n(it, 'jn') > 0 : total(it) === 0);
   function baseFiltered() {
@@ -199,7 +199,7 @@
   }
 
   /* Opening stock import (administrators): CSV with SKU, name, type and one column per location. */
-  const HEADERS = { sku:['sku', 'SKU'], name:['产品名称', '名称', '产品', 'name', 'product'], type:['类型', 'type'], us:['美国仓', '美国', 'us', 'us warehouse'], dg:['东莞工厂仓', '东莞', 'dg', 'dongguan'], jn:['济南工厂仓', '济南', '山东', 'jn', 'jinan'], transit:['在途', 'transit', 'in transit'], refurb:['美国仓·翻新品', '美国仓翻新品', '翻新品', '翻新', 'refurb', 'refurbished', 'us refurbished'] };
+  const HEADERS = { sku:['sku', 'SKU'], name:['产品名称', '名称', '产品', 'name', 'product'], type:['类型', 'type'], us:['美国LA仓', '美国仓', '美国', 'us', 'us la warehouse', 'us warehouse'], dg:['东莞工厂仓', '东莞', 'dg', 'dongguan'], jn:['济南工厂仓', '济南', '山东', 'jn', 'jinan'], transit:['在途运输中', '在途', 'transit', 'in transit'] };
   let importRows = null;
   function parseCsv(text) {
     const out = []; let row = [], cell = '', q = false;
@@ -221,7 +221,7 @@
     for (const [k, names] of Object.entries(HEADERS)) { const i = head.findIndex(h => names.some(n => n.toLowerCase() === h)); if (i >= 0) col[k] = i; }
     if (col.sku === undefined) throw new Error(tr('找不到“SKU”这一列，请用模板的表头。', 'No “SKU” column found; use the template headers.'));
     const locs = data.locations.map(l => l.id).filter(id => col[id] !== undefined);
-    if (!locs.length) throw new Error(tr('找不到任何库位列（美国仓 / 东莞工厂仓 / 济南工厂仓 / 在途 / 美国仓·翻新品）。', 'No location columns found (US warehouse / Dongguan / Jinan / In transit / US refurbished).'));
+    if (!locs.length) throw new Error(tr('找不到任何库位列（美国LA仓 / 东莞工厂仓 / 济南工厂仓 / 在途运输中）。', 'No location columns found (US LA warehouse / Dongguan / Jinan / In transit).'));
     const rows = [], seen = new Set(), problems = [];
     grid.slice(1).forEach((r, n) => {
       const sku = String(r[col.sku] || '').trim(); if (!sku) return;
@@ -237,7 +237,7 @@
     importRows = null;
     const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
     ctx.modal(tr('导入期初库存', 'Import opening stock'), `<form id="wms-import" class="wms-form">
-      <p class="wms-hint">${tr('把库存表在 Excel 里“另存为 CSV（UTF-8）”后上传。表头需要包含：SKU、产品名称、类型、美国仓、东莞工厂仓、济南工厂仓、在途、美国仓·翻新品（没有的库位列可以不放）。', 'In Excel, save the stock sheet as “CSV UTF-8” and upload it. Headers: SKU, 产品名称, 类型, 美国仓, 东莞工厂仓, 济南工厂仓, 在途, 美国仓·翻新品 (location columns you do not have can be left out).')} <button type="button" class="wms-link" data-wms="template">${icon('download-simple')} ${tr('下载模板', 'Download template')}</button></p>
+      <p class="wms-hint">${tr('把库存表在 Excel 里“另存为 CSV（UTF-8）”后上传。表头需要包含：SKU、产品名称、类型、美国LA仓、东莞工厂仓、济南工厂仓、在途运输中（没有的库位列可以不放）。退货品（REF- 开头）在“退货维修”里管理，不要放进这张表。', 'In Excel, save the stock sheet as “CSV UTF-8” and upload it. Headers: SKU, 产品名称, 类型, 美国LA仓, 东莞工厂仓, 济南工厂仓, 在途运输中 (location columns you do not have can be left out). Returned goods (REF-…) are handled in Returns & repairs, not in this sheet.')} <button type="button" class="wms-link" data-wms="template">${icon('download-simple')} ${tr('下载模板', 'Download template')}</button></p>
       <label class="field"><span>${tr('库存截至日期', 'Stock as of')}</span><input name="asOf" type="date" required value="${today}"></label>
       <label class="field"><span>${tr('库存表（CSV）', 'Stock sheet (CSV)')}</span><input name="file" type="file" accept=".csv,text/csv" required data-wms-file></label>
       <div data-wms-import-preview></div>
@@ -245,7 +245,7 @@
       <p class="wms-error" role="alert"></p></form>`, `<button class="btn" data-live-action="close">${tr('取消', 'Cancel')}</button><button class="btn primary" type="submit" form="wms-import">${tr('确认导入', 'Import')}</button>`);
   }
   function downloadTemplate() {
-    const csv = '\uFEFFSKU,产品名称,类型,美国仓,东莞工厂仓,济南工厂仓,在途,美国仓·翻新品\nEXAMPLE-SKU-01,示例产品,整机,0,0,0,0,0\n';
+    const csv = '\uFEFFSKU,产品名称,类型,美国LA仓,东莞工厂仓,济南工厂仓,在途运输中\nEXAMPLE-SKU-01,示例产品,整机,0,0,0,0\n';
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' })); a.download = 'wms-opening-stock-template.csv';
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   }

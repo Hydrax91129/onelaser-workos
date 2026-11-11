@@ -2,8 +2,8 @@
  * Returns & repairs (RMA), the third tab of "产品与库存".
  *
  * One case per returned unit: received date, reason, who diagnosed and repaired it, photos at receipt /
- * diagnosis / listing, how many days the repair took, and how it ended (back into stock through a
- * WMS goods-in movement, scrapped, or returned to the customer). A refurbished unit back in stock can get
+ * diagnosis / listing, how many days the repair took, and how it ended (put away for sale, scrapped, or
+ * returned to the customer). Returns never touch regular WMS stock (owner, 2026-11-11). A refurbished unit can get
  * a discount and a listing status for the website.
  *
  * Data comes from /rma/* (server). Photos are read through the API and shown as data: URLs (CSP).
@@ -39,7 +39,6 @@
   const LISTING = { pending:['已入库待上架', 'To list'], listed:['完成上架', 'Listed'], sold:['售出', 'Sold'], none:['不上架', 'Not for sale'] };
   /* Grade sets the discount (server: GRADE_DISCOUNT in rma.ts): A untouched, back as new stock; B 10% off; C 20% off. */
   const GRADE = { A:['A 品（原封不动，当新货卖，不打折）', 'A (untouched, sold as new, no discount)'], B:['B 品（10% off）', 'B (10% off)'], C:['C 品（20% off）', 'C (20% off)'] };
-  const GRADE_LOC = { A:'us', B:'refurb', C:'refurb' };
   const w = pair => pair ? tr(pair[0], pair[1]) : '';
   const stageOf = c => c.stage || (c.status === 'restocked' ? ({ listed:'listed', sold:'sold' })[c.listing] || 'restocked' : c.status);
   const badge = c => { const k = stageOf(c); return `<span class="rma-badge ${STAGE[k]?.[2] || ''}">${esc(w(STAGE[k]))}</span>`; };
@@ -73,7 +72,7 @@
     const views = [...STAGE_FLOW.map(k => [k, w(STAGE[k]), data.items.filter(c => stageOf(c) === k).length]), ['all', tr('全部', 'All'), data.items.length]];
     const rows = filtered();
     return `<div class="rma">
-      <div class="page-heading"><div><div class="eyebrow">WORK OS · RMA</div><h1>${tr('退货维修', 'Returns & repairs')}</h1><p>${tr('每一台退回的产品一条记录：收货、诊断、维修人员、维修前后照片、维修用时；修好后退回库存（进入“美国仓·翻新品”），再设定折扣在网站销售。', 'One case per returned unit: receipt, diagnosis, technician, photos, repair time; repaired units go back into stock (US refurbished) and can be discounted for the website.')}</p></div>
+      <div class="page-heading"><div><div class="eyebrow">WORK OS · RMA</div><h1>${tr('退货维修', 'Returns & repairs')}</h1><p>${tr('每一台退回的产品一条记录：收货、诊断、维修人员、维修前后照片、维修用时；修好后入库待上架，再设定折扣在网站销售。退货维修自成一块，不进常规库存。', 'One case per returned unit: receipt, diagnosis, technician, photos, repair time; repaired units go put away for sale and can be discounted for the website. Returns are their own stock, not regular stock.')}</p></div>
         <div class="heading-actions">${data.canOperate ? `<button class="btn primary" data-rma="new">${icon('plus')} ${tr('登记退货', 'Register a return')}</button>` : ''}</div></div>
       <div class="rma-kpis">
         <div class="rma-kpi"><span>${tr('处理中', 'Open')}</span><b>${open.length}</b><em>${tr(`其中超过 7 天 ${open.filter(c => (c.openDays || 0) > 7).length} 件`, `${open.filter(c => (c.openDays || 0) > 7).length} older than 7 days`)}</em></div>
@@ -174,9 +173,8 @@
       ${open && c.canOperate ? `<section class="rma-sec"><h3>${icon('flag-checkered')} ${tr('结案', 'Close the case')}</h3><form id="rma-close" class="form-grid">
         <label class="field"><span>${tr('处理结果', 'Outcome')}</span><select name="outcome"><option value="restock">${tr('退回库存', 'Back into stock')}</option><option value="scrap">${tr('报废', 'Scrap')}</option><option value="return_customer">${tr('修好寄回客户', 'Return to customer')}</option></select></label>
         <label class="field" data-rma-restock><span>${tr('成色', 'Grade')}</span><select name="grade" data-rma-grade>${Object.entries(GRADE).map(([k, v]) => opt(k, w(v), 'B')).join('')}</select></label>
-        <label class="field" data-rma-restock><span>${tr('入库库位', 'Into location')}</span><select name="location" data-rma-loc>${(data?.locations || []).map(l => opt(l.id, lang() === 'en' ? l.en : l.zh, 'refurb')).join('')}</select></label>
         <label class="field"><span>${tr('备注', 'Note')}</span><input name="note" maxlength="1000"></label>
-        <div class="full rma-actions"><button class="btn primary" type="submit">${tr('确认结案', 'Close case')}</button><span class="wms-hint">${tr('成色决定折扣：A 品原封不动当新货卖（不打折，默认入美国仓），B 品 10% off，C 品 20% off。退回库存会自动记一条入库流水（单号即 RMA 编号）。', 'The grade sets the discount: A untouched, sold as new (no discount, into US stock), B 10% off, C 20% off. Restocking records a goods-in movement with the RMA number.')}</span></div>
+        <div class="full rma-actions"><button class="btn primary" type="submit">${tr('确认结案', 'Close case')}</button><span class="wms-hint">${tr('成色决定折扣：A 品原封不动当新货卖（不打折），B 品 10% off，C 品 20% off。入库只在退货维修里记录，不改常规库存。', 'The grade sets the discount: A untouched, sold as new (no discount, into US stock), B 10% off, C 20% off. Putting it away is recorded here only; regular stock does not change.')}</span></div>
         <p class="wms-error" role="alert"></p></form></section>` : ''}
       ${c.status === 'restocked' ? `<section class="rma-sec"><h3>${icon('tag')} ${tr('上架与销售', 'Listing & sale')}</h3>${c.canPrice ? `<form id="rma-price" class="form-grid">
         <label class="field"><span>${tr('零售价 MSRP', 'MSRP')}</span><input value="${esc(money(c.msrp))}" readonly></label>
@@ -242,7 +240,6 @@
   });
   document.addEventListener('change', e => {
     if (e.target.matches?.('[data-rma-file]')) { upload(e.target.dataset.rmaFile, e.target.files); e.target.value = ''; return; }
-    if (e.target.matches?.('[data-rma-grade]')) { const loc = e.target.form?.querySelector('[data-rma-loc]'); if (loc && GRADE_LOC[e.target.value]) loc.value = GRADE_LOC[e.target.value]; }
     if (e.target.closest?.('#rma-close')) syncClose();
   });
   document.addEventListener('dragover', e => { const z = e.target.closest?.('[data-rma-drop]'); if (!z || !e.dataTransfer?.types?.includes('Files')) return; e.preventDefault(); z.classList.add('over'); });
@@ -303,7 +300,7 @@
       if (f.id === 'rma-work') { busy = false; await saveWork(f, false); return; }
       if (f.id === 'rma-close') {
         const v = Object.fromEntries(new FormData(f)), restock = v.outcome === 'restock';
-        await ctx.api.post(`/rma/${encodeURIComponent(detail.id)}/close`, { outcome:v.outcome, ...(restock ? { grade:v.grade, location:v.location } : {}), note:String(v.note || '').trim() || undefined });
+        await ctx.api.post(`/rma/${encodeURIComponent(detail.id)}/close`, { outcome:v.outcome, ...(restock ? { grade:v.grade } : {}), note:String(v.note || '').trim() || undefined });
         ctx.toast?.(restock ? tr('已退回库存，并记入库存流水', 'Back in stock; movement recorded') : tr('已结案', 'Case closed'));
       }
       if (f.id === 'rma-price') {
