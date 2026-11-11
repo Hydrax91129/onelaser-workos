@@ -1,5 +1,5 @@
 /*
- * ERP permissions ("ERP 权限").
+ * Supply chain permissions ("供应链权限管理", formerly "ERP 权限").
  *
  * One place to decide, per employee, what they can do in the product hub:
  *   Products        none / view / manage (create SKUs, edit specs)
@@ -46,7 +46,7 @@
     const people = data.people.filter(p => (!q || `${p.name} ${p.title || ''} ${p.location || ''}`.toLowerCase().includes(q)) && (!ui.area || (p.access[ui.area] || 'none') !== 'none'));
     const counts = AREAS.map(([id]) => data.people.filter(p => (p.access[id] || 'none') !== 'none').length);
     return `<div class="erpa">
-      <div class="page-heading"><div><div class="eyebrow">WORK OS · ERP</div><h1>${tr('ERP 权限', 'ERP permissions')}</h1><p>${tr('在这里给每位员工设置产品、价格构成、供应链和仓库库存的权限。“管理”自动包含“查看”。这些设置不再放在“组织与权限”里。', 'Set each employee’s access to products, price build-up, supply chain and warehouse stock here. Manage includes view. These settings no longer live in Organization & permissions.')}</p></div></div>
+      <div class="page-heading"><div><div class="eyebrow">WORK OS · ERP</div><h1>${tr('供应链权限管理', 'Supply chain permissions')}</h1><p>${tr('在这里给每位员工设置产品、价格构成、供应链和仓库库存的权限。“管理”自动包含“查看”。这些设置不再放在“组织与权限”里。', 'Set each employee’s access to products, price build-up, supply chain and warehouse stock here. Manage includes view. These settings no longer live in Organization & permissions.')}</p></div></div>
       ${data.canAdmin ? '' : `<div class="erpa-note">${icon('info')} ${tr('你是主管：可以为自己的下属设置“仓库库存”权限，其他权限由管理员设置。', 'As a manager you can set warehouse access for your reports; administrators set everything else.')}</div>`}
       <div class="erpa-legend">${AREAS.map(([id, ic, zh, en, , nzh, nen], i) => `<button class="erpa-card ${ui.area === id ? 'on' : ''}" data-erpa="area" data-v="${id}">${icon(ic)}<span><b>${tr(zh, en)}</b><em>${tr(nzh, nen)}</em></span><strong>${counts[i]}</strong></button>`).join('')}</div>
       <div class="erpa-toolbar"><label class="erpa-search">${icon('magnifying-glass')}<input data-erpa-search value="${esc(ui.q)}" placeholder="${tr('搜索姓名、职位或地点', 'Search name, title or location')}"></label>${ui.area ? `<button class="erpa-link" data-erpa="area" data-v="">${icon('x-circle')} ${tr('看全部人', 'Show everyone')}</button>` : ''}<span class="erpa-hint">${tr(`${people.length} 人`, `${people.length} people`)}${saving ? ' · ' + tr('保存中…', 'Saving…') : ''}</span></div>

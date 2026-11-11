@@ -23,12 +23,13 @@
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
     { version:'1.54', date:'2026-11-11T09:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
-      short:c('新增“AI 连接”：让老板自己的 Claude 或 Composio 只读查询 WorkOS', 'New AI connections: your own Claude or Composio can read WorkOS'),
+      short:c('新增“AI 连接”（老板自己的 Claude / Composio 只读查询）；侧边栏改名 SKU管理、库存管理、供应链权限管理', 'New AI connections: your own Claude or Composio can read WorkOS'),
       title:c('AI 连接（WorkOS MCP）', 'AI connections (WorkOS MCP)'),
       changes:[c('新增 MCP 服务器 https://craftos.app/api/mcp：Claude 添加自定义连接器、在 WorkOS 授权页点“允许”就能用；Composio 等工具用“AI 连接”页生成的个人令牌。', 'New MCP server at https://craftos.app/api/mcp: add it as a custom connector in Claude and click Allow on the WorkOS page; Composio and other tools use a personal token made on the AI connections page.'),
         c('只给主管理员本人用（部署配置 WORKOS_MCP_USER_IDS），其他人即使有令牌也不能连接。', 'For the main admin alone (deployment setting WORKOS_MCP_USER_IDS); nobody else can connect, even with a token.'),
         c('全部只读：任务、OKR、项目、产品资料（全员字段）、库存、退货维修进度、消息和人员名单。成本、渠道价、供应商、人事薪资和客户资料一律不给 AI。', 'Read only: tasks, OKRs, projects, product data (company-wide fields), stock, returns, inbox and people. Costs, channel prices, suppliers, HR and customer details are never sent to the AI.'),
-        c('“AI 连接”页可以查看已连接的应用和最近调用，随时断开。', 'The AI connections page lists connected apps and recent calls; disconnect any time.')] },
+        c('“AI 连接”页可以查看已连接的应用和最近调用，随时断开。', 'The AI connections page lists connected apps and recent calls; disconnect any time.'),
+        c('侧边栏改名：产品 PIM → SKU管理(PIM)，WMS → 库存管理(WMS)，ERP 权限 → 供应链权限管理。', 'Sidebar names: Product PIM → SKU management (PIM), WMS → Inventory (WMS), ERP permissions → Supply chain permissions.')] },
     { version:'1.53', date:'2026-11-10T09:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('产品资料取消所有必填，只保留“产品资料”和“批量更新”两个子页', 'Product library: nothing is required; only Products and Bulk update remain'),
       title:c('产品资料不再有必填项', 'No required fields in the product library'),
