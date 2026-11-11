@@ -22,6 +22,10 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.55', date:'2026-11-11T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('退货详情里可以直接改收货日期', 'Correct the received date in a return'),
+      title:c('改正填错的收货日期', 'Fix a wrongly entered received date'),
+      changes:[c('库存管理员在退货详情里可以直接修改收货日期（不能早于 2000 年、不能晚于今天），改完用时会重新计算。', 'Warehouse managers can change the received date in the return detail (not before 2000, not in the future); the open days are recalculated.')] },
     { version:'1.54', date:'2026-11-11T09:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('AI 连接（MCP）；产品资料必填项；常规库存与退货维修分开；侧边栏和库位改名', 'New AI connections: your own Claude or Composio can read WorkOS'),
       title:c('AI 连接（WorkOS MCP）', 'AI connections (WorkOS MCP)'),
