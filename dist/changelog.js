@@ -22,6 +22,11 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.56', date:'2026-11-11T15:00:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
+      short:c('库存直接认产品资料里的 SKU，不用再“新增 SKU”', 'Inventory accepts every SKU in the product library'),
+      title:c('库存认产品资料 SKU', 'Inventory uses product library SKUs'),
+      changes:[c('产品资料里已有的 SKU（包括批量导入的）直接出现在库存管理里，数量为 0，可以直接入库、批量入库、出库和调拨，不用再在库存里“新增 SKU”。', 'Every SKU in the product library, including bulk-imported ones, now appears in Inventory at zero and can be received, moved or shipped right away, without adding it again.'),
+        c('经销商订单发货扣库存时也一样认产品资料里的 SKU。REF- 退货 SKU 仍然只在退货维修里管。', 'Dealer shipments that deduct stock accept them too. REF- return SKUs still live in Returns & repairs only.')] },
     { version:'1.55', date:'2026-11-11T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('批量更新可授权给指定的人；退货详情里可以改收货日期', 'Bulk update can be granted to chosen people; correct a return\'s received date'),
       title:c('批量更新授权、改正收货日期', 'Bulk update access, received date fix'),
