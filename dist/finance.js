@@ -1,7 +1,8 @@
 /*
  * Finance (财务) — accounts receivable (应收账款). Server: onelaser-workos-api src/finance.ts.
  *
- * One row per invoice: responsible person, invoice date, term and due date, customer and contact, type, our order
+ * One row per invoice: responsible person, invoice date, term and due date, company (optional), contact name, email and
+ * phone, shipping address, type, our order
  * number, total, dispatched or not, payment method, status, received, outstanding and paid %. The page leads with
  * what needs chasing: outstanding, overdue, shipped but unpaid, and aging. A row opens the invoice: details (editable
  * by finance managers), payments (the responsible person records them too), invoice files (paste, drag or choose),
@@ -44,7 +45,7 @@
 
   function list() {
     const q = ui.q.trim().toLowerCase();
-    return data.items.filter(i => (!q || [i.number, i.customer, i.contact, i.orderRef, i.responsibleName, i.kind].some(x => String(x || '').toLowerCase().includes(q)))
+    return data.items.filter(i => (!q || [i.number, i.customer, i.contact, i.contactEmail, i.contactPhone, i.orderRef, i.responsibleName, i.kind].some(x => String(x || '').toLowerCase().includes(q)))
       && (!ui.owner || i.responsibleId === ui.owner)
       && (!ui.status || (ui.status === 'open' ? i.status !== 'paid' : ui.status === 'overdue' ? i.overdue : ui.status === 'shipped' ? i.dispatched && i.status !== 'paid' : i.status === ui.status)));
   }
@@ -88,7 +89,7 @@
         ${items.length ? items.map(i => `<tr class="fin-row ${i.overdue ? 'late' : ''}" data-fin="open" data-id="${esc(i.id)}" tabindex="0">
           <td class="mono">${esc(i.number)}${i.fileCount ? ` <span class="fin-clip" title="${tr('附件', 'Files')}">${icon('paperclip')}${i.fileCount}</span>` : ''}</td><td>${esc(i.responsibleName || '—')}</td>
           <td class="date">${esc(i.invoiceDate)}</td><td class="date">${esc(i.dueDate || '—')}<small>${esc(i.paymentTerm ? w(TERM[i.paymentTerm]) || i.paymentTerm : '')}</small></td>
-          <td><b>${esc(i.customer)}</b><small>${esc(i.contact)}</small></td><td>${esc(i.kind || '—')}</td><td class="mono">${esc(i.orderRef || '—')}</td><td class="num">${usd(i.amount)}</td>
+          <td><b>${esc(nameOf(i))}</b>${i.customer ? `<small>${esc(i.contact)}</small>` : ''}</td><td>${esc(i.kind || '—')}</td><td class="mono">${esc(i.orderRef || '—')}</td><td class="num">${usd(i.amount)}</td>
           <td>${i.dispatched ? `<span class="fin-badge green soft">${tr('已发货', 'Dispatched')}</span>` : `<span class="fin-badge soft">${tr('未发货', 'Not yet')}</span>`}</td><td>${esc(w(METHOD[i.payMethod]) || i.payMethod || '—')}</td>
           <td>${badge(i)}</td><td class="num">${usd(i.received)}</td><td class="num ${i.outstanding > 0 ? 'owe' : ''}">${usd(i.outstanding)}</td><td>${bar(i.paidPct)}</td></tr>`).join('')
         : `<tr><td colspan="14" class="fin-empty">${data.items.length ? tr('没有符合条件的单子。', 'Nothing matches.') : tr('还没有应收记录。点右上角“新建应收”开始记录。', 'No invoices yet. Use “New invoice” to start.')}</td></tr>`}
@@ -113,9 +114,10 @@
     return `<div class="form-grid">
       <label class="field"><span>${tr('负责人（销售 / 账户经理）', 'Responsible (sales / account manager)')}</span><select name="responsibleId"><option value="">${tr('未指定', 'Not set')}</option>${people.map(p => opt(p.id, p.name, v.responsibleId)).join('')}</select></label>
       <label class="field"><span>${tr('类型', 'Type')}</span><input name="kind" maxlength="60" list="fin-kinds" value="${esc(v.kind || '')}" placeholder="PO / KOL / …"><datalist id="fin-kinds">${KINDS.map(k => `<option value="${esc(k)}">`).join('')}</datalist></label>
-      <label class="field"><span>${tr('客户公司', 'Customer company')}</span><input name="customer" required maxlength="200" value="${esc(v.customer || '')}"></label>
-      <label class="field"><span>${tr('联系人', 'Contact')}</span><input name="contact" maxlength="120" value="${esc(v.contact || '')}"></label>
-      <label class="field"><span>${tr('联系人邮箱', 'Contact email')}</span><input name="contactEmail" type="email" maxlength="200" value="${esc(v.contactEmail || '')}"></label>
+      <label class="field"><span>${tr('客户公司（选填）', 'Company (optional)')}</span><input name="customer" maxlength="200" value="${esc(v.customer || '')}"></label>
+      <label class="field"><span>${tr('联系人姓名 Contact Name', 'Contact name')}</span><input name="contact" required maxlength="120" autocomplete="off" value="${esc(v.contact || '')}"></label>
+      <label class="field"><span>${tr('联系人邮箱', 'Contact email')}</span><input name="contactEmail" type="email" required maxlength="200" autocomplete="off" placeholder="name@example.com" value="${esc(v.contactEmail || '')}"></label>
+      <label class="field"><span>${tr('联系电话 Phone #', 'Phone #')}</span><input name="contactPhone" type="tel" required maxlength="40" autocomplete="off" placeholder="(626) 555-0142" value="${esc(phoneText(v.contactPhone))}"></label>
       <label class="field"><span>${tr('我们的订单号', 'Our order #')}</span><input name="orderRef" maxlength="80" value="${esc(v.orderRef || '')}"></label>
       <label class="field"><span>${tr('开票日期', 'Invoice date')}</span><input name="invoiceDate" type="date" required min="2000-01-01" value="${esc(v.invoiceDate || '')}" data-fin-due-src></label>
       <label class="field"><span>${tr('账期', 'Payment term')}</span><select name="paymentTerm" data-fin-term data-fin-due-src>${Object.entries(TERM).map(([k, p]) => opt(k, w(p), v.paymentTerm)).join('')}</select></label>
@@ -125,14 +127,58 @@
       <label class="field"><span>${tr('付款方式', 'Payment method')}</span><select name="payMethod">${Object.entries(METHOD).map(([k, p]) => opt(k, w(p), v.payMethod)).join('')}</select></label>
       <label class="field"><span>${tr('是否已发货', 'Dispatched?')}</span><select name="dispatched" data-fin-shipped>${opt('no', tr('未发货', 'Not yet'), v.dispatched ? 'yes' : 'no')}${opt('yes', tr('已发货', 'Dispatched'), v.dispatched ? 'yes' : 'no')}</select></label>
       <label class="field" data-fin-shipdate ${v.dispatched ? '' : 'hidden'}><span>${tr('发货日期', 'Dispatched on')}</span><input name="dispatchedOn" type="date" min="2000-01-01" value="${esc(v.dispatchedOn || '')}"></label>
+      ${addressFields(v)}
       <label class="field full"><span>${tr('备注', 'Notes')}</span><textarea name="note" rows="2" maxlength="4000">${esc(v.note || '')}</textarea></label>
     </div>`;
+  }
+  /* Contact and shipping address: the same format rules as the server (finance.ts checkContact). Format only, no address lookup. */
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const US_STATES = ('AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY ' +
+    'DC PR GU VI AS MP AA AE AP').split(' ');
+  /** US numbers (10 digits, any punctuation) → +1XXXXXXXXXX; others need + and the country code. null when invalid. */
+  function normalizePhone(raw) {
+    const s = String(raw || '').trim();
+    if (!s || /[^\d\s()+.\-]/.test(s) || s.indexOf('+') > 0 || (s.match(/\+/g) || []).length > 1) return null;
+    const d = s.replace(/\D/g, ''), us = ten => /^[2-9]\d{2}[2-9]\d{6}$/.test(ten) ? '+1' + ten : null;
+    if (s.startsWith('+')) return d.startsWith('1') ? (d.length === 11 ? us(d.slice(1)) : null) : d.length >= 8 && d.length <= 15 ? '+' + d : null;
+    if (d.length === 10) return us(d);
+    if (d.length === 11 && d.startsWith('1')) return us(d.slice(1));
+    return null;
+  }
+  /** +16265550142 → +1 (626) 555-0142 for reading; anything else as stored. */
+  const phoneText = p => /^\+1\d{10}$/.test(p || '') ? `+1 (${p.slice(2, 5)}) ${p.slice(5, 8)}-${p.slice(8)}` : (p || '');
+  const addressText = c => [c.shipStreet, c.shipLine2, [c.shipCity, [c.shipState, c.shipZip].filter(Boolean).join(' ')].filter(Boolean).join(', '), c.shipCountry && c.shipCountry !== 'US' ? c.shipCountry : '']
+    .filter(Boolean).join(' · ');
+  const nameOf = i => i.customer || i.contact || '—';
+  function addressFields(v) {
+    const us = (v.shipCountry || 'US').toUpperCase() === 'US';
+    return `<div class="field full fin-addr-head"><span>${tr('收货地址', 'Shipping address')}</span></div>
+      <label class="field full"><span>${tr('街道地址', 'Street address')}</span><input name="shipStreet" required maxlength="200" autocomplete="off" placeholder="100 Example Ave" value="${esc(v.shipStreet || '')}"></label>
+      <label class="field full"><span>${tr('地址行2（选填）', 'Address line 2 (optional)')}</span><input name="shipLine2" maxlength="200" autocomplete="off" placeholder="${tr('如 Suite / Unit / Apt', 'Suite, unit, apt')}" value="${esc(v.shipLine2 || '')}"></label>
+      <label class="field"><span>${tr('城市', 'City')}</span><input name="shipCity" required maxlength="100" autocomplete="off" value="${esc(v.shipCity || '')}"></label>
+      <label class="field"><span>${tr('州', 'State')}</span><input name="shipState" ${us ? 'required' : ''} maxlength="60" autocomplete="off" list="fin-states" placeholder="${us ? 'CA' : ''}" value="${esc(v.shipState || '')}" data-fin-state><datalist id="fin-states">${US_STATES.map(k => `<option value="${k}">`).join('')}</datalist></label>
+      <label class="field"><span>${tr('邮编', 'ZIP')}</span><input name="shipZip" ${us ? 'required' : ''} maxlength="20" autocomplete="off" inputmode="${us ? 'numeric' : 'text'}" placeholder="${us ? '91101 / 91101-1234' : ''}" value="${esc(v.shipZip || '')}"></label>
+      <label class="field"><span>${tr('国家（两位代码）', 'Country (2-letter code)')}</span><input name="shipCountry" required maxlength="2" autocomplete="off" value="${esc(v.shipCountry || 'US')}" data-fin-country></label>`;
+  }
+  /** The page's own check before sending, so people see what to fix next to the form. Returns an error message or ''. */
+  function contactError(v) {
+    if (!v.contact) return tr('请填写联系人姓名。', 'Enter the contact name.');
+    if (!EMAIL_RE.test(v.contactEmail)) return tr('请填写正确的联系人邮箱，例如 name@example.com。', 'Enter a valid contact email, like name@example.com.');
+    if (!normalizePhone(v.contactPhone)) return tr('请填写正确的联系电话：美国号码 10 位，其他国家请以 + 和国家代码开头。', 'Enter a valid phone number: 10 digits for the US, or + and the country code.');
+    if (!/^[A-Z]{2}$/.test(v.shipCountry)) return tr('国家请用两位字母代码，例如 US。', 'Use the two-letter country code, e.g. US.');
+    const us = v.shipCountry === 'US';
+    if (!v.shipStreet || !v.shipCity || (us && (!v.shipState || !v.shipZip))) return tr('请填写完整的收货地址：街道地址、城市、州和邮编。', 'Enter the shipping address: street, city, state and ZIP.');
+    if (us && !US_STATES.includes(v.shipState.toUpperCase())) return tr('州请用两位字母缩写，例如 CA。', 'Use the two-letter state code, e.g. CA.');
+    if (us && !/^\d{5}(-?\d{4})?$/.test(v.shipZip)) return tr('邮编要 5 位数字，或 5+4 位，例如 12345-6789。', 'ZIP must be 5 digits, or ZIP+4 like 12345-6789.');
+    return '';
   }
   const TERM_DAYS = { due_on_receipt:0, net15:15, net30:30, net45:45, net60:60, net90:90, prepaid:0 };
   function readForm(f) {
     const v = Object.fromEntries(new FormData(f).entries());
     const term = v.paymentTerm, days = term === 'custom' ? (v.termDays === '' ? null : Number(v.termDays)) : TERM_DAYS[term] ?? null;
-    return { responsibleId:v.responsibleId || null, kind:v.kind.trim(), customer:v.customer.trim(), contact:v.contact.trim(), contactEmail:v.contactEmail.trim(), orderRef:v.orderRef.trim(),
+    return { responsibleId:v.responsibleId || null, kind:v.kind.trim(), customer:v.customer.trim(), contact:v.contact.trim(), contactEmail:v.contactEmail.trim(),
+      contactPhone:v.contactPhone.trim(), shipStreet:v.shipStreet.trim(), shipLine2:v.shipLine2.trim(), shipCity:v.shipCity.trim(), shipState:v.shipState.trim().toUpperCase().length === 2 ? v.shipState.trim().toUpperCase() : v.shipState.trim(),
+      shipZip:v.shipZip.trim(), shipCountry:(v.shipCountry.trim() || 'US').toUpperCase(), orderRef:v.orderRef.trim(),
       invoiceDate:v.invoiceDate, paymentTerm:term, termDays:days, dueDate:v.dueDate || null, amount:Number(v.amount), payMethod:v.payMethod,
       dispatched:v.dispatched === 'yes', dispatchedOn:v.dispatched === 'yes' ? (v.dispatchedOn || null) : null, note:v.note.trim() };
   }
@@ -161,13 +207,16 @@
   function drawDetail(first) {
     const c = detail, fileUrl = f => `/api/finance/receivables/${encodeURIComponent(c.id)}/files/${encodeURIComponent(f.id)}`;
     const body = `<div class="fin-detail" data-fin-case="${esc(c.id)}">
-      <div class="fin-head">${badge(c)}<span class="mono">${esc(c.number)}</span><b>${esc(c.customer)}</b><span>${usd(c.amount)}</span></div>
+      <div class="fin-head">${badge(c)}<span class="mono">${esc(c.number)}</span><b>${esc(nameOf(c))}</b><span>${usd(c.amount)}</span></div>
       <div class="fin-kpis small"><div class="fin-kpi"><span>${tr('已收', 'Received')}</span><b>${usd(c.received)}</b></div><div class="fin-kpi hot"><span>${tr('待收', 'Outstanding')}</span><b>${usd(c.outstanding)}</b></div>
         <div class="fin-kpi"><span>${tr('收款占比', 'Paid')}</span><b>${Math.round(c.paidPct)}%</b><em>${bar(c.paidPct)}</em></div>${c.deposited ? `<div class="fin-kpi"><span>${tr('支票待到账', 'Check to clear')}</span><b>${usd(c.deposited)}</b></div>` : ''}
         <div class="fin-kpi ${c.overdue ? 'red' : ''}"><span>${tr('到期日', 'Due')}</span><b>${esc(c.dueDate || '—')}</b><em>${c.overdue ? tr(`已逾期 ${c.daysOverdue} 天`, `${c.daysOverdue} days overdue`) : ''}</em></div></div>
       ${c.canEdit ? `<section class="fin-sec"><h3>${icon('pencil-simple')} ${tr('发票信息', 'Invoice details')}</h3><form id="fin-edit">${formFields(c, data?.people || [])}
         <div class="fin-actions"><button class="btn" type="submit">${tr('保存修改', 'Save changes')}</button><button class="fin-link danger" type="button" data-fin="archive">${tr('删除这条应收', 'Delete this invoice')}</button></div><p class="wms-error" role="alert"></p></form></section>`
-        : `<dl class="fin-facts"><div><dt>${tr('负责人', 'Responsible')}</dt><dd>${esc(c.responsibleName || '—')}</dd></div><div><dt>${tr('联系人', 'Contact')}</dt><dd>${esc(c.contact || '—')} ${esc(c.contactEmail || '')}</dd></div>
+        : `<dl class="fin-facts"><div><dt>${tr('负责人', 'Responsible')}</dt><dd>${esc(c.responsibleName || '—')}</dd></div><div><dt>${tr('客户公司', 'Company')}</dt><dd>${esc(c.customer || '—')}</dd></div>
+          <div><dt>${tr('联系人', 'Contact')}</dt><dd>${esc(c.contact || '—')}${c.contactEmail ? ` · <a href="mailto:${esc(c.contactEmail)}">${esc(c.contactEmail)}</a>` : ''}</dd></div>
+          <div><dt>${tr('联系电话', 'Phone')}</dt><dd>${c.contactPhone ? `<a href="tel:${esc(c.contactPhone)}">${esc(phoneText(c.contactPhone))}</a>` : '—'}</dd></div>
+          <div class="full"><dt>${tr('收货地址', 'Shipping address')}</dt><dd>${esc(addressText(c) || '—')}</dd></div>
           <div><dt>${tr('开票日期', 'Invoice date')}</dt><dd>${esc(c.invoiceDate)}</dd></div><div><dt>${tr('账期', 'Term')}</dt><dd>${esc(w(TERM[c.paymentTerm]) || c.paymentTerm || '—')}</dd></div>
           <div><dt>${tr('订单号', 'Order #')}</dt><dd>${esc(c.orderRef || '—')}</dd></div><div><dt>${tr('类型', 'Type')}</dt><dd>${esc(c.kind || '—')}</dd></div>
           <div><dt>${tr('发货', 'Dispatch')}</dt><dd>${c.dispatched ? tr(`已发货 ${c.dispatchedOn || ''}`, `Dispatched ${c.dispatchedOn || ''}`) : tr('未发货', 'Not yet')}</dd></div><div><dt>${tr('付款方式', 'Method')}</dt><dd>${esc(w(METHOD[c.payMethod]) || c.payMethod || '—')}</dd></div>
@@ -191,7 +240,7 @@
         ${c.canWork ? `<form id="fin-note" class="fin-inline"><label class="field grow"><span>${tr('跟进 / 催收计划', 'Follow-up / collection plan')}</span><input name="body" maxlength="2000" required placeholder="${tr('例如：已电话联系，客户承诺周五付款', 'e.g. Called; customer promised to pay Friday')}"></label><button class="btn" type="submit">${tr('添加', 'Add')}</button></form>` : ''}
         <ul class="fin-timeline">${c.notes.map(n => `<li><b>${esc(n.by)}</b> ${esc(n.body)} <time>${esc(new Date(n.at).toLocaleString(lang() === 'en' ? 'en-US' : 'zh-CN'))}</time></li>`).join('')}</ul></section>
     </div>`;
-    if (first || !document.querySelector('[data-fin-case]')) { ctx.modal(`${esc(c.number)} · ${esc(c.customer)}`, body, `<button class="btn" data-live-action="close">${tr('关闭', 'Close')}</button>`); document.querySelector('#overlay-root .modal')?.classList.add('modal-wide'); }
+    if (first || !document.querySelector('[data-fin-case]')) { ctx.modal(`${esc(c.number)} · ${esc(nameOf(c))}`, body, `<button class="btn" data-live-action="close">${tr('关闭', 'Close')}</button>`); document.querySelector('#overlay-root .modal')?.classList.add('modal-wide'); }
     else document.querySelector('[data-fin-case]').outerHTML = body;
     if (c.canWork) window.WorkOSUpload?.register('fin-files', { lang:lang(), accept:FILE_MIME, multiple:true, maxBytes:10 * 1024 * 1024, onFiles:async files => {
       window.WorkOSUpload.status('fin-files', tr('上传中…', 'Uploading…'));
@@ -234,6 +283,7 @@
     e.preventDefault(); if (busy) return; busy = true; formError(f, '');
     const btn = f.querySelector('button[type="submit"]'); if (btn) btn.disabled = true;
     try {
+      if (f.id === 'fin-new' || f.id === 'fin-edit') { const bad = contactError(readForm(f)); if (bad) throw new Error(bad); }
       if (f.id === 'fin-new') {
         const r = await ctx.api.post('/finance/receivables', readForm(f));
         if (pending.length) await uploadFiles(r.id, pending); pending = [];
@@ -253,6 +303,11 @@
     if (el.matches?.('[data-fin-owner]')) { ui.owner = el.value; return ctx.rerender(); }
     const form = el.form; if (!form || !['fin-new', 'fin-edit'].includes(form.id)) return;
     if (el.matches('[data-fin-shipped]')) form.querySelector('[data-fin-shipdate]').hidden = el.value !== 'yes';
+    if (el.matches('[data-fin-country]')) {
+      // US addresses need a state and ZIP; elsewhere they are free text and optional.
+      const us = (el.value.trim() || 'US').toUpperCase() === 'US';
+      for (const n of ['shipState', 'shipZip']) form.querySelector(`[name="${n}"]`).required = us;
+    }
     if (el.matches('[data-fin-term]')) form.querySelector('[data-fin-days]').hidden = el.value !== 'custom';
     if (el.matches('[data-fin-due-src]')) {
       // Due date = invoice date + term days, filled in for you (still editable).

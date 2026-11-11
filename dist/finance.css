@@ -34,6 +34,8 @@
 .fin-row{cursor:pointer}.fin-row:hover td{background:#f7f9ff}.fin-row.late td:first-child{box-shadow:inset 3px 0 0 #d92d20}
 .fin-empty{text-align:center;color:var(--muted,#9aa0b4);padding:28px!important}
 .fin-table td.mono,.fin-table td.date,.fin-table td:nth-child(2){white-space:nowrap}
+
+.fin-addr-head{border-top:1px dashed var(--border,#e4e7ef);padding-top:12px;margin-top:2px}.fin-addr-head>span{font-size:13px!important;font-weight:700!important;color:var(--ink,#1f2433)!important}
 [data-fin-days][hidden],[data-fin-shipdate][hidden]{display:none!important}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
 .fin-clip{color:#6b7280;font-size:11px;display:inline-flex;align-items:center;gap:1px}
