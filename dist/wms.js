@@ -164,7 +164,7 @@
       if (/^sku$/i.test(parts[0])) return;
       const qty = Number(String(parts.at(-1)).replace(/[,\s]/g, '')), sku = parts.slice(0, -1).join(' ').trim(), it = bySku.get(sku.toLowerCase());
       if (!Number.isInteger(qty) || qty <= 0) { problems.push(tr(`第 ${i + 1} 行：${sku} 的数量“${parts.at(-1)}”不是正整数`, `Line ${i + 1}: ${sku} quantity is not a positive whole number`)); return; }
-      if (!it) { problems.push(tr(`第 ${i + 1} 行：找不到 SKU ${sku}，请先“新增 SKU”`, `Line ${i + 1}: SKU ${sku} not found; add it first`)); return; }
+      if (!it) { problems.push(tr(`第 ${i + 1} 行：产品资料和库存里都没有 SKU ${sku}，请检查拼写或先在产品资料里添加`, `Line ${i + 1}: SKU ${sku} is not in the product library or inventory; check the spelling or add it to the product library`)); return; }
       lines.push({ sku:it.sku, name:it.name, qty, line:i + 1 });
     });
     return { lines, problems };
