@@ -50,6 +50,7 @@
     }
     get(path, options = {}) { return this.request(path, options); }
     post(path, body) { return this.request(path, { method: 'POST', body }); }
+    patch(path, body) { return this.request(path, { method: 'PATCH', body }); }
     delete(path) { return this.request(path, { method: 'DELETE' }); }
     clearSession() { this.csrfToken = null; }
   }
