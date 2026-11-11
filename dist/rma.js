@@ -98,7 +98,7 @@
         <label class="field"><span>${tr('类别', 'Item class')}</span><select name="productClass" required data-rma-class><option value="">${tr('请选择', 'Choose')}</option>${Object.entries(CLASS).map(([k, v]) => `<option value="${k}">${esc(w(v))}</option>`).join('')}</select></label>
         <label class="field"><span>${tr('序列号', 'Serial number')}</span><input name="serial" maxlength="80" placeholder="${tr('机器铭牌上的 SN（机器必填）', 'SN on the label (required for machines)')}"></label>
         <label class="field"><span>${tr('数量', 'Quantity')}</span><input name="qty" type="number" min="1" max="500" value="1" required></label>
-        <label class="field"><span>${tr('收货日期', 'Received on')}</span><input name="receivedAt" type="date" required value="${today()}" max="${today()}"></label>
+        <label class="field"><span>${tr('收货日期', 'Received on')}</span><input name="receivedAt" type="date" required value="${today()}" min="2000-01-01" max="${today()}"></label>
         <label class="field"><span>${tr('来源渠道（选填）', 'Channel (optional)')}</span><select name="channel"><option value="">—</option>${Object.entries(CHANNEL).map(([k, v]) => `<option value="${k}">${esc(w(v))}</option>`).join('')}</select></label>
         <label class="field"><span>${tr('客户（选填）', 'Customer (optional)')}</span><input name="customer" maxlength="120"></label>
         <label class="field"><span>${tr('原订单号（选填）', 'Original order (optional)')}</span><input name="orderRef" maxlength="80" placeholder="#1001"></label>
@@ -148,7 +148,7 @@
       <dl class="rma-facts">
         <div><dt>${tr('类别', 'Item class')}</dt><dd>${c.productClass ? esc(w(CLASS[c.productClass])) : esc(w(KIND[c.kind]))}${c.channel ? ' · ' + esc(w(CHANNEL[c.channel])) : ''}${c.repairable ? ` · ${c.repairable === 'yes' ? tr('可维修', 'Repairable') : tr('不可维修', 'Not repairable')}` : ''}</dd></div>
         <div><dt>${tr('客户 / 订单', 'Customer / order')}</dt><dd>${esc(c.customer || '—')} ${esc(c.orderRef || '')}</dd></div>
-        <div><dt>${tr('收货日期', 'Received')}</dt><dd>${esc(c.receivedAt)}</dd></div>
+        <div><dt>${tr('收货日期', 'Received')}</dt><dd>${open && c.canOperate ? `<input type="date" data-rma-received value="${esc(c.receivedAt)}" min="2000-01-01" max="${today()}" aria-label="${tr('修改收货日期', 'Change the received date')}" title="${tr('填错了可以直接改', 'Fix it here if it was entered wrong')}">` : esc(c.receivedAt)}</dd></div>
         <div><dt>${tr('维修完成', 'Repaired')}</dt><dd>${esc(c.repairedAt || '—')}</dd></div>
         <div><dt>${tr('维修用时', 'Repair time')}</dt><dd class="${(c.openDays || 0) > 7 ? 'late' : ''}">${c.repairDays != null ? tr(`${c.repairDays} 天`, `${c.repairDays} days`) : c.openDays != null ? tr(`已 ${c.openDays} 天（进行中）`, `${c.openDays} days so far`) : '—'}</dd></div>
         <div><dt>${tr('登记人', 'Registered by')}</dt><dd>${esc(c.createdByName)}</dd></div>
@@ -272,6 +272,14 @@
     const el = e.target; if (!el?.matches?.('[data-rma-status]')) return;
     const box = el.form?.querySelector('[data-rma-parts]'), on = el.value === 'waiting_parts';
     if (box) { box.hidden = !on; const i = box.querySelector('input'); if (i) { i.required = on; if (on) i.focus(); } }
+  });
+  // Managers fix a wrongly entered received date in place (the server refuses dates before 2000 or in the future).
+  document.addEventListener('change', async e => {
+    const el = e.target; if (!el?.matches?.('[data-rma-received]') || !detail || !ctx) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(el.value) || el.value === detail.receivedAt) return;
+    el.disabled = true;
+    try { await ctx.api.post(`/rma/${encodeURIComponent(detail.id)}/update`, { receivedAt:el.value }); ctx.toast?.(tr('收货日期已更新', 'Received date updated')); await refresh(); }
+    catch (x) { ctx.toast?.(x.message || tr('保存失败', 'Could not save')); el.value = detail.receivedAt; el.disabled = false; }
   });
   document.addEventListener('change', e => {
     const el = e.target; if (!el?.matches?.('[data-rma-class]')) return;
