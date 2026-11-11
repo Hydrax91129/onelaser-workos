@@ -14,7 +14,7 @@ test('ERP permissions show a module row only when the server offers that module'
   window.WorkOSErpAccess.render();
   await new Promise(r => setTimeout(r, 0));
   const areas = () => { document.body.innerHTML = window.WorkOSErpAccess.render(); return [...document.querySelectorAll('[data-erpa="area"][data-v]')].map(b => b.dataset.v).filter(Boolean); };
-  assert.deepEqual(areas(), ['products', 'pricing', 'supply', 'warehouse', 'kol'], 'no Dealers row before the dealer API is live');
+  assert.deepEqual(areas(), ['products', 'import', 'pricing', 'supply', 'warehouse', 'kol'], 'no Dealers row before the dealer API is live; 批量更新 sits next to 产品');
   offered.add('dealers'); assert.ok(areas().includes('dealers'), 'Dealers row appears once the server offers it');
   offered.delete('kol'); assert.ok(!areas().includes('kol'), 'KOL row hidden when the server has no KOL module');
 });

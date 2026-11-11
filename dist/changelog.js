@@ -23,9 +23,10 @@
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
     { version:'1.55', date:'2026-11-11T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
-      short:c('退货详情里可以直接改收货日期', 'Correct the received date in a return'),
-      title:c('改正填错的收货日期', 'Fix a wrongly entered received date'),
-      changes:[c('库存管理员在退货详情里可以直接修改收货日期（不能早于 2000 年、不能晚于今天），改完用时会重新计算。', 'Warehouse managers can change the received date in the return detail (not before 2000, not in the future); the open days are recalculated.')] },
+      short:c('批量更新可授权给指定的人；退货详情里可以改收货日期', 'Bulk update can be granted to chosen people; correct a return\'s received date'),
+      title:c('批量更新授权、改正收货日期', 'Bulk update access, received date fix'),
+      changes:[c('“供应链权限管理”新增“批量更新（SKU 与价格）”：主管理员勾选谁能批量更新 SKU 资料和零售价（开通时一起开“产品：管理”和“价格构成：查看 MSRP”）；改到岸价等成本列还要“价格组成 + 修改”。被授权的人只能撤销自己做的批量更新。', 'Supply chain permissions has a new Bulk update (SKUs & prices) column: main admins choose who may bulk-update SKU data and retail prices (this also opens Products: manage and Pricing: MSRP); cost columns still need the full price build-up. People allowed can undo only their own bulk updates.'),
+        c('库存管理员在退货详情里可以直接修改收货日期（不能早于 2000 年、不能晚于今天），改完用时会重新计算。', 'Warehouse managers can change the received date in the return detail (not before 2000, not in the future); the open days are recalculated.')] },
     { version:'1.54', date:'2026-11-11T09:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('AI 连接（MCP）；产品资料必填项；常规库存与退货维修分开；侧边栏和库位改名', 'New AI connections: your own Claude or Composio can read WorkOS'),
       title:c('AI 连接（WorkOS MCP）', 'AI connections (WorkOS MCP)'),
