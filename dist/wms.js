@@ -346,12 +346,13 @@
   });
   /* Stock operations in three groups (owner, 2026-11-12): 入库 (到港入仓, 普通入库), 出库 (普通出库, 调拨出库), 仓库管理 (库存盘点, 库位管理). */
   function opGroups() {
-    const op = (type, ic, zh, en) => `<button class="btn" data-wms="op" data-type="${type}">${icon(ic)} ${tr(zh, en)}</button>`;
+    // Everyday operations are highlighted (owner, 2026-11-12): 普通入库, 普通出库, 库存盘点
+    const op = (type, ic, zh, en, main = false) => `<button class="btn ${main ? 'primary' : ''}" data-wms="op" data-type="${type}">${icon(ic)} ${tr(zh, en)}</button>`;
     const group = (ic, zh, en, cls, buttons) => `<div class="wms-opgroup ${cls}"><span class="wms-opgroup-name">${icon(ic)} ${tr(zh, en)}</span><div class="wms-opgroup-btns">${buttons}</div></div>`;
     return `<div class="wms-opgroups">
-      ${group('arrow-circle-down', '入库', 'Goods in', 'in', `<button class="btn primary" data-wms="arrivals">${icon('boat')} ${tr('到港入仓', 'Arrivals')}${arrivals?.arrivals?.length ? ` <b class="wms-badge">${arrivals.arrivals.length}</b>` : ''}</button>${op('in', 'arrow-circle-down', '普通入库', 'Goods in')}`)}
-      ${group('arrow-circle-up', '出库', 'Goods out', 'out', `${op('out', 'arrow-circle-up', '普通出库', 'Goods out')}${op('transfer', 'arrows-left-right', '调拨出库（仓与仓之间）', 'Transfer (between warehouses)')}`)}
-      ${group('warehouse', '仓库管理', 'Warehouse', 'manage', `${op('adjust', 'clipboard-text', '库存盘点', 'Stock count')}<button class="btn" data-wms="binmgr">${icon('grid-four')} ${tr('库位管理', 'Bins')}</button>`)}
+      ${group('arrow-circle-down', '入库', 'Goods in', 'in', `${op('in', 'arrow-circle-down', '普通入库', 'Goods in', true)}<button class="btn" data-wms="arrivals">${icon('boat')} ${tr('到港入仓', 'Arrivals')}${arrivals?.arrivals?.length ? ` <b class="wms-badge">${arrivals.arrivals.length}</b>` : ''}</button>`)}
+      ${group('arrow-circle-up', '出库', 'Goods out', 'out', `${op('out', 'arrow-circle-up', '普通出库', 'Goods out', true)}${op('transfer', 'arrows-left-right', '调拨出库（仓与仓之间）', 'Transfer (between warehouses)')}`)}
+      ${group('warehouse', '仓库管理', 'Warehouse', 'manage', `${op('adjust', 'clipboard-text', '库存盘点', 'Stock count', true)}<button class="btn" data-wms="binmgr">${icon('grid-four')} ${tr('库位管理', 'Bins')}</button>`)}
     </div>`;
   }
   let binSku = null;

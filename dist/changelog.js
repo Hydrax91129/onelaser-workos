@@ -28,7 +28,7 @@
         '库存：库位管理（新增、改名、删除）；产品族等筛选始终可用；出入库和盘点双击或“选择添加该 SKU”加入本单，原因一键选择；导出 CSV 移到右上角',
         '盘点调整由另一位有库存管理权限的同事确认（没有就由主管理员），页面写出可以确认的人',
         '到港入仓：SCM 发“到港通知”，仓库在 WMS 逐行确认实收数量和库位后入库，少收的留在在途',
-        'SCM：DS 365 / 90 / 30 和预测日销（季节性、短期爆发和下滑）；到仓天数 = 下单 + 生产 + 头程 + 清关收货 + 意外天数；分仓显示，成品合计与成品 + 在产两套计算；三种状态加系统判断；采购下单和完工入库；货柜显示航行进度、当前位置和 SKU 明细'],
+        'SCM 供应链看板：销量趋势、库存分布、库存周转（SKU）、仓库、工厂准时率、补货状态和未来到港；补货表更紧凑，状态上悬停看系统判断，每列表头悬停有解释，加“预测缺货天数”，日期写成 Dec 1st', '采购单：供应商取自产品资料，从产品库选 SKU（5 个筛选），草稿 → 下达生产 → 交付（准时 / 延迟），可以修改；新建货柜选头程和尾程，自动算预计天数', '库存页按钮分入库 / 出库 / 仓库管理三组；右上角改为 下载标准模板、导出所有库存、批量更新库存、导入 / 导出记录、库存权限；所有页面的权限按钮放在最右边', 'SCM：DS 365 / 90 / 30 和预测日销（季节性、短期爆发和下滑）；到仓天数 = 下单 + 生产 + 头程 + 清关收货 + 意外天数；分仓显示，成品合计与成品 + 在产两套计算；三种状态加系统判断；采购下单和完工入库；货柜显示航行进度、当前位置和 SKU 明细'],
       en:['Product data and pricing each have four access levels', 'Leaving the company clears every permission', 'Products: three prices only; group order; pricing page edits basics and per-SKU selling rates',
         'Inventory: bin management, filters, double-click to add, reason chips, CSV export top right', 'Count adjustments confirmed by another warehouse manager (or a main admin), named on the page',
         'Arrivals: supply chain notifies, the warehouse confirms each line', 'SCM: DS 365/90/30 and a forecast, days to warehouse, finished vs. finished + in production, three statuses with reasons, purchase orders, voyage progress'] },

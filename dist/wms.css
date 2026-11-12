@@ -115,3 +115,4 @@ html[data-theme=dark] .wms-opgroup{background:#1d1f27;border-color:#343745}html[
 .wms .page-heading{gap:16px}.wms .page-heading>div:first-child{min-width:0;flex:1 1 320px}
 .wms .page-heading .heading-actions{flex-wrap:nowrap;flex:0 0 auto}.wms .page-heading .heading-actions .btn{padding:6px 10px;font-size:13px;white-space:nowrap}
 @media (max-width:1280px){.wms .page-heading .heading-actions{flex-wrap:wrap;justify-content:flex-end}}
+.wms-badge{background:#3c64f4!important;color:#fff!important}
