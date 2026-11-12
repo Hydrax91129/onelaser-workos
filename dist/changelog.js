@@ -22,6 +22,16 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.63', date:'2026-11-12T22:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      zh:['产品资料和价格权限各分四级：产品资料 无 / 查看普通信息 / 查看保密信息 / 管理信息；价格 无 / 查看 / 单项修改 / 管理（含批量更新）', '员工离职（停用账号）时所有功能权限自动清空，恢复账号不会自动恢复',
+        '产品资料只填三个价格（到岸价、尾程运费、MSRP），分组顺序：基本参数、生命周期、定价、包装物流、供应商、产品详情；定价页可以直接改基本信息，每个 SKU 可设自己的零售 / 批发销售费率',
+        '库存：库位管理（新增、改名、删除）；产品族等筛选始终可用；出入库和盘点双击或“选择添加该 SKU”加入本单，原因一键选择；导出 CSV 移到右上角',
+        '盘点调整由另一位有库存管理权限的同事确认（没有就由主管理员），页面写出可以确认的人',
+        '到港入仓：SCM 发“到港通知”，仓库在 WMS 逐行确认实收数量和库位后入库，少收的留在在途',
+        'SCM：DS 365 / 90 / 30 和预测日销（季节性、短期爆发和下滑）；到仓天数 = 下单 + 生产 + 头程 + 清关收货 + 意外天数；分仓显示，成品合计与成品 + 在产两套计算；三种状态加系统判断；采购下单和完工入库；货柜显示航行进度、当前位置和 SKU 明细'],
+      en:['Product data and pricing each have four access levels', 'Leaving the company clears every permission', 'Products: three prices only; group order; pricing page edits basics and per-SKU selling rates',
+        'Inventory: bin management, filters, double-click to add, reason chips, CSV export top right', 'Count adjustments confirmed by another warehouse manager (or a main admin), named on the page',
+        'Arrivals: supply chain notifies, the warehouse confirms each line', 'SCM: DS 365/90/30 and a forecast, days to warehouse, finished vs. finished + in production, three statuses with reasons, purchase orders, voyage progress'] },
     { version:'1.62', date:'2026-11-12T18:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('供应链管理（SCM）改为精简决策看板：Shopify 日销、补货建议、在途货柜', 'SCM becomes a lean board: Shopify daily sales, reorder suggestions, containers in transit'),
       title:c('SCM 决策看板', 'SCM decision board'),

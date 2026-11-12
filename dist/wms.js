@@ -43,13 +43,13 @@
   const methodLabel = m => { const t = TYPES[m.type] ? tr(TYPES[m.type][0], TYPES[m.type][1]) : m.type;
     return m.method === 'import' ? tr('期初导入', 'Opening import') : m.method === 'dealer' ? tr('经销商发货', 'Dealer shipment')
       : m.method === 'batch' ? tr(`批量${m.type === 'adjust' ? '盘点' : t}`, `Batch ${t.toLowerCase()}`) : tr(`手动${m.type === 'adjust' ? '盘点' : t}`, `Manual ${t.toLowerCase()}`); };
-  const STATES = { done:['已生效', 'Applied', 'done'], pending:['待主管确认', 'Awaiting manager', 'pending'], rejected:['已驳回', 'Rejected', 'rejected'] };
+  const STATES = { done:['已生效', 'Applied', 'done'], pending:['待确认', 'Awaiting confirmation', 'pending'], rejected:['已驳回', 'Rejected', 'rejected'] };
 
   function configure(next) { ctx = next; }
   function reset() { data = null; loading = false; error = ''; Object.assign(ui, { q:'', loc:'', type:'', fam:'', series:'', status:'', brand:'', pmin:'', pmax:'', stock:'', sort:'', dir:1, tab:'stock', sku:null, limit:PAGE }); Object.assign(history, { sku:null, list:null, loading:false }); }
   async function load() {
     if (loading) return; loading = true;
-    try { data = await ctx.api.get('/wms/summary'); error = ''; history.list = null; }
+    try { data = await ctx.api.get('/wms/summary'); error = ''; history.list = null; if (data.canOperate) await loadArrivals(); }
     catch (e) { error = e.message || tr('库存读取失败', 'Could not load inventory'); }
     finally { loading = false; ctx.rerender(); }
   }
@@ -78,18 +78,17 @@
     const today = data.movements.filter(m => new Date(m.createdAt).toDateString() === new Date().toDateString()).length;
     return `<div class="wms">
       <div class="page-heading"><div><div class="eyebrow">WORK OS · WMS</div><h1>${tr('库存管理', 'Inventory')}</h1><p>${tr('按 SKU 和库位记录库存。每一次入库、出库、调拨和盘点调整都会留下流水；盘点调整需直属主管确认后生效。', 'Stock per SKU and location. Every goods-in, goods-out, transfer and count adjustment is logged; count adjustments take effect after the submitter’s manager confirms.')}${data.lastImport ? `<br><small class="wms-hint">${tr(`期初库存截至 ${String(data.lastImport.asOf).slice(0, 10)}`, `Opening stock as of ${String(data.lastImport.asOf).slice(0, 10)}`)}</small>` : ''}</p></div>
-        <div class="heading-actions">${data.canImport ? `<button class="btn" data-wms="import">${icon('upload-simple')} ${tr('导入期初库存', 'Import opening stock')}</button>` : ''}${data.canOperate ? `<button class="btn" data-wms="new-sku">${icon('plus')} ${tr('新增 SKU', 'New SKU')}</button>` : ''}${window.WorkOSErpAccess?.button?.('warehouse') || ''}</div></div>
+        <div class="heading-actions">${data.items.length ? `<button class="btn" data-wms="export" title="${tr('按当前筛选和排序导出库存', 'Exports the stock with the current filter and sort')}">${icon('download-simple')} ${tr('导出 CSV', 'Export CSV')}</button>` : ''}${data.canImport ? `<button class="btn" data-wms="import">${icon('upload-simple')} ${tr('导入期初库存', 'Import opening stock')}</button>` : ''}${data.canOperate ? `<button class="btn" data-wms="new-sku">${icon('plus')} ${tr('新增 SKU', 'New SKU')}</button>` : ''}${window.WorkOSErpAccess?.button?.('warehouse') || ''}</div></div>
       ${data.canOperate ? '' : `<div class="wms-note">${icon('eye')} ${tr('你的仓库库存权限是“查看”：可以看库存和流水，不能加减数量。需要管理权限请联系主管在“供应链权限管理”里开通。', 'Your warehouse access is view-only: you can see stock and movements but not change quantities. Ask a manager to grant Manage in Supply chain permissions.')}</div>`}
       <div class="wms-kpis">${data.locations.map(l => `<button class="wms-kpi ${ui.loc === l.id ? 'on' : ''}" data-wms="loc" data-v="${esc(l.id)}"><span>${esc(word(l))}</span><b>${fmtN(data.items.reduce((s, it) => s + Number(it.qty?.[l.id] || 0), 0))}</b><em>${data.items.filter(it => Number(it.qty?.[l.id] || 0) > 0).length} SKU${data.values ? ` · ${data.values.cost ? tr('成本货值', 'cost') : tr('零售货值', 'retail')} ${usd(data.values.cost ? data.values.cost[l.id] : data.values.msrp[l.id])}` : ''}</em></button>`).join('')}
-        <div class="wms-kpi ${pending.length ? 'warn' : ''}"><span>${tr('待主管确认', 'Awaiting manager')}</span><b>${pending.length}</b><em>${tr('盘点调整', 'count adjustments')}</em></div>
+        <div class="wms-kpi ${pending.length ? 'warn' : ''}"><span>${tr('待确认', 'Awaiting confirmation')}</span><b>${pending.length}</b><em>${tr('盘点调整', 'count adjustments')}</em></div>
         <div class="wms-kpi"><span>${tr('今日流水', 'Today')}</span><b>${today}</b><em>${tr('条操作', 'movements')}</em></div></div>
       ${!data.items.length ? `<div class="wms-note">${icon('info')} ${data.canImport ? tr('还没有库存数据。请点右上角“导入期初库存”，上传库存表（Excel 另存为 CSV）。', 'No stock yet. Use “Import opening stock” at the top right and upload the stock sheet (Excel saved as CSV).') : tr('还没有库存数据，等待管理员导入期初库存。', 'No stock yet; waiting for an administrator to import the opening balance.')}</div>` : ''}
       ${mineToDecide.length ? `<section class="wms-pending"><h3>${icon('seal-question')} ${tr('待你确认的盘点调整', 'Count adjustments awaiting you')} <b>${mineToDecide.length}</b></h3>${mineToDecide.map(m => `<div class="wms-pend-row"><span class="wms-type adjust">${tr('盘点调整', 'Adjust')}</span><strong>${esc(m.sku)}</strong><span>${esc(word(loc(m.location)))}</span><span class="${m.qty < 0 ? 'neg' : 'pos'}">${m.qty > 0 ? '+' : ''}${fmtN(m.qty)}</span><span class="wms-by">${tr(`系统 ${fmtN(m.systemQty)} → 实盘 ${fmtN(m.counted)}`, `system ${fmtN(m.systemQty)} → counted ${fmtN(m.counted)}`)}</span><span class="wms-reason">${esc(m.reason)}</span><span class="wms-by">${esc(m.byName)} · ${when(m.createdAt)}</span><button class="btn small primary" data-wms="approve" data-id="${esc(m.id)}">${tr('确认生效', 'Confirm')}</button><button class="btn small" data-wms="reject" data-id="${esc(m.id)}">${tr('驳回', 'Reject')}</button></div>`).join('')}</section>` : ''}
       <div class="wms-tabs"><button class="${ui.tab === 'stock' ? 'on' : ''}" data-wms="tab" data-v="stock">${icon('package')} ${tr('库存', 'Stock')}</button><button class="${ui.tab === 'log' ? 'on' : ''}" data-wms="tab" data-v="log">${icon('list-bullets')} ${tr('出入库流水', 'Movements')}</button></div>
       <div class="wms-toolbar"><label class="wms-search">${icon('magnifying-glass')}<input data-wms-search value="${esc(ui.q)}" placeholder="${ui.tab === 'stock' ? tr('搜索 SKU 或产品名', 'Search SKU or product') : tr('搜索 SKU、原因、单号或操作人', 'Search SKU, reason, reference or person')}"></label>
-        ${ui.tab === 'stock' && data.items.length ? `<button class="btn" data-wms="export" title="${tr('按当前筛选和排序导出', 'Exports the current filter and sort')}">${icon('download-simple')} ${tr('导出 CSV', 'Export CSV')}</button>` : ''}
         <span class="wms-spacer"></span>
-        ${data.canOperate ? `<button class="btn primary" data-wms="batch">${icon('stack')} ${tr('批量入库', 'Batch goods in')}</button>` + Object.entries(TYPES).filter(([k]) => k !== 'move').map(([k, [zh, en, ic]]) => `<button class="btn" data-wms="op" data-type="${k}">${icon(ic)} ${tr(zh, en)}</button>`).join('') : ''}</div>
+        ${data.canOperate ? `<button class="btn primary" data-wms="arrivals">${icon('boat')} ${tr('到港入仓', 'Arrivals')}${arrivals?.arrivals?.length ? ` <b class="wms-badge">${arrivals.arrivals.length}</b>` : ''}</button>` + Object.entries(TYPES).filter(([k]) => k !== 'move').map(([k, [zh, en, ic]]) => `<button class="btn" data-wms="op" data-type="${k}">${icon(ic)} ${tr(zh, en)}</button>`).join('') + `<button class="btn" data-wms="binmgr">${icon('grid-four')} ${tr('库位管理', 'Bins')}</button>` : ''}</div>
       ${ui.tab === 'stock' ? stockTable(items) : logTable(logList())}
     </div>`;
   }
@@ -112,17 +111,18 @@
     return list.slice().sort((a, b) => { const x = key(a), y = key(b); return (typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'zh')) * ui.dir; });
   }
   function filterBar() {
-    const fams = (data.families || []).filter(f => data.items.some(it => it.family === f.key)), noFam = data.items.filter(it => !it.family).length;
+    // Product filters stay visible even when a list is short (owner, 2026-11-12): family (主机 / 配件 / 耗材 …), series, status, brand, MSRP range.
+    const fams = data.families || [], noFam = data.items.filter(it => !it.family).length;
     const series = [...new Set(data.items.filter(it => !ui.fam || it.family === ui.fam).map(it => it.series).filter(Boolean))].sort();
     const base = baseFiltered(), count = k => base.filter(it => stockIs(it, k)).length;
     const active = ui.q || ui.loc || ui.fam || ui.series || ui.status || ui.brand || ui.pmin !== '' || ui.pmax !== '' || ui.stock;
-    const statuses = (data.statuses || []).filter(x => data.items.some(it => it.status === x.key)), brands = [...new Set(data.items.map(it => it.brand).filter(Boolean))].sort();
+    const statuses = data.statuses || [], brands = [...new Set(data.items.map(it => it.brand).filter(Boolean))].sort();
     return `<div class="wms-filters">
       <label class="wms-select">${icon('warehouse')}<select data-wms-loc aria-label="${tr('仓库', 'Warehouse')}"><option value="">${tr('全部仓库（各仓数量）', 'All warehouses (quantities)')}</option>${data.locations.map(l => `<option value="${esc(l.id)}" ${ui.loc === l.id ? 'selected' : ''}>${esc(word(l))} · ${tr('库位', 'bins')}</option>`).join('')}</select></label>
       <label class="wms-select">${icon('funnel')}<select data-wms-fam aria-label="${tr('产品族', 'Family')}"><option value="">${tr('全部产品族', 'All families')}</option>${fams.map(f => `<option value="${esc(f.key)}" ${ui.fam === f.key ? 'selected' : ''}>${esc(word(f))}（${data.items.filter(it => it.family === f.key).length}）</option>`).join('')}${noFam ? `<option value="-" ${ui.fam === '-' ? 'selected' : ''}>${tr('未设置产品族', 'No family')}（${noFam}）</option>` : ''}</select></label>
-      ${series.length ? `<label class="wms-select"><select data-wms-series aria-label="${tr('产品线 / 系列', 'Series')}"><option value="">${tr('全部系列', 'All series')}</option>${series.map(x => `<option value="${esc(x)}" ${ui.series === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>` : ''}
-      ${statuses.length ? `<label class="wms-select"><select data-wms-flt="status" aria-label="${tr('状态', 'Status')}"><option value="">${tr('全部状态', 'All statuses')}</option>${statuses.map(x => `<option value="${esc(x.key)}" ${ui.status === x.key ? 'selected' : ''}>${esc(word(x))}</option>`).join('')}</select></label>` : ''}
-      ${brands.length ? `<label class="wms-select"><select data-wms-flt="brand" aria-label="${tr('品牌', 'Brand')}"><option value="">${tr('全部品牌', 'All brands')}</option>${brands.map(x => `<option value="${esc(x)}" ${ui.brand === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>` : ''}
+      <label class="wms-select"><select data-wms-series aria-label="${tr('产品线 / 系列', 'Series')}"><option value="">${tr('全部系列', 'All series')}</option>${series.map(x => `<option value="${esc(x)}" ${ui.series === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>
+      <label class="wms-select"><select data-wms-flt="status" aria-label="${tr('状态', 'Status')}"><option value="">${tr('全部状态', 'All statuses')}</option>${statuses.map(x => `<option value="${esc(x.key)}" ${ui.status === x.key ? 'selected' : ''}>${esc(word(x))}（${data.items.filter(it => it.status === x.key).length}）</option>`).join('')}</select></label>
+      <label class="wms-select"><select data-wms-flt="brand" aria-label="${tr('品牌', 'Brand')}"><option value="">${tr('全部品牌', 'All brands')}</option>${brands.map(x => `<option value="${esc(x)}" ${ui.brand === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>
       <label class="wms-select wms-price" title="${tr('按 MSRP 筛选', 'Filter by MSRP')}">$<input data-wms-pmin inputmode="decimal" value="${esc(ui.pmin)}" placeholder="${tr('最低', 'min')}" aria-label="${tr('最低 MSRP', 'Min MSRP')}">–<input data-wms-pmax inputmode="decimal" value="${esc(ui.pmax)}" placeholder="${tr('最高', 'max')}" aria-label="${tr('最高 MSRP', 'Max MSRP')}"></label>
       <div class="wms-seg">${STOCK.map(([k, zh, en]) => `<button class="${ui.stock === k ? 'on' : ''}" data-wms="stock" data-v="${k}">${tr(zh, en)}${k ? ` <b>${count(k)}</b>` : ''}</button>`).join('')}</div>
       ${active ? `<button class="wms-link" data-wms="clear">${icon('x-circle')} ${tr('清除筛选', 'Clear filters')}</button>` : ''}</div>`;
@@ -163,17 +163,20 @@
     return `<div class="wms-filters"><div class="wms-seg">${types.map(([k, label]) => `<button class="${ui.type === k ? 'on' : ''}" data-wms="type" data-v="${k}">${esc(label)}</button>`).join('')}</div>
       ${ui.sku ? `<span class="wms-hint">${tr('只看', 'Only')} <b class="mono">${esc(ui.sku)}</b>${history.loading ? ` · ${tr('正在读取完整流水…', 'loading full history…')}` : history.list ? ` · ${tr(`完整流水 ${history.list.length} 条`, `full history, ${history.list.length}`)}` : ''} <button class="wms-link" data-wms="history" data-sku="">${tr('看全部', 'Show all')}</button></span>` : `<span class="wms-hint">${tr('显示最近 500 条；点库存表里的“流水”可看单个 SKU 的完整记录', 'Latest 500 shown; use “Log” on a stock row for one SKU’s full history')}</span>`}</div>
       <div class="wms-table-wrap"><table class="wms-table"><thead><tr><th>${tr('操作日期', 'Date')}</th><th>${tr('类型', 'Type')}</th><th>${tr('操作方式', 'How')}</th><th>SKU</th><th>${tr('仓库', 'Warehouse')}</th><th class="num">${tr('数量', 'Qty')}</th><th>${tr('原因', 'Reason')}</th><th>${tr('单号', 'Reference')}</th><th>${tr('操作人', 'By')}</th><th>${tr('状态', 'Status')}</th></tr></thead><tbody>
-      ${list.map(m => { const [zh, en, , cls] = TYPES[m.type] || [m.type, m.type, '', '']; const st = STATES[m.status] || STATES.done; return `<tr><td class="nowrap">${esc(m.opDate || '')}<small title="${tr('录入时间', 'Recorded at')}">${tr('录入', 'rec.')} ${when(m.createdAt)}</small></td><td><span class="wms-type ${cls}">${tr(zh, en)}</span></td><td class="nowrap">${esc(methodLabel(m))}${m.method === 'batch' || m.method === 'import' || m.method === 'dealer' && m.batchSkus > 1 ? `<small>${tr(`本批 ${m.batchSkus} 个 SKU · 共 ${fmtN(m.batchUnits)} 件`, `${m.batchSkus} SKUs · ${fmtN(m.batchUnits)} units in this batch`)}</small>` : ''}</td><td class="mono">${esc(m.sku)}</td><td>${esc(word(loc(m.location)))}${m.toLocation ? ` → ${esc(word(loc(m.toLocation)))}` : ''}</td><td class="num ${m.qty < 0 ? 'neg' : 'pos'}">${m.type === 'transfer' ? '' : m.qty > 0 ? '+' : ''}${fmtN(m.qty)}</td><td>${esc(m.reason)}</td><td class="mono">${esc(m.reference || '—')}</td><td>${esc(m.byName)}${m.approvedByName ? `<small>${tr('确认', 'confirmed')}：${esc(m.approvedByName)}</small>` : ''}</td><td><span class="wms-state ${st[2]}">${tr(st[0], st[1])}</span></td></tr>`; }).join('') || `<tr><td colspan="10" class="wms-empty">${tr('还没有流水', 'No movements yet')}</td></tr>`}
+      ${list.map(m => { const [zh, en, , cls] = TYPES[m.type] || [m.type, m.type, '', '']; const st = STATES[m.status] || STATES.done; return `<tr><td class="nowrap">${esc(m.opDate || '')}<small title="${tr('录入时间', 'Recorded at')}">${tr('录入', 'rec.')} ${when(m.createdAt)}</small></td><td><span class="wms-type ${cls}">${tr(zh, en)}</span></td><td class="nowrap">${esc(methodLabel(m))}${m.method === 'batch' || m.method === 'import' || m.method === 'dealer' && m.batchSkus > 1 ? `<small>${tr(`本批 ${m.batchSkus} 个 SKU · 共 ${fmtN(m.batchUnits)} 件`, `${m.batchSkus} SKUs · ${fmtN(m.batchUnits)} units in this batch`)}</small>` : ''}</td><td class="mono">${esc(m.sku)}</td><td>${esc(word(loc(m.location)))}${m.toLocation ? ` → ${esc(word(loc(m.toLocation)))}` : ''}</td><td class="num ${m.qty < 0 ? 'neg' : 'pos'}">${m.type === 'transfer' ? '' : m.qty > 0 ? '+' : ''}${fmtN(m.qty)}</td><td>${esc(m.reason)}</td><td class="mono">${esc(m.reference || '—')}</td><td>${esc(m.byName)}${m.approvedByName ? `<small>${tr('确认', 'confirmed')}：${esc(m.approvedByName)}</small>` : ''}</td><td><span class="wms-state ${st[2]}">${tr(st[0], st[1])}</span>${m.status === 'pending' && m.confirmers?.length ? `<small class="wms-who">${tr('可确认：', 'Can confirm: ')}${esc(m.confirmers.join(tr('、', ', ')))}</small>` : ''}</td></tr>`; }).join('') || `<tr><td colspan="10" class="wms-empty">${tr('还没有流水', 'No movements yet')}</td></tr>`}
     </tbody></table></div>`;
   }
 
   /* Goods in / out / transfer / count: one date, warehouse, reason and order number, any number of SKUs (one order often has
      several products). A finder with filters adds SKUs; each line has its own quantity (or counted quantity for a count). */
-  const op = { type:'in', lines:[], q:'', fam:'', inStock:false };
-  const REASONS = () => ({ in:[tr('采购到货', 'Purchase received'), tr('退货入库', 'Customer return'), tr('维修完成回库', 'Back from repair')], out:[tr('销售发货', 'Sales shipment'), tr('样机 / 展会', 'Demo / trade show'), tr('售后换货', 'Warranty replacement')], transfer:[tr('工厂发美国（海运）', 'Factory to US (sea)'), tr('工厂发美国（空运）', 'Factory to US (air)'), tr('到港入仓', 'Arrived at warehouse')], adjust:[tr('月底盘点', 'Month-end count'), tr('抽盘', 'Spot count'), tr('破损报废', 'Damaged / scrapped')] });
+  const op = { type:'in', lines:[], q:'', fam:'', series:'', status:'', brand:'', inStock:false };
+  const REASONS = () => ({ in:[tr('采购到货', 'Purchase received'), tr('退货入库（未拆封，按新品上架）', 'Customer return (unopened, as new)'), tr('调拨到货', 'Transfer received'), tr('维修完成回库', 'Back from repair'), tr('盘盈', 'Count surplus'), tr('其他', 'Other')],
+    out:[tr('销售发货', 'Sales shipment'), tr('经销商发货', 'Dealer shipment'), tr('样机 / 展会', 'Demo / trade show'), tr('赠送 / 样品', 'Gift / sample'), tr('售后换货', 'Warranty replacement'), tr('破损报废', 'Damaged / scrapped'), tr('其他', 'Other')], transfer:[tr('工厂发美国（海运）', 'Factory to US (sea)'), tr('工厂发美国（空运）', 'Factory to US (air)'), tr('到港入仓', 'Arrived at warehouse')], adjust:[tr('月底盘点', 'Month-end count'), tr('抽盘', 'Spot count'), tr('破损报废', 'Damaged / scrapped')] });
   function opForm(type) {
     const locOpts = (sel, name) => `<select name="${name}" required>${data.locations.map(l => `<option value="${esc(l.id)}" ${l.id === sel ? 'selected' : ''}>${esc(word(l))}</option>`).join('')}</select>`;
-    const fams = (data.families || []).filter(f => data.items.some(it => it.family === f.key));
+    // Every goods-in / out / transfer / count can narrow the SKUs by family, series, status and brand (owner, 2026-11-12).
+    const fams = data.families || [], uniq = k => [...new Set(data.items.map(it => it[k]).filter(Boolean))].sort();
+    const sel = (attr, label, all, opts) => `<label class="wms-select"><select data-wms-${attr} aria-label="${label}"><option value="">${all}</option>${opts.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('')}</select></label>`;
     return `<form id="wms-op" data-type="${type}" class="wms-form">
       <div class="wms-op-head">
         <label class="field"><span>${tr('操作日期', 'Date')}</span><input name="opDate" type="date" required min="2000-01-01" max="${today()}" value="${today()}"></label>
@@ -182,13 +185,18 @@
       </div>
       <div class="wms-finder">
         <div class="wms-finder-bar"><label class="wms-search">${icon('magnifying-glass')}<input data-wms-fq placeholder="${tr('找 SKU：输入 SKU、中英文名或库位', 'Find a SKU: SKU, name or bin')}" autocomplete="off"></label>
-          <label class="wms-select"><select data-wms-ffam aria-label="${tr('产品族', 'Family')}"><option value="">${tr('全部产品族', 'All families')}</option>${fams.map(f => `<option value="${esc(f.key)}">${esc(word(f))}</option>`).join('')}</select></label>
+          ${sel('ffam', tr('产品族', 'Family'), tr('全部产品族', 'All families'), fams.map(f => [f.key, word(f)]))}
+          ${sel('fseries', tr('系列', 'Series'), tr('全部系列', 'All series'), uniq('series').map(x => [x, x]))}
+          ${sel('fstatus', tr('状态', 'Status'), tr('全部状态', 'All statuses'), (data.statuses || []).map(x => [x.key, word(x)]))}
+          ${sel('fbrand', tr('品牌', 'Brand'), tr('全部品牌', 'All brands'), uniq('brand').map(x => [x, x]))}
           <label class="wms-check"><input type="checkbox" data-wms-fstock ${type === 'in' ? '' : 'checked'}> ${tr('只看这个仓库有货的', 'In stock here only')}</label></div>
+        <p class="wms-finder-tip">${icon('hand-pointing')} ${tr('双击一行或点“选择添加该 SKU”把它加进本单；可以选多个 SKU，在下方给每个 SKU 填数量。', 'Double-click a row or use “Add this SKU” to put it on this order; add as many as you need and fill in each quantity below.')}</p>
         <div class="wms-finder-list" data-wms-finder></div>
       </div>
       <div data-wms-lines></div>
       <div class="form-grid">
-        <label class="field"><span>${tr('原因', 'Reason')}</span><input name="reason" required minlength="2" maxlength="200" list="wms-reasons" value="${esc(REASONS()[type][0])}"><datalist id="wms-reasons">${REASONS()[type].map(r => `<option value="${esc(r)}">`).join('')}</datalist></label>
+        <label class="field"><span>${tr('原因', 'Reason')}</span><input name="reason" required minlength="2" maxlength="200" list="wms-reasons" value="${esc(REASONS()[type][0])}"><datalist id="wms-reasons">${REASONS()[type].map(r => `<option value="${esc(r)}">`).join('')}</datalist>
+          <span class="wms-reasons">${REASONS()[type].map((r, i) => `<button type="button" class="${i ? '' : 'on'}" data-wms-reason="${esc(r)}">${esc(r)}</button>`).join('')}</span></label>
         <label class="field"><span>${type === 'out' ? tr('订单号 / 单号（必填）', 'Order / reference no. (required)') : tr('单号（采购单、运单等，选填）', 'Reference (PO, waybill…, optional)')}</span><input name="reference" maxlength="80" ${type === 'out' ? 'required' : ''}></label>
       </div>
       ${type === 'adjust' ? `<p class="wms-note">${icon('seal-question')} ${tr('填每个 SKU 的实盘数量；和系统一样的会自动跳过。提交后需要你的直属主管确认，确认后才会改动库存。', 'Enter the counted quantity of each SKU; lines that match the system are skipped. Your manager confirms before stock changes.')}</p>` : ''}
@@ -196,7 +204,7 @@
     </form>`;
   }
   function openOp(type, sku) {
-    Object.assign(op, { type, lines:[], q:'', fam:'', inStock:type !== 'in' });
+    Object.assign(op, { type, lines:[], q:'', fam:'', series:'', status:'', brand:'', inStock:type !== 'in' });
     const it = sku && data.items.find(x => x.sku === sku); if (it) op.lines.push({ sku:it.sku, qty:'' });
     ctx.modal(tr(...TYPES[type].slice(0, 2)), opForm(type), `<button class="btn" data-live-action="close">${tr('取消', 'Cancel')}</button><button class="btn primary" type="submit" form="wms-op">${type === 'adjust' ? tr('提交确认', 'Submit for confirmation') : tr('保存', 'Save')}</button>`);
     document.querySelector('#overlay-root .modal')?.classList.add('modal-wide');
@@ -207,10 +215,11 @@
   function paintFinder() {
     const box = document.querySelector('[data-wms-finder]'); if (!box) return;
     const q = op.q.trim().toLowerCase(), l = opLoc(), taken = new Set(op.lines.map(x => x.sku));
-    const list = data.items.filter(it => (!op.fam || it.family === op.fam) && (!op.inStock || n(it, l) > 0)
+    const list = data.items.filter(it => (!op.fam || it.family === op.fam) && (!op.series || it.series === op.series) && (!op.status || it.status === op.status)
+      && (!op.brand || it.brand === op.brand) && (!op.inStock || n(it, l) > 0)
       && (!q || [it.sku, it.nameZh, it.nameEn, it.name, it.series, ...binsOf(it, l)].some(x => String(x || '').toLowerCase().includes(q))));
-    box.innerHTML = list.slice(0, 40).map(it => `<div class="wms-find-row ${taken.has(it.sku) ? 'taken' : ''}">${thumb(it)}<span class="mono">${esc(it.sku)}</span><span class="nm">${esc(pname(it))}</span><span class="wms-tag">${esc(famName(it.family) || '—')}</span><span class="bin">${esc(binsOf(it, l)[0] || '')}</span><span class="num">${tr('现有', 'on hand')} ${fmtN(n(it, l))}</span>
-      <button type="button" class="wms-link" data-wms-add="${esc(it.sku)}" ${taken.has(it.sku) ? 'disabled' : ''}>${taken.has(it.sku) ? tr('已添加', 'Added') : '＋ ' + tr('添加', 'Add')}</button></div>`).join('')
+    box.innerHTML = list.slice(0, 40).map(it => `<div class="wms-find-row ${taken.has(it.sku) ? 'taken' : ''}" data-wms-pick="${esc(it.sku)}" title="${tr('双击选择', 'Double-click to select')}">${thumb(it)}<span class="mono">${esc(it.sku)}</span><span class="nm">${esc(pname(it))}</span><span class="wms-tag">${esc(famName(it.family) || '—')}</span><span class="bin">${esc(binsOf(it, l)[0] || '')}</span><span class="num">${tr('现有', 'on hand')} ${fmtN(n(it, l))}</span>
+      <button type="button" class="wms-add-btn" data-wms-add="${esc(it.sku)}" ${taken.has(it.sku) ? 'disabled' : ''}>${taken.has(it.sku) ? icon('check') + ' ' + tr('已选择', 'Selected') : icon('check-square') + ' ' + tr('选择添加该 SKU', 'Add this SKU')}</button></div>`).join('')
       + (list.length > 40 ? `<p class="wms-hint">${tr(`还有 ${list.length - 40} 个，请输入更多关键词或用产品族筛选`, `${list.length - 40} more; narrow the search`)}</p>` : '')
       || `<p class="wms-hint">${tr('没有符合的 SKU', 'No matching SKU')}${op.inStock ? tr('（已勾选“只看这个仓库有货的”）', ' (in-stock only is on)') : ''}</p>`;
   }
@@ -225,17 +234,117 @@
           ${adj ? `<td class="num ${v == null ? '' : v - have < 0 ? 'neg' : v - have > 0 ? 'pos' : ''}" data-wms-diff="${i}">${v == null ? '' : (v - have > 0 ? '+' : '') + fmtN(v - have)}</td>` : ''}
           <td><button type="button" class="wms-link" data-wms-rm="${i}" aria-label="${tr('移除', 'Remove')}">${icon('x')}</button></td></tr>`; }).join('')}</tbody></table></div>
       <p class="wms-hint" data-wms-total>${tr(`共 ${op.lines.length} 个 SKU`, `${op.lines.length} SKUs`)}${adj ? '' : tr(`，${fmtN(op.lines.reduce((s2, x) => s2 + (Number(x.qty) || 0), 0))} 件`, `, ${fmtN(op.lines.reduce((s2, x) => s2 + (Number(x.qty) || 0), 0))} units`)}</p>`
-      : `<p class="wms-hint wms-lines-empty">${icon('arrow-up')} ${tr('从上面的列表添加 SKU，一单可以加多个 SKU，每个填自己的数量。', 'Add SKUs from the list above; one order can hold several SKUs, each with its own quantity.')}</p>`;
+      : `<p class="wms-hint wms-lines-empty">${icon('arrow-up')} ${tr('从上面的列表选择 SKU，一单可以选多个 SKU，每个填自己的数量。', 'Add SKUs from the list above; one order can hold several SKUs, each with its own quantity.')}</p>`;
   }
   /* Bins of one SKU in one warehouse: set the bin codes (preferred + two alternates) and move stock between bins. */
+  /* 库位管理 (owner, 2026-11-12): add, rename and delete shelf bins per warehouse, like the goods-out dialog. */
+  const bm = { loc:'us', q:'', list:null, edit:null, err:'' };
+  async function binMgrLoad() { try { bm.list = (await ctx.api.get('/wms/bin-codes')).codes; bm.err = ''; } catch (x) { bm.err = x.message || tr('读取失败', 'Could not load'); } paintBinMgr(); }
+  function binMgrDialog() {
+    bm.q = ''; bm.edit = null; bm.loc = ui.loc || 'us';
+    ctx.modal(tr('库位管理', 'Bins'), `<div class="wms-form" id="wms-binmgr">
+      <div class="wms-op-head"><label class="field"><span>${tr('仓库', 'Warehouse')}</span><select data-bm-loc>${data.locations.filter(l => l.id !== 'transit').map(l => `<option value="${esc(l.id)}" ${l.id === bm.loc ? 'selected' : ''}>${esc(word(l))}</option>`).join('')}</select></label></div>
+      <form id="wms-bm-add" class="wms-bm-add"><label class="field"><span>${tr('新增库位（可一次填多个，用逗号或换行分开）', 'New bins (several at once: comma or new line)')}</span><textarea name="codes" rows="2" placeholder="A-01-01, A-01-02"></textarea></label>
+        <label class="field"><span>${tr('备注（选填）', 'Note (optional)')}</span><input name="note" maxlength="120" placeholder="${tr('如：一楼 A 排货架', 'e.g. ground floor, row A')}"></label>
+        <button class="btn primary" type="submit">${icon('plus')} ${tr('新增库位', 'Add bins')}</button></form>
+      <div class="wms-finder"><div class="wms-finder-bar"><label class="wms-search">${icon('magnifying-glass')}<input data-bm-q placeholder="${tr('找库位：编码、备注或 SKU', 'Find a bin: code, note or SKU')}" autocomplete="off"></label></div>
+        <p class="wms-finder-tip">${icon('info')} ${tr('改库位编码时，放在这个库位的 SKU 会一起改过去；库位里还有货就不能删除，请先在 SKU 的“库位”里移库。', 'Renaming a bin renames it for every SKU in it; a bin that still holds stock cannot be deleted — move the stock first from the SKU’s Bins.')}</p>
+        <div data-bm-list><p class="wms-hint">${tr('正在读取…', 'Loading…')}</p></div></div>
+      <p class="wms-error" role="alert" data-bm-err></p></div>`, `<button class="btn" data-live-action="close">${tr('关闭', 'Close')}</button>`);
+    binMgrLoad();
+  }
+  function paintBinMgr() {
+    const box = document.querySelector('[data-bm-list]'); if (!box) return;
+    const e = document.querySelector('[data-bm-err]'); if (e) e.textContent = bm.err;
+    if (!bm.list) return;
+    const q = bm.q.trim().toLowerCase(), rows = bm.list.filter(c => c.location === bm.loc && (!q || [c.code, c.note, ...c.skus.map(x => x.sku)].some(v => String(v || '').toLowerCase().includes(q))));
+    box.innerHTML = rows.length ? `<table class="wms-table wms-bm-table"><thead><tr><th>${tr('库位', 'Bin')}</th><th>${tr('备注', 'Note')}</th><th>${tr('放了哪些 SKU', 'SKUs in it')}</th><th class="num">${tr('件数', 'Units')}</th><th></th></tr></thead><tbody>${rows.map(c => bm.edit === c.code
+      ? `<tr class="editing"><td><input data-bm-code value="${esc(c.code)}" maxlength="40"></td><td><input data-bm-note value="${esc(c.note)}" maxlength="120"></td><td>${c.skus.map(x => `<span class="mono">${esc(x.sku)}</span> × ${fmtN(x.qty)}`).join('<br>') || '—'}</td><td class="num">${fmtN(c.qty)}</td>
+          <td class="act"><button type="button" class="wms-add-btn" data-wms="bm-save" data-code="${esc(c.code)}">${tr('保存', 'Save')}</button><button type="button" class="wms-link" data-wms="bm-cancel">${tr('取消', 'Cancel')}</button></td></tr>`
+      : `<tr><td class="mono"><b>${esc(c.code)}</b></td><td>${esc(c.note || '')}</td><td>${c.skus.map(x => `<span class="mono">${esc(x.sku)}</span> × ${fmtN(x.qty)}`).join('<br>') || `<span class="wms-hint">${tr('空库位', 'Empty')}</span>`}</td><td class="num">${fmtN(c.qty)}</td>
+          <td class="act"><button type="button" class="wms-link" data-wms="bm-edit" data-code="${esc(c.code)}">${tr('修改', 'Edit')}</button><button type="button" class="wms-link danger" data-wms="bm-del" data-code="${esc(c.code)}" ${c.qty > 0 ? `disabled title="${tr('库位里还有货，先移库', 'Holds stock; move it first')}"` : ''}>${tr('删除', 'Delete')}</button></td></tr>`).join('')}</tbody></table>`
+      : `<p class="wms-hint">${q ? tr('没有符合的库位', 'No matching bin') : tr('这个仓库还没有库位，在上面新增。', 'No bins in this warehouse yet; add some above.')}</p>`;
+  }
+  async function binMgrRename(code) {
+    const to = document.querySelector('[data-bm-code]')?.value.trim(), note = document.querySelector('[data-bm-note]')?.value.trim() ?? '';
+    try { await ctx.api.post('/wms/bin-codes/rename', { location:bm.loc, code, to, note }); bm.edit = null; ctx.toast?.(tr('库位已保存', 'Bin saved')); data = await ctx.api.get('/wms/summary'); ctx.rerender(); binMgrLoad(); }
+    catch (x) { bm.err = x.message || tr('保存失败', 'Could not save'); paintBinMgr(); }
+  }
+  async function binMgrDelete(code) {
+    if (!window.confirm(tr(`删除库位 ${code}？`, `Delete bin ${code}?`))) return;
+    try { await ctx.api.post('/wms/bin-codes/delete', { location:bm.loc, code }); ctx.toast?.(tr('库位已删除', 'Bin deleted')); data = await ctx.api.get('/wms/summary'); ctx.rerender(); binMgrLoad(); }
+    catch (x) { bm.err = x.message || tr('删除失败', 'Could not delete'); paintBinMgr(); }
+  }
+  document.addEventListener('input', e => { if (e.target.matches?.('[data-bm-q]')) { bm.q = e.target.value; paintBinMgr(); } });
+  document.addEventListener('change', e => { if (e.target.matches?.('[data-bm-loc]')) { bm.loc = e.target.value; bm.edit = null; paintBinMgr(); } });
+  document.addEventListener('submit', async e => {
+    if (e.target.id !== 'wms-bm-add' || !ctx) return; e.preventDefault();
+    const f = e.target, codes = String(fld(f, 'codes').value || '').split(/[,，\n]+/).map(x => x.trim()).filter(Boolean);
+    if (!codes.length) { bm.err = tr('请填库位编码', 'Enter at least one bin code'); return paintBinMgr(); }
+    try { const r = await ctx.api.post('/wms/bin-codes', { location:bm.loc, codes, note:fld(f, 'note').value.trim() });
+      ctx.toast?.(tr(`新增 ${r.added.length} 个库位${r.existing.length ? `（${r.existing.join('、')} 已存在）` : ''}`, `${r.added.length} bins added${r.existing.length ? ` (${r.existing.join(', ')} already there)` : ''}`));
+      fld(f, 'codes').value = ''; binMgrLoad(); }
+    catch (x) { bm.err = x.message || tr('保存失败', 'Could not save'); paintBinMgr(); }
+  });
+  /* 到港入仓 (owner, 2026-11-12): shipments supply chain marked at port. Each line is ticked after checking the quantity
+     actually received and the bin; the goods then move from In transit into the US LA warehouse. */
+  let arrivals = null, arrCur = null;
+  const loadArrivals = async () => { try { arrivals = await ctx.api.get('/wms/arrivals'); } catch { arrivals = { arrivals:[], canReceive:false }; } };
+  async function arrivalDialog() {
+    await loadArrivals();
+    const list = arrivals.arrivals || [];
+    if (!arrCur || !list.some(x => x.id === arrCur)) arrCur = list[0]?.id || null;
+    const a = list.find(x => x.id === arrCur);
+    const slotOpts = l => [`<option value="">${tr('未分库位', 'Unassigned')}</option>`, ...l.bins.map((c, i) => c ? `<option value="${i + 1}" ${i === 0 ? 'selected' : ''}>${esc(c)}${i ? tr(`（备选 ${i}）`, ` (alt ${i})`) : tr('（首选）', ' (preferred)')}</option>` : '')].join('');
+    ctx.modal(tr('到港入仓', 'Arrivals'), `<form id="wms-arrival" class="wms-form">
+      ${list.length ? `<div class="wms-op-head"><label class="field"><span>${tr('到港货柜', 'Shipment')}</span><select data-arr-pick>${list.map(x => `<option value="${esc(x.id)}" ${x.id === arrCur ? 'selected' : ''}>${esc(x.number)} · ${tr(`${x.lines.length} 个 SKU`, `${x.lines.length} SKUs`)}</option>`).join('')}</select></label>
+        <label class="field"><span>${tr('入库日期', 'Date')}</span><input name="opDate" type="date" required min="2000-01-01" max="${today()}" value="${today()}"></label></div>
+        <p class="wms-finder-tip">${icon('info')} ${esc([a.carrier, a.eta && tr(`预计到港 ${a.eta}`, `ETA ${a.eta}`), a.notifiedOn && tr(`${a.notifiedBy || '供应链'} ${a.notifiedOn} 通知到港`, `notified by ${a.notifiedBy || 'supply chain'} on ${a.notifiedOn}`)].filter(Boolean).join(' · '))}
+          · ${tr('逐行点数，填实收数量、选库位，再勾选确认；全部勾选后才能入库。少收的数量留在“在途”。', 'Count each line, fill in what arrived and the bin, then tick it; all lines must be ticked. Anything short stays in transit.')}</p>
+        <div class="wms-finder"><table class="wms-table wms-arr-table"><thead><tr><th><button type="button" class="wms-link" data-wms="arr-all">${tr('全选', 'All')}</button></th><th>SKU</th><th>${tr('产品', 'Product')}</th><th class="num">${tr('发货数量', 'Shipped')}</th><th class="num">${tr('实收数量', 'Received')}</th><th>${tr('库位', 'Bin')}</th></tr></thead><tbody>
+          ${a.lines.map((l, i) => `<tr data-arr-row="${i}"><td><input type="checkbox" data-arr-ok aria-label="${tr('确认', 'Confirm')} ${esc(l.sku)}"></td><td class="mono">${esc(l.sku)}</td><td>${esc((lang() === 'en' ? l.nameEn || l.nameZh : l.nameZh || l.nameEn) || '')}</td>
+            <td class="num">${fmtN(l.qty)}</td><td class="num"><input class="wms-qty" data-arr-qty="${esc(l.sku)}" type="number" min="0" max="${l.qty}" value="${l.qty}" inputmode="numeric"></td><td><select data-arr-slot>${slotOpts(l)}</select></td></tr>`).join('')}
+        </tbody></table></div>
+        <p class="wms-hint" data-arr-state></p>`
+      : `<p class="wms-note">${icon('info')} ${tr('现在没有到港通知。供应链在 SCM 的在途货柜点“到港通知”后，货柜会出现在这里。', 'No arrival notices now. When supply chain sends one from SCM, the shipment shows up here.')}</p>`}
+      <p class="wms-hint"><button type="button" class="wms-link" data-wms="batch">${icon('clipboard-text')} ${tr('没有到港通知的货：手动入库（粘贴 Excel）', 'Goods without a notice: manual goods in (paste from Excel)')}</button></p>
+      <p class="wms-error" role="alert"></p></form>`,
+      `<button class="btn" data-live-action="close">${tr('取消', 'Cancel')}</button>${a && arrivals.canReceive ? `<button class="btn primary" type="submit" form="wms-arrival" data-arr-go disabled>${tr('确认入库', 'Receive')}</button>` : ''}`);
+    paintArrivalState();
+  }
+  function paintArrivalState() {
+    const box = document.getElementById('wms-arrival'); if (!box) return;
+    const rows = [...box.querySelectorAll('[data-arr-row]')], ok = rows.filter(r => r.querySelector('[data-arr-ok]').checked).length;
+    const short = rows.reduce((t, r) => { const q = r.querySelector('[data-arr-qty]'); return t + Math.max(0, Number(q.max) - Number(q.value || 0)); }, 0);
+    rows.forEach(r => r.classList.toggle('ok', r.querySelector('[data-arr-ok]').checked));
+    const st = box.querySelector('[data-arr-state]'); if (st) st.textContent = tr(`已确认 ${ok} / ${rows.length} 行${short ? ` · 少收 ${fmtN(short)} 件（留在在途）` : ''}`, `${ok} / ${rows.length} lines confirmed${short ? ` · ${fmtN(short)} short (stay in transit)` : ''}`);
+    const go = document.querySelector('[data-arr-go]'); if (go) go.disabled = !rows.length || ok < rows.length;
+  }
+  document.addEventListener('change', e => {
+    if (e.target.matches?.('[data-arr-pick]')) { arrCur = e.target.value; return arrivalDialog(); }
+    if (e.target.closest?.('#wms-arrival')) paintArrivalState();
+  });
+  document.addEventListener('input', e => { if (e.target.matches?.('[data-arr-qty]')) paintArrivalState(); });
+  document.addEventListener('submit', async e => {
+    if (e.target.id !== 'wms-arrival' || !ctx) return; e.preventDefault();
+    const f = e.target, err = f.querySelector('.wms-error'), go = document.querySelector('[data-arr-go]');
+    const lines = [...f.querySelectorAll('[data-arr-row]')].map(r => { const q = r.querySelector('[data-arr-qty]'), slot = r.querySelector('[data-arr-slot]').value; return { sku:q.dataset.arrQty, received:Number(q.value || 0), ...(slot ? { slot:Number(slot) } : {}) }; });
+    if (go) go.disabled = true;
+    try { const r = await ctx.api.post(`/wms/arrivals/${encodeURIComponent(arrCur)}/receive`, { opDate:fld(f, 'opDate').value, lines });
+      ctx.closeOverlay(); ctx.toast?.(tr(`已入库 ${fmtN(r.units)} 件${r.short.length ? `，少收 ${r.short.map(x => `${x.sku} ${x.short}`).join('、')}（留在在途）` : ''}`, `${fmtN(r.units)} units received${r.short.length ? `; short: ${r.short.map(x => `${x.sku} ${x.short}`).join(', ')} (still in transit)` : ''}`));
+      arrCur = null; data = null; load(); }
+    catch (x) { err.textContent = x.message || tr('入库失败', 'Could not receive'); if (go) go.disabled = false; }
+  });
   let binSku = null;
   function binsDialog(sku) {
+    if (!bm.list) ctx.api.get('/wms/bin-codes').then(r => { bm.list = r.codes; const dl = document.getElementById('wms-bincodes'); if (dl) dl.innerHTML = bm.list.filter(c => c.location === ui.loc).map(c => `<option value="${esc(c.code)}">`).join(''); }).catch(() => {});
     binSku = sku; const it = data.items.find(x => x.sku === sku), l = ui.loc, b = binsOf(it, l), q = binQ(it, l), un = unassigned(it, l);
     const slotOpt = (v, label) => `<option value="${v}">${esc(label)}</option>`;
     const places = [[0, tr(`未分库位（${fmtN(un)} 件）`, `Unassigned (${fmtN(un)})`)], ...b.map((c, i) => c ? [i + 1, `${c}（${fmtN(q[i])} 件）`] : null).filter(Boolean)];
     ctx.modal(tr(`库位 · ${sku}`, `Bins · ${sku}`), `<div class="wms-form">
-      <p class="wms-hint">${esc(word(loc(l)))} · ${tr(`合计 ${fmtN(n(it, l))} 件`, `${fmtN(n(it, l))} in total`)}</p>
-      <form id="wms-bins" class="form-grid">${[0, 1, 2].map(i => `<label class="field"><span>${i ? tr(`备选库位 ${i}`, `Alternate bin ${i}`) : tr('首选库位', 'Preferred bin')}${b[i] ? ` · ${fmtN(q[i])} ${tr('件', '')}` : ''}</span><input name="b${i}" maxlength="40" value="${esc(b[i])}" placeholder="${i ? '' : 'A-01-01'}"></label>`).join('')}
+      <p class="wms-hint">${esc(word(loc(l)))} · ${tr(`合计 ${fmtN(n(it, l))} 件`, `${fmtN(n(it, l))} in total`)} · ${tr('可以从“库位管理”的列表里选', 'pick from the list in Bins')}</p>
+      <datalist id="wms-bincodes">${(bm.list || []).filter(c => c.location === l).map(c => `<option value="${esc(c.code)}">`).join('')}</datalist>
+      <form id="wms-bins" class="form-grid">${[0, 1, 2].map(i => `<label class="field"><span>${i ? tr(`备选库位 ${i}`, `Alternate bin ${i}`) : tr('首选库位', 'Preferred bin')}${b[i] ? ` · ${fmtN(q[i])} ${tr('件', '')}` : ''}</span><input name="b${i}" maxlength="40" list="wms-bincodes" value="${esc(b[i])}" placeholder="${i ? '' : 'A-01-01'}"></label>`).join('')}
         <div class="field full"><small class="wms-hint">${tr('改名时数量跟着库位走；清空一个库位，它的数量回到“未分库位”。', 'Renaming keeps the quantity; clearing a bin returns its quantity to unassigned.')}</small><button class="btn" type="submit">${tr('保存库位', 'Save bins')}</button></div></form>
       ${places.length > 1 ? `<form id="wms-binmove" class="form-grid"><h3 class="full" style="margin:6px 0 0;font-size:14px">${tr('移库', 'Move stock')}</h3>
         <label class="field"><span>${tr('从', 'From')}</span><select name="from">${places.map(([v, lab]) => slotOpt(v, lab)).join('')}</select></label>
@@ -263,7 +372,7 @@
   function batchDialog() {
     batchLines = [];
     const locOpts = (sel, name) => `<select name="${name}">${data.locations.map(l => `<option value="${esc(l.id)}" ${l.id === sel ? 'selected' : ''}>${esc(word(l))}</option>`).join('')}</select>`;
-    ctx.modal(tr('批量入库', 'Batch goods in'), `<form id="wms-batch" class="wms-form">
+    ctx.modal(tr('手动入库（粘贴）', 'Manual goods in (paste)'), `<form id="wms-batch" class="wms-form">
       <div class="wms-seg wms-batch-mode"><label><input type="radio" name="mode" value="in" checked> ${tr('新货入库（加到库位）', 'New goods (add to a location)')}</label><label><input type="radio" name="mode" value="transfer"> ${tr('到港入仓（从在途转入）', 'Arrived (move from in transit)')}</label></div>
       <label class="field"><span>${tr('操作日期', 'Date')}</span><input name="opDate" type="date" required min="2000-01-01" max="${today()}" value="${today()}"></label>
       <div class="form-grid"><label class="field" data-wms-batch-from hidden><span>${tr('从库位', 'From')}</span>${locOpts('transit', 'location')}</label><label class="field"><span>${tr('入到库位', 'Into location')}</span>${locOpts('us', 'toLocation')}</label></div>
@@ -347,9 +456,17 @@
     catch (e) { ctx.toast?.(e.message || tr('操作失败', 'Failed')); return false; }
   }
 
+  // Double-click a row in the SKU finder adds it, like its Add button.
+  const addLine = sku => { if (!op.lines.some(x => x.sku === sku)) op.lines.push({ sku, qty:'' }); paintFinder(); paintLines(); document.querySelector(`[data-wms-line="${op.lines.findIndex(x => x.sku === sku)}"]`)?.focus(); };
+  document.addEventListener('dblclick', e => { const row = e.target.closest?.('[data-wms-pick]'); if (!row || !ctx || e.target.closest('button')) return; e.preventDefault(); addLine(row.dataset.wmsPick); });
   document.addEventListener('click', async e => {
     const add = e.target.closest?.('[data-wms-add]'), rm = e.target.closest?.('[data-wms-rm]');
-    if (add && ctx) { e.preventDefault(); if (!op.lines.some(x => x.sku === add.dataset.wmsAdd)) op.lines.push({ sku:add.dataset.wmsAdd, qty:'' }); paintFinder(); paintLines(); document.querySelector(`[data-wms-line="${op.lines.length - 1}"]`)?.focus(); return; }
+    if (add && ctx) { e.preventDefault(); addLine(add.dataset.wmsAdd); return; }
+    const why = e.target.closest?.('[data-wms-reason]');
+    if (why && ctx) { e.preventDefault(); const f = why.closest('form'), r = f?.querySelector('[name="reason"]'); if (!r) return;
+      // 其他 clears the field for free text; any other chip fills it in.
+      r.value = why.dataset.wmsReason === tr('其他', 'Other') ? '' : why.dataset.wmsReason; r.focus();
+      why.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === why)); return; }
     if (rm && ctx) { e.preventDefault(); op.lines.splice(Number(rm.dataset.wmsRm), 1); paintFinder(); paintLines(); return; }
     const b = e.target.closest?.('[data-wms]'); if (!b || !ctx) return;
     e.preventDefault();
@@ -366,8 +483,15 @@
     if (a === 'history') { ui.sku = b.dataset.sku || null; ui.tab = 'log'; ui.q = ''; return ctx.rerender(); }
     if (a === 'op') return openOp(b.dataset.type, b.dataset.sku);
     if (a === 'bins') return binsDialog(b.dataset.sku);
+    if (a === 'binmgr') return binMgrDialog();
+    if (a === 'bm-edit') { bm.edit = b.dataset.code; return paintBinMgr(); }
+    if (a === 'bm-cancel') { bm.edit = null; return paintBinMgr(); }
+    if (a === 'bm-save') return binMgrRename(b.dataset.code);
+    if (a === 'bm-del') return binMgrDelete(b.dataset.code);
     if (a === 'new-sku') return newSkuDialog();
     if (a === 'batch') return batchDialog();
+    if (a === 'arrivals') return arrivalDialog();
+    if (a === 'arr-all') { const box = document.getElementById('wms-arrival'); const on = ![...box.querySelectorAll('[data-arr-ok]')].every(c => c.checked); box.querySelectorAll('[data-arr-ok]').forEach(c => { c.checked = on; }); return paintArrivalState(); }
     if (a === 'import') return importDialog();
     if (a === 'template') return downloadTemplate();
     if (a === 'approve' || a === 'reject') return act(() => ctx.api.post('/wms/movements/' + encodeURIComponent(b.dataset.id) + '/' + a, {}), a === 'approve' ? tr('已确认，库存已更新', 'Confirmed; stock updated') : tr('已驳回', 'Rejected'));
@@ -375,7 +499,8 @@
   document.addEventListener('change', async e => {
     const t = e.target;
     if (t.matches?.('[data-wms-loc]')) { ui.loc = t.value; ui.limit = PAGE; return ctx.rerender(); }
-    if (t.closest?.('#wms-op') && (t.name === 'location' || t.matches('[data-wms-fstock],[data-wms-ffam]'))) { const of = t.closest('#wms-op'); op.inStock = !!of.querySelector('[data-wms-fstock]')?.checked; op.fam = of.querySelector('[data-wms-ffam]')?.value || ''; paintFinder(); paintLines(); }
+    if (t.closest?.('#wms-op') && (t.name === 'location' || t.matches('[data-wms-fstock],[data-wms-ffam],[data-wms-fseries],[data-wms-fstatus],[data-wms-fbrand]'))) { const of = t.closest('#wms-op'); op.inStock = !!of.querySelector('[data-wms-fstock]')?.checked;
+      for (const k of ['fam', 'series', 'status', 'brand']) op[k] = of.querySelector(`[data-wms-f${k}]`)?.value || ''; paintFinder(); paintLines(); }
     if (t.matches?.('[data-wms-fam]')) { ui.fam = t.value; ui.series = ''; ui.limit = PAGE; return ctx.rerender(); }
     if (t.matches?.('[data-wms-flt]')) { ui[t.dataset.wmsFlt] = t.value; ui.limit = PAGE; return ctx.rerender(); }
     if (t.matches?.('[data-wms-series]')) { ui.series = t.value; ui.limit = PAGE; return ctx.rerender(); }
@@ -470,7 +595,7 @@
     try {
       const r = await ctx.api.post('/wms/movements/batch', body); ctx.closeOverlay();
       const name = tr(TYPES[type][0], TYPES[type][1]);
-      ctx.toast?.(adj ? tr(`已提交 ${r.lines} 个 SKU 的盘点${r.unchanged ? `（${r.unchanged} 个与系统一致，已跳过）` : ''}，等待直属主管确认`, `${r.lines} count lines submitted${r.unchanged ? ` (${r.unchanged} matched, skipped)` : ''}; awaiting your manager`)
+      ctx.toast?.(adj ? tr(`已提交 ${r.lines} 个 SKU 的盘点${r.unchanged ? `（${r.unchanged} 个与系统一致，已跳过）` : ''}。要由另一位有库存管理权限的同事确认后才生效${r.confirmers?.length ? `，可以找：${r.confirmers.join('、')}` : ''}`, `${r.lines} count lines submitted${r.unchanged ? ` (${r.unchanged} matched, skipped)` : ''}. Another warehouse manager must confirm${r.confirmers?.length ? `: ${r.confirmers.join(', ')}` : ''}`)
         : tr(`已${name} ${r.lines} 个 SKU，共 ${fmtN(r.units)} 件`, `${name}: ${r.lines} SKUs, ${fmtN(r.units)} units`));
       op.lines = []; data = null; load();
     } catch (x) { err.textContent = x.message || tr('保存失败', 'Could not save'); if (btn) btn.disabled = false; }

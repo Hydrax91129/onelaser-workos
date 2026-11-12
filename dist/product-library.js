@@ -137,6 +137,11 @@
   /* ---------- pricing ---------- */
   const P = f => fieldOf(f);
   const pin = (k, it) => P(k) ? fieldHTML(P(k), it) : '';
+  /** The company selling-cost rate from 价格参数 (percent), as the placeholder of a SKU's own rate. */
+  const companyRate = kind => { const w = D().settings || {}, ov = w[kind + 'RateOverride'], items = w[kind + 'Items'] || [];
+    return ov != null ? Number(ov) : items.length ? items.reduce((a, x) => a + (Number(x.pct) || 0), 0) : null; };
+  const ratePin = (k, kind, it) => { const f = P(k); if (!f) return ''; const c = companyRate(kind);
+    return fieldHTML({ ...f, ph: c == null ? tr('价格参数里还没有设置', 'Not set in price parameters') : tr(`默认 ${+c.toFixed(2)}%（价格参数）`, `Default ${+c.toFixed(2)}% (price parameters)`) }, it); };
   function retailHTML(g, it) {
     const name = L(g);
     if (it.values.family === 'mat') return `<details class="pl-grp">${grpHead(g.no, name, `<span class="cnt">${tr('内部物料不对外销售', 'Internal material is not sold')}</span>`)}</details>`;
@@ -147,7 +152,7 @@
     const fx = pr.fixed || [], lbl = { msrp:tr('MSRP 贡献利润', 'MSRP contribution'), map:tr('MAP 贡献利润', 'MAP contribution'), promoFloor:tr('促销底价贡献利润', 'Promotion floor contribution') };
     return `<details class="pl-grp" open>${grpHead(g.no, name, `<span class="cnt">${tr('官网 DTC · 销售费率', 'DTC · selling-cost rate')} ${pct(pr.dtcRate)}</span>`)}<div class="pl-pm">${unset}
       <div><h4>${tr('成本', 'Cost')} ${visChip('sens')}<small>${tr('送达成本 = 到岸价 + 尾程运费；成本和利润只有成本权限的同事能看到', 'Delivered = landed + last mile; costs and margins are visible to cost access only')}</small></h4>
-        <div class="pl-fields" style="padding:0">${pin('landed', it)}${pin('lastMile', it)}</div>
+        <div class="pl-fields" style="padding:0">${pin('landed', it)}${pin('lastMile', it)}${ratePin('dtcRate', 'dtc', it)}</div>
         <div class="pl-calc" style="margin-top:10px"><div class="pl-out key"><div class="k">${tr('送达成本 Delivered', 'Delivered cost')}</div><div class="v">${usd(pr.delivered)}</div><div class="f">${tr('到岸价 + 尾程运费', 'Landed + last mile')}</div></div>
           <div class="pl-out"><div class="k">${tr('MSRP 贡献利润', 'MSRP contribution')}</div><div class="v">${usd(fx[0]?.cm)} <span style="font-size:13px">${pct(fx[0]?.cmPct)}</span></div><div class="f">${tr('售价 × (1 − 零售销售费率) − 送达成本', 'Price × (1 − retail rate) − delivered')}</div></div></div></div>
       <div><h4>${tr('零售档位', 'Retail tiers')} <small>${tr('建议零售价 = 送达成本 ÷ (1 − 销售费率 − 目标贡献利润率)，标价取最接近的 x99', 'Suggested = delivered ÷ (1 − selling rate − target CM), list price at the nearest x99')}</small></h4>
@@ -173,6 +178,7 @@
     return `<details class="pl-grp" open>${grpHead(g.no, name, `<span class="cnt">${tr('经销商 · 批发费率', 'Dealers · wholesale rate')} ${pct(pr.whRate)}</span>`)}<div class="pl-pm"><div>
       <h4>${tr('批发档位', 'Wholesale tiers')} <span class="pl-seg" role="group" aria-label="${tr('运费承担方', 'Freight paid by')}"><button data-pl-freight="dealer" aria-pressed="${wf === 'dealer'}" ${canFreight ? '' : 'disabled'}>${tr('经销商付运费', 'Dealer pays freight')}</button><button data-pl-freight="us" aria-pressed="${wf === 'us'}" ${canFreight ? '' : 'disabled'}>${tr('我们付运费', 'We pay freight')}</button></span>
         <small>${tr('批发价 = MSRP × (1 − 折扣)，全员可见；贡献利润只有成本权限的同事能看到', 'Wholesale = MSRP × (1 − discount), visible to everyone; margins to cost access only')}</small></h4>
+      ${P('whRate') ? `<div class="pl-fields" style="padding:0 0 10px">${ratePin('whRate', 'wh', it)}</div>` : ''}
       <div class="pl-tbl"><table><thead><tr><th>${tr('档位', 'Tier')}</th><th>${tr('折扣', 'Discount')}</th><th>${tr('批发价', 'Wholesale')}</th><th>${tr('手动调整', 'Override')}</th><th>${tr('经销商每台利润', 'Dealer margin / unit')}</th><th>${tr('我们的贡献利润', 'Our contribution')}（${wf === 'dealer' ? tr('经销商付运费', 'dealer freight') : tr('我们付运费', 'our freight')}）</th><th>${tr('另一种运费方式', 'Other freight option')}</th></tr></thead>
       <tbody>${rows || `<tr><td colspan="7" class="l">${tr('还没有设置批发档位', 'No wholesale tiers yet')}</td></tr>`}</tbody></table></div>${note}</div></div></details>`;
   }
@@ -194,27 +200,30 @@
     // the same product record, so a new MSRP here is the MSRP in 产品资料 too.
     if (S.mode === 'pricing') {
       const pg = no => spec().groups.find(g => g.no === no);
-      return sum + basicFacts(it) + (pg('4') ? retailHTML(pg('4'), it) : '') + (pg('5') ? wholesaleHTML(pg('5'), it) : '');
+      return sum + basicEdit(it) + (pg('4') ? retailHTML({ ...pg('4'), no:'2', zh:'定价（零售）', en:'Pricing (retail)' }, it) : '')
+        + (pg('5') ? wholesaleHTML({ ...pg('5'), no:'3', zh:'定价（批发）', en:'Pricing (wholesale)' }, it) : '');
     }
-    // 产品资料 page: the pricing groups stay (everyone sees public prices) but start folded; the 定价 page is where they are worked out.
-    const folded = (g, html) => html.replace(/^<details class="pl-grp"( open)?>/, `<details class="pl-grp" data-pl-price="${esc(g.no)}" ${S.priceOpen[g.no] ? 'open' : ''}>`)
-      .replace('</summary>', ` <span class="cnt">${tr('· 在“定价”页计算和调整', '· worked out on the Pricing page')}</span></summary>`);
-    const groups = spec().groups.map(g => {
-      if (g.no === '4') return folded(g, retailHTML(g, it));
-      if (g.no === '5') return folded(g, wholesaleHTML(g, it));
+    // 产品资料 page (owner, 2026-11-12): only three prices — landed cost, last mile and MSRP. Selling-cost rates, tiers, NPCR and
+    // wholesale are worked out on the 定价 page.
+    const groups = [...spec().groups].sort((a, b) => Number(a.disp || a.no) - Number(b.disp || b.no)).map(g0 => {
+      const g = { ...g0, show: g0.disp || g0.no };
+      if (g.no === '5') return '';
+      if (g.no === '4') {
+        const list = ['landed', 'lastMile', 'msrp'].map(k => fieldOf(k)).filter(Boolean);
+        return list.length ? `<details class="pl-grp" open>${grpHead(g.show, L(g), `<span class="cnt">${groupCount(list, it)} ${tr('· 定价计算在“定价”页', '· pricing is worked out on the Pricing page')}</span>`)}<div class="pl-fields">${list.map(f => fieldHTML(f, it)).join('')}</div></details>` : '';
+      }
       const list = fs.filter(f => f.group === g.no && !(g.no === '4' || f.key.startsWith('whOv') || f.key === 'whFreight'));
       const body = `<div class="pl-fields">${list.map(f => fieldHTML(f, it)).join('')}</div>`;
-      if (g.no === '3') return `<details class="pl-grp" open>${grpHead(g.no, L(g), `<span class="cnt">${groupCount(list, it)}</span>`)}${body}<div class="pl-subhead">${tr('文件上传', 'Files')} ${visChip('sens')}</div>${filesBody(it)}</details>`;
+      if (g.no === '3') return `<details class="pl-grp" open>${grpHead(g.show, L(g), `<span class="cnt">${groupCount(list, it)}</span>`)}${body}<div class="pl-subhead">${tr('文件上传', 'Files')} ${visChip('sens')}</div>${filesBody(it)}</details>`;
       if (!list.length) return '';
-      return `<details class="pl-grp" open>${grpHead(g.no, L(g), `<span class="cnt">${groupCount(list, it)}</span>`)}${body}</details>`;
+      return `<details class="pl-grp" open>${grpHead(g.show, L(g), `<span class="cnt">${groupCount(list, it)}</span>`)}${body}</details>`;
     }).join('');
     return sum + groups + historyHTML(it);
   }
-  /** 定价 page: the basic facts of the product, read only (they are edited in 产品资料). */
-  function basicFacts(it) {
-    const keys = ['goodsType', 'family', 'series', 'nameZh', 'nameEn', 'brand', 'status'].filter(k => fieldOf(k));
-    return `<div class="pl-card pl-facts"><dl>${keys.map(k => `<div><dt>${esc(fieldName(k))}</dt><dd>${esc(it.values[k] == null || it.values[k] === '' ? '—' : show(k, it.values[k]))}</dd></div>`).join('')}</dl>
-      <span class="pl-note">${tr('基本信息在“产品资料”里修改', 'Edit basic details in Products')}</span></div>`;
+  /** 定价 page: the product's basic details, editable here too (owner, 2026-11-12); who may change them follows 产品资料 access. */
+  function basicEdit(it) {
+    const list = ['goodsType', 'family', 'series', 'nameZh', 'nameEn', 'brand', 'status'].map(k => fieldOf(k)).filter(Boolean);
+    return `<details class="pl-grp pl-basic" open>${grpHead('1', tr('基本信息', 'Basic details'), `<span class="cnt">${tr('和“产品资料”是同一份，改了两边一起变', 'Same record as Products: a change shows on both pages')}</span>`)}<div class="pl-fields">${list.map(f => fieldHTML(f, it)).join('')}</div></details>`;
   }
   function historyHTML(it) {
     const h = S.history[it.sku], src = { create:tr('新建', 'created'), edit:tr('编辑', 'edit'), import:tr('批量导入', 'import'), undo:tr('撤销导入', 'undo'), price:tr('价格', 'price'), status:tr('状态', 'status') };

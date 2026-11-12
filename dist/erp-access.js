@@ -2,8 +2,8 @@
  * Supply chain permissions ("供应链权限管理", formerly "ERP 权限").
  *
  * One place to decide, per employee, what they can do in the product hub:
- *   Products        none / view / manage (create SKUs, edit specs)
- *   Price build-up  none / MSRP only / full cost build-up incl. editing
+ *   Product data    none / view general / view confidential / manage (everything, incl. bulk updates)
+ *   Pricing         none / view / edit one SKU at a time / manage (incl. bulk updates)
  *   Supply chain    none / view / manage
  *   Warehouse stock none / view / manage (goods in, out, transfers, counts)
  * "Manage" includes "view". Administrators edit every column; managers may set
@@ -19,9 +19,8 @@
   const lang = () => ctx?.lang() === 'en' ? 'en' : 'zh';
   const tr = (zh, en) => lang() === 'en' ? en : zh;
   const ALL_AREAS = [
-    ['products', 'package', '产品', 'Products', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 新建 SKU、修改产品资料与规格', 'Manage = create SKUs and edit product specs'],
-    ['import', 'upload-simple', '批量更新（SKU 与价格）', 'Bulk update (SKUs & prices)', [['none', '无', 'None'], ['allow', '允许', 'Allowed']], '允许 = 能批量更新 SKU 资料和零售价（开通时一起开“产品：管理”和“价格构成：查看 MSRP”）；改到岸价等成本要“价格组成 + 修改”', 'Allowed = bulk-update SKU data and retail prices (also opens Products: manage and Pricing: MSRP); cost columns need the full price build-up'],
-    ['pricing', 'currency-dollar', '价格构成', 'Price build-up', [['none', '无', 'None'], ['msrp', '查看 MSRP', 'MSRP only'], ['full', '价格组成 + 修改', 'Full build-up + edit']], '价格组成包含工厂成本、运费、关税和毛利，请谨慎开通', 'The full build-up shows factory cost, freight, duty and margin; grant with care'],
+    ['products', 'package', '产品资料', 'Product data', [['none', '无', 'None'], ['view', '查看普通信息', 'View general'], ['secret', '查看保密信息', 'View confidential'], ['manage', '管理信息', 'Manage']], '普通信息 = 名称、规格、包装等；保密信息 = 供应商、到岸价、尾程运费、报关和文件；管理信息 = 新建 SKU、修改全部资料（含保密信息）和批量更新', 'General = names, specs, packaging; confidential = suppliers, landed cost, last mile, customs and files; manage = create SKUs, edit everything (confidential included) and bulk updates'],
+    ['pricing', 'currency-dollar', '价格', 'Pricing', [['none', '无', 'None'], ['view', '查看', 'View'], ['edit', '单项修改', 'Edit one by one'], ['manage', '管理', 'Manage']], '查看 = 看定价页的成本、费率和利润；单项修改 = 逐个 SKU 改价格、成本和费率；管理 = 再加批量更新。价格参数（NPCR）只有主管理员能改，请谨慎开通', 'View = cost, rates and margins on the Pricing page; edit = change prices, cost and rates one SKU at a time; manage = also bulk updates. Price parameters (NPCR) stay main-admin only; grant with care'],
     ['supply', 'truck', '供应链', 'Supply chain', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 生成采购单草稿、调整补货参数', 'Manage = draft purchase orders and tune reorder settings'],
     ['warehouse', 'warehouse', '仓库库存', 'Warehouse stock', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 入库、出库、调拨、盘点调整；只查看的人不能改数量', 'Manage = goods in, out, transfers and counts; view-only people cannot change quantities'],
     ['returns', 'arrow-u-up-left', '退货维修', 'Returns & repairs', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 登记退货、维修、入库上架和售出；查看 = 只看退货记录', 'Manage = register returns, repair, put away and sell; view = see the returns only'],
@@ -31,7 +30,7 @@
 
   /* Each module has its own permissions page (no separate menu item): 产品资料, 定价, 库存, 退货维修, 供应链, 经销商, KOL.
      A button on the module opens #erp-access/<area>, which shows only that module's columns and a way back. */
-  const PAGES = { products:{ areas:['products', 'import'], zh:'产品资料权限', en:'Product permissions', back:'products', bzh:'产品资料', ben:'Products' },
+  const PAGES = { products:{ areas:['products'], zh:'产品资料权限', en:'Product permissions', back:'products', bzh:'产品资料', ben:'Products' },
     pricing:{ areas:['pricing'], zh:'价格权限', en:'Pricing permissions', back:'products', bzh:'定价', ben:'Pricing' },
     warehouse:{ areas:['warehouse'], zh:'库存权限', en:'Stock permissions', back:'wms', bzh:'库存管理', ben:'Inventory' },
     returns:{ areas:['returns'], zh:'退货权限', en:'Returns permissions', back:'wms', bzh:'退货维修', ben:'Returns' },

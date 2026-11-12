@@ -15,8 +15,8 @@ const FIELDS = [F('sku', 'SKU', '1', 'rrrrr', 'all', 'sku', { writable:false }),
   F('status', '状态', '2', 'rrrro', 'all', 'enum', { opts:[{ key:'dev', zh:'开发中', en:'dev' }, { key:'launch', zh:'上新中', en:'launch' }, { key:'clearance', zh:'清库存', en:'clearance' }] }),
   F('netWeight', '净重', '6', 'roono', 'all', 'number', { unit:'kg' }), F('msrp', '零售价 MSRP', '4', 'roooo', 'all', 'price'), F('map', '最低公开售价 MAP', '4', 'ooooo', 'all', 'price'), F('promoFloor', '官网促销底价', '4', 'ooooo', 'all', 'price'),
   F('whFreight', '批发运费承担方', '5', 'oooon', 'all', 'enum', { opts:[{ key:'dealer', zh:'经销商付运费', en:'d' }, { key:'us', zh:'我们付运费', en:'u' }] }), F('whOv0', '批发价手动调整 · 示例档', '5', 'oooon', 'all', 'price')];
-const SENS = [F('landed', '到岸价', '4', 'roooo', 'sens', 'price'), F('lastMile', '尾程运费 / 台', '4', 'roooo', 'sens', 'price'), F('supplier', '主供应商', '7', 'roooo', 'sens', 'text')];
-const groups = [['1', '产品基本参数'], ['2', '生命周期'], ['3', '产品详细信息与文件'], ['4', '定价（零售）'], ['5', '定价（批发）'], ['6', '包装与物流'], ['7', '采购与供应商'], ['8', '售后与库存控制']].map(([no, zh]) => ({ no, zh, en:zh }));
+const SENS = [F('landed', '到岸价', '4', 'roooo', 'sens', 'price'), F('lastMile', '尾程运费 / 台', '4', 'roooo', 'sens', 'price'), F('dtcRate', '零售销售费率', '4', 'ooooo', 'sens', 'number', { unit:'%' }), F('whRate', '批发销售费率', '5', 'ooooo', 'sens', 'number', { unit:'%' }), F('supplier', '主供应商', '7', 'roooo', 'sens', 'text')];
+const groups = [['1', '产品基本参数', '1'], ['2', '生命周期', '2'], ['3', '产品详情', '6'], ['4', '定价', '3'], ['5', '定价（批发）', '3'], ['6', '包装与物流', '4'], ['7', '采购与供应商', '5'], ['8', '售后与库存控制', '7']].map(([no, zh, disp]) => ({ no, zh, en:zh, disp }));
 const visNames = { all:['全员', 'Everyone'], ops:['产品与供应链', 'Ops'], cost:['仅成本权限', 'Cost'], admin:['仅管理员', 'Admin'], sens:['敏感 · 仅编辑者', 'Sensitive'] };
 function library(sens, admin = false) {
   const fields = sens ? [...FIELDS, ...SENS] : FIELDS;
@@ -27,7 +27,7 @@ function library(sens, admin = false) {
     : { msrp:2000, map:2000, promoFloor:1200, freight:'dealer', wholesale:[{ name:'示例档', discount:20, price:1600, override:false }] };
   return { spec:{ families:fam, statuses:[], groups, visNames, clearMarker:'[清空]', fields, slots:sens ? [{ key:'manual', zh:'说明书', en:'Manual', code:'roooo', hint:'PDF', mode:'any', vis:'sens', writable:true }, { key:'spareParts', zh:'常用备件清单', en:'Spare parts', code:'roooo', hint:'仅 PDF', mode:'pdf', vis:'sens', writable:true }] : [] },
     viewer:{ levels:sens ? ['all', 'ops', 'cost', 'sens', ...(admin ? ['admin'] : [])] : ['all'], editCatalog:sens, editCost:sens, editPrices:sens, admin, canImport:admin, canEditSettings:admin },
-    settings:sens ? { dtcItems:[], whItems:[], mktExtra:null, retailTiers:[], whTiers:[], npcr:[], dtcTarget:'', dtcFloor:10, whTarget:'', whFloor:10, dtcRateOverride:null, whRateOverride:null, configured:false } : { whTiers:[{ name:'示例档', discount:20 }], configured:true },
+    settings:sens ? { dtcItems:[], whItems:[], mktExtra:null, retailTiers:[], whTiers:[], npcr:[], dtcTarget:'', dtcFloor:10, whTarget:'', whFloor:10, dtcRateOverride:13, whRateOverride:null, configured:false } : { whTiers:[{ name:'示例档', discount:20 }], configured:true },
     items:[{ sku:'ODL-DEMO-1', values:{ sku:'ODL-DEMO-1', goodsType:'bulk', family:'main', nameZh:'示例主机', series:null, status:'dev', netWeight:null, msrp:2000, map:null, promoFloor:1200, whFreight:null, whOv0:null, ...(sens ? { landed:1000, lastMile:100, supplier:'示例工厂' } : {}) },
       completeness:{ need:5, got:3, missing:['series', 'netWeight'], done:false }, pricing, mainImage:null, ...(sens ? { files:{ manual:[{ id:'f1', name:'manual.pdf', size:2048, at:'2026-11-04' }] } } : {}) },
       { sku:'ODL-DEMO-2', values:{ sku:'ODL-DEMO-2', family:'acc', nameZh:'示例配件', status:'dev', msrp:99 }, completeness:{ need:3, got:3, missing:[], done:true }, pricing:sens ? { ...pricing, fixed:[{ key:'msrp', price:99, cm:10, cmPct:0.1 }, { key:'map', price:99 }, { key:'promoFloor', price:null }] } : { msrp:99, wholesale:[] } }] };
@@ -66,28 +66,38 @@ function load(data, { confirm = true, prompt = '' } = {}) {
 test('editor: groups, 必填 badges where required (no 选填 noise), visibility chips; everyone sees public prices only', async () => {
   const { document, show } = load(library(false));
   const html = await show();
-  for (const g of ['产品基本参数', '生命周期', '产品详细信息与文件', '定价（零售）', '定价（批发）', '包装与物流']) assert.match(html, new RegExp(g));
+  for (const g of ['产品基本参数', '生命周期', '产品详情', '定价', '包装与物流']) assert.match(html, new RegExp(g));
+  // Owner's order (2026-11-12): 1 基本参数, 2 生命周期, 3 定价, 4 包装物流, 5 供应商, 6 产品详情
+  const heads = [...document.querySelectorAll('.pl-grp > summary')].map(x => x.textContent.replace(/\s+/g, ' ').trim());
+  assert.match(heads.join(' | '), /^1\s*产品基本参数.*\|\s*2\s*生命周期.*\|\s*3\s*定价.*\|\s*4\s*包装与物流.*\|\s*6\s*产品详情/);
   assert.doesNotMatch(html, /受限区域|测试原型|DEMO-HYD|示例 · 60W/, 'no demo banner or sample rows');
   assert.match(html, /全员/); assert.match(html, /必填/); assert.doesNotMatch(html, /选填/, 'only required fields carry a badge');
   assert.match(html, /文件是敏感信息/); assert.doesNotMatch(html, /到岸价|送达成本|贡献利润|NPCR|示例工厂/);
-  assert.match(html, /\$1,600/, 'public wholesale price');
+  assert.doesNotMatch(html, /定价（批发）|批发档位|零售档位/, '产品资料 shows the three prices only');
   assert.equal(document.querySelector('[data-pl-f="series"]').closest('.pl-fld').classList.contains('miss'), true, 'missing required field is highlighted');
   assert.match(html, /仅看必填未完成[\s\S]*1 个待补/);
   assert.equal(document.querySelector('[data-pl="new"]'), null, 'view-only people cannot add products');
 });
 
 test('cost access: worksheet, CM warnings, wholesale tiers with override and freight, file slots; autosave per field', async () => {
-  const { document, calls, show, fire, toasts } = load(library(true), { prompt:'新款上市' });
-  const html = await show();
-  for (const t of ['送达成本', '\\$1,100', '零售档位', '\\$1,699', 'NPCR 价格阶梯', 'Amazon / eBay', '低于官网底线 10%', '经销商每台利润', '我们付运费', '说明书', 'manual.pdf', '常用备件清单']) assert.match(html, new RegExp(t), t);
-  assert.doesNotMatch(html, /价格参数/, 'the pricing settings page is gone');
-  assert.equal(document.querySelector('[data-pl-upload="spareParts"]').getAttribute('accept'), '.pdf', 'PDF-only slot');
-  const w = document.querySelector('[data-pl-f="netWeight"]'); w.value = '38'; fire(w, 'change'); await tick(); await tick();
-  assert.deepEqual(j(calls.find(c => c[0] === 'PATCH')), ['PATCH', '/products/library/ODL-DEMO-1', { values:{ netWeight:'38' } }]);
+  const { W, document, calls, show, fire, toasts } = load(library(true), { prompt:'新款上市' });
+  let html = await show();
+  // 产品资料: three prices only (landed, last mile, MSRP); the worksheet lives on the 定价 page
+  for (const t of ['到岸价', '尾程运费', '零售价 MSRP', '说明书', 'manual.pdf', '常用备件清单']) assert.match(html, new RegExp(t), t);
+  assert.doesNotMatch(html, /零售档位|NPCR 价格阶梯|经销商每台利润/);
+  document.getElementById('app').innerHTML = W.render('pricing'); html = document.getElementById('app').innerHTML;
+  for (const t of ['送达成本', '\\$1,100', '零售档位', '\\$1,699', 'NPCR 价格阶梯', 'Amazon / eBay', '低于官网底线 10%', '经销商每台利润', '我们付运费']) assert.match(html, new RegExp(t), t);
+  assert.equal(document.querySelector('[data-pl="view"][data-v="settings"]'), null, 'no price-parameter button without admin');
+  assert.match(html, /零售销售费率[\s\S]*默认 13%（价格参数）/, 'a SKU’s own retail rate, the company rate as placeholder');
   const ov = document.querySelector('[data-pl-f="whOv0"]'); ov.value = '1500'; fire(ov, 'change'); await tick(); await tick();
   assert.deepEqual(j(calls.filter(c => c[0] === 'PATCH').at(-1)[2]), { values:{ whOv0:'1500' } });
+  document.getElementById('app').innerHTML = W.render('pricing');
   fire(document.querySelector('[data-pl-freight="us"]'), 'click'); await tick(); await tick();
   assert.deepEqual(j(calls.filter(c => c[0] === 'PATCH').at(-1)[2]), { values:{ whFreight:'us' } });
+  document.getElementById('app').innerHTML = W.render();
+  assert.equal(document.querySelector('[data-pl-upload="spareParts"]').getAttribute('accept'), '.pdf', 'PDF-only slot');
+  const w = document.querySelector('[data-pl-f="netWeight"]'); w.value = '38'; fire(w, 'change'); await tick(); await tick();
+  assert.deepEqual(j(calls.filter(c => c[0] === 'PATCH').at(-1)), ['PATCH', '/products/library/ODL-DEMO-1', { values:{ netWeight:'38' } }]);
   const st = document.querySelector('[data-pl-f="status"]'); st.querySelectorAll('option').forEach(o => o.removeAttribute('selected')); st.querySelector('option[value="clearance"]').setAttribute('selected', ''); fire(st, 'change'); await tick(); await tick();
   assert.deepEqual(j(calls.filter(c => c[0] === 'PATCH').at(-1)[2]), { values:{ status:'clearance' }, note:'新款上市' }, 'clearance asks for a reason');
   const s = document.querySelector('[data-pl-f="series"]'); s.value = ''; fire(s, 'change'); await tick();
@@ -136,16 +146,18 @@ test('nothing is written when the admin cancels the confirm dialog; cancelling t
   assert.match(back, /pl-layout/); assert.doesNotMatch(back, /更新前后对比与分析/);
 });
 
-test('定价 is the same library in pricing mode: basic facts, cost and NPCR; MSRP saves to the product; admins get 价格参数', async () => {
+test('定价 is the same library in pricing mode: editable basic details, cost and NPCR; MSRP saves to the product; admins get 价格参数', async () => {
   const { W, document, calls, fire, show } = load(library(true, true));
   await show(); W.render('pricing'); for (let i = 0; i < 6; i++) await tick();
   document.getElementById('app').innerHTML = W.render('pricing'); const html = document.getElementById('app').innerHTML;
-  assert.ok(document.querySelector('.pl-facts'), 'basic facts, read only'); assert.match(html, /基本信息在“产品资料”里修改/);
-  assert.match(html, /NPCR 价格阶梯/); assert.match(html, /到岸价/); assert.doesNotMatch(html, /产品基本参数/, 'no basic-parameter editor on the pricing page');
+  assert.ok(document.querySelector('.pl-basic [data-pl-f="nameZh"]:not([disabled])'), 'basic details are editable on the pricing page');
+  assert.match(html, /NPCR 价格阶梯/); assert.match(html, /到岸价/); assert.match(html, /定价（零售）/); assert.match(html, /定价（批发）/);
+  assert.doesNotMatch(html, /包装与物流/, 'only basic details and pricing on the pricing page');
   const labels = [...document.querySelectorAll('.pl-bar .pl-btn')].map(b => b.textContent.replace(/[＋\s]/g, ''));
   assert.deepEqual(labels, ['新建产品', '批量更新', '下载标准模板', '导入记录', '价格参数（NPCR）', '价格权限'], 'the pricing page has its own 价格权限');
   const m = document.querySelector('[data-pl-f="msrp"]'); m.value = '2199'; fire(m, 'change'); for (let i = 0; i < 4; i++) await tick();
   assert.deepEqual(JSON.parse(JSON.stringify(calls.filter(c => c[0] === 'PATCH').at(-1))).slice(2), [{ values:{ msrp:'2199' } }], 'MSRP is saved on the product record');
-  // 产品资料 keeps the price groups, folded
-  document.getElementById('app').innerHTML = W.render(); assert.ok(document.querySelector('details[data-pl-price="4"]:not([open])'), 'pricing folded on 产品资料');
+  // 产品资料 shows the three prices only
+  document.getElementById('app').innerHTML = W.render(); const cat = document.getElementById('app').innerHTML;
+  assert.doesNotMatch(cat, /NPCR 价格阶梯|零售销售费率/); assert.match(cat, /零售价 MSRP/);
 });

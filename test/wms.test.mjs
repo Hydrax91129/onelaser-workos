@@ -94,7 +94,13 @@ test('goods out: one order with several SKUs from the finder, each with its own 
   const f = document.getElementById('wms-op');
   assert.match(f.querySelector('[name="opDate"]').getAttribute('value'), /^\d{4}-\d{2}-\d{2}$/, 'the date is filled with today');
   assert.equal(document.querySelectorAll('[data-wms-add]').length, 2, 'in-stock only by default for goods out');
-  ev(document.querySelector('[data-wms-add="M-1"]'), 'click'); ev(document.querySelector('[data-wms-add="P-1"]'), 'click');
+  assert.match(f.innerHTML, /双击一行或点“选择添加该 SKU”/, 'how to add, in one line');
+  ev(f.querySelector('[data-wms-reason="样机 / 展会"]'), 'click'); assert.equal(f.querySelector('[name="reason"]').value, '样机 / 展会', 'a reason chip fills the reason');
+  ev(f.querySelector('[data-wms-reason="销售发货"]'), 'click');
+  for (const k of ['ffam', 'fseries', 'fstatus', 'fbrand']) assert.ok(f.querySelector(`[data-wms-${k}]`), k + ' filter');
+  assert.equal(f.querySelectorAll('[data-wms-ffam] option').length, 3, 'every family is listed (all + 2), not only the ones in stock');
+  ev(document.querySelector('[data-wms-pick="M-1"] .nm'), 'dblclick'); ev(document.querySelector('[data-wms-add="P-1"]'), 'click');
+  assert.match(document.querySelector('[data-wms-add="M-1"]').textContent, /已选择/, 'double-click selects the row');
   const qty = (i, v) => { const el = document.querySelector(`[data-wms-line="${i}"]`); el.value = v; ev(el, 'input'); };
   qty(0, '2'); qty(1, '3');
   f.querySelector('[name="opDate"]').value = '2026-11-03'; f.querySelector('[name="reference"]').value = 'SO-1001';
