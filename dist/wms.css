@@ -112,3 +112,6 @@ html[data-theme=dark] .wms-arr-table tr.ok{background:#173326}
 .wms-opgroup-name{font-size:12px;font-weight:600;color:var(--muted,#5b6170);display:flex;gap:4px;align-items:center}.wms-opgroup-btns{display:flex;gap:6px;flex-wrap:wrap}
 @media (max-width:1000px){.wms-opgroups{grid-template-columns:1fr}}
 html[data-theme=dark] .wms-opgroup{background:#1d1f27;border-color:#343745}html[data-theme=dark] .wms-opgroup.in{border-left-color:#0f8a5f}html[data-theme=dark] .wms-opgroup.out{border-left-color:#d97706}html[data-theme=dark] .wms-opgroup.manage{border-left-color:#3c64f4}
+.wms .page-heading{gap:16px}.wms .page-heading>div:first-child{min-width:0;flex:1 1 320px}
+.wms .page-heading .heading-actions{flex-wrap:nowrap;flex:0 0 auto}.wms .page-heading .heading-actions .btn{padding:6px 10px;font-size:13px;white-space:nowrap}
+@media (max-width:1280px){.wms .page-heading .heading-actions{flex-wrap:wrap;justify-content:flex-end}}
