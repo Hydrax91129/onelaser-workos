@@ -389,6 +389,8 @@
     if (!ctx) return '';
     if (tab && tab !== ui.tab) { ui.tab = tab; ui.product = null; }
     if ((tab || ui.tab) === 'catalog' && libraryOn()) return window.WorkOSProductLibrary.render();
+    // 定价 is the same product library in pricing mode: basic facts, landed + last mile and the NPCR calculation; MSRP edits save to the product.
+    if ((tab || ui.tab) === 'cost' && libraryOn()) return window.WorkOSProductLibrary.render('pricing');
     let [eyebrow, zh, en, dzh, den] = PAGES[ui.tab] || PAGES.catalog;
     loadServer();
     if (ui.tab === 'cost' && !canDetail()) { dzh = '输入 SKU 或名称，查询产品的零售价。'; den = 'Enter a SKU or name to look up the retail price.'; }

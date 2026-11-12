@@ -98,7 +98,12 @@ test('template download, upload preview with before/after and analysis, skip-err
   await show();
   fire(document.querySelector('[data-pl="template"]'), 'click'); await tick();
   assert.equal(fetches.at(-1), '/api/products/library/template?format=xlsx');
-  fire(document.querySelector('[data-pl="view"][data-v="import"]'), 'click');
+  // One page: no sub-tabs; the toolbar has 新建产品 · 批量更新 · 下载标准模板 · 导入记录 · 产品资料权限, in that order
+  assert.equal(document.querySelector('.pl-tabs'), null, 'no 产品资料 / 批量更新 sub-tabs');
+  const labels = [...document.querySelectorAll('.pl-bar .pl-btn')].map(b => b.textContent.replace(/[＋\s]/g, ''));
+  assert.deepEqual(labels, ['新建产品', '批量更新', '下载标准模板', '导入记录', '产品资料权限']);
+  assert.equal(document.querySelector('.pl-bar a.pl-btn').getAttribute('href'), '#erp-access', '产品资料权限 opens 供应链权限管理');
+  assert.ok(document.querySelector('.pl-layout'), 'the product list stays on the page');
   const inp = document.querySelector('[data-pl-import]'); assert.equal(inp.getAttribute('accept'), '.xlsx,.csv');
   Object.defineProperty(inp, 'files', { value:[{ name:'update.xlsx', size:10, text:'x' }] }); fire(inp, 'change');
   for (let i = 0; i < 6; i++) await tick();
@@ -112,17 +117,33 @@ test('template download, upload preview with before/after and analysis, skip-err
   fire(document.querySelector('[data-pl="report"]'), 'click'); await tick(); assert.equal(fetches.at(-1), '/api/products/library/import/pv1/report');
   fire(btn(), 'click'); for (let i = 0; i < 6; i++) await tick();
   assert.deepEqual(j(calls.find(c => c[1] === '/products/library/import/pv1/confirm')), ['POST', '/products/library/import/pv1/confirm', { skipErrors:true }]);
-  const hist = await show(); assert.match(hist, /导入记录[\s\S]*update\.xlsx/);
+  const hist = await show(); assert.match(hist, /导入记录[\s\S]*update\.xlsx/); assert.match(hist, /返回产品资料/);
   fire(document.querySelector('[data-pl-undo="imp1"]'), 'click'); for (let i = 0; i < 4; i++) await tick();
   assert.ok(calls.some(c => c[1] === '/products/library/imports/imp1/undo'));
 });
 
-test('nothing is written when the admin cancels the confirm dialog; only 产品资料 and 批量更新 sub-pages', async () => {
+test('nothing is written when the admin cancels the confirm dialog; cancelling the preview goes back to the product list', async () => {
   const { W, document, calls, show, fire } = load(library(true, true), { confirm:false });
   await show();
   W._state.view = 'import'; W._state.preview = j(PREVIEW); W._state.skipErrors = true; await show();
   fire(document.querySelector('[data-pl="confirm"]'), 'click'); await tick();
   assert.equal(calls.some(c => c[1].endsWith('/confirm')), false);
   const html = await show();
-  assert.match(html, /产品资料/); assert.match(html, /批量更新/); assert.doesNotMatch(html, /data-v="settings"|价格参数/, 'no pricing settings sub-page');
+  assert.match(html, /返回产品资料/); assert.match(html, /批量更新/); assert.doesNotMatch(html, /data-v="settings"|价格参数/, 'no pricing settings sub-page');
+  fire(document.querySelector('[data-pl="preview-cancel"]'), 'click'); const back = await show();
+  assert.match(back, /pl-layout/); assert.doesNotMatch(back, /更新前后对比与分析/);
+});
+
+test('定价 is the same library in pricing mode: basic facts, cost and NPCR; MSRP saves to the product; admins get 价格参数', async () => {
+  const { W, document, calls, fire, show } = load(library(true, true));
+  await show(); W.render('pricing'); for (let i = 0; i < 6; i++) await tick();
+  document.getElementById('app').innerHTML = W.render('pricing'); const html = document.getElementById('app').innerHTML;
+  assert.ok(document.querySelector('.pl-facts'), 'basic facts, read only'); assert.match(html, /基本信息在“产品资料”里修改/);
+  assert.match(html, /NPCR 价格阶梯/); assert.match(html, /到岸价/); assert.doesNotMatch(html, /产品基本参数/, 'no basic-parameter editor on the pricing page');
+  const labels = [...document.querySelectorAll('.pl-bar .pl-btn')].map(b => b.textContent.replace(/[＋\s]/g, ''));
+  assert.deepEqual(labels, ['新建产品', '批量更新', '下载标准模板', '导入记录', '价格参数（NPCR）', '产品资料权限']);
+  const m = document.querySelector('[data-pl-f="msrp"]'); m.value = '2199'; fire(m, 'change'); for (let i = 0; i < 4; i++) await tick();
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.filter(c => c[0] === 'PATCH').at(-1))).slice(2), [{ values:{ msrp:'2199' } }], 'MSRP is saved on the product record');
+  // 产品资料 keeps the price groups, folded
+  document.getElementById('app').innerHTML = W.render(); assert.ok(document.querySelector('details[data-pl-price="4"]:not([open])'), 'pricing folded on 产品资料');
 });

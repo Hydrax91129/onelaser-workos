@@ -22,6 +22,14 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.59', date:'2026-11-12T09:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('产品资料、定价都改为单页；页面更紧凑，手机和平板也好用', 'Products and Pricing are single pages; tighter layout that works on phones and tablets'),
+      title:c('产品资料、定价单页', 'Products and Pricing on one page'),
+      changes:[c('去掉“产品资料 / 批量更新”两个子页签：产品资料就是一个页面，右上角依次是 新建产品、批量更新、下载标准模板、导入记录、产品资料权限。', 'The Products / Bulk update sub-tabs are gone: Products is one page with New product, Bulk update, Download template, Import history and Product permissions at the top right.'),
+        c('点“批量更新”直接选文件上传，随后显示更新前后对比；确认或取消后回到产品列表。导入记录也从这里打开，可以返回。', 'Bulk update opens the file picker and then the before/after comparison; confirming or cancelling returns to the list. Import history opens from the toolbar too, with a way back.'),
+        c('“产品资料权限”（主管理员可见）打开“供应链权限管理”，在那里设置谁能查看、编辑、批量更新产品资料。', 'Product permissions (main admins) opens Supply chain permissions, where you set who can view, edit and bulk-update products.'),
+        c('定价页和产品资料用同一个列表和同样的按钮：右边是产品基本信息（只读）、到岸价和尾程运费、零售档位、定稿售价、NPCR 价格阶梯和批发档位，改到岸价、运费或 MSRP 马上重算；在这里改的 MSRP 就是产品资料里的 MSRP。主管理员可以点“价格参数（NPCR）”调整费率、档位和 NPCR 阶梯。', 'Pricing uses the same list and buttons: basic details (read only), landed and last-mile cost, retail tiers, final prices, the NPCR ladder and wholesale tiers, recalculated as you change cost or MSRP; the MSRP you set here is the product’s MSRP. Main admins tune rates, tiers and NPCR steps under Pricing parameters (NPCR).'),
+        c('产品资料页里的定价两组默认收起；整个页面更紧凑（列表每行更矮、字段间距更小、文件栏位并排），并按屏幕宽度调整：大屏列表更宽，笔记本更窄，平板把列表放到上面，手机一列。', 'On Products the two pricing groups start folded; the page is tighter (shorter list rows, closer fields, file slots side by side) and adapts to the screen: wider list on large screens, narrower on laptops, list on top on tablets, one column on phones.')] },
     { version:'1.58', date:'2026-11-11T19:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('分析页并入各自页面，左侧不再有“报表区”', 'Analysis pages moved into their own pages; no Reports group in the sidebar'),
       title:c('分析页改为页签', 'Analysis pages become tabs'),
