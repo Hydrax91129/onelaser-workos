@@ -53,7 +53,8 @@ test('movement log filters by type and search; one SKU loads its full history fr
 test('bulk stock update and the standard template use the four regular locations; returns are not regular stock', () => {
   const src = read('wms.js');
   assert.doesNotMatch(src, /refurb|翻新品/, 'no returns warehouse in regular stock');
-  assert.match(src, /const TEMPLATE_HEAD = \(\) => \['SKU', '产品名称', \.\.\.data\.locations\.map\(l => l\.zh\)\]/, 'template: SKU, name and one column per regular location');
+  assert.match(src, /const TEMPLATE_HEAD = \(\) => \['SKU', tr\('产品名称', 'Product'\), \.\.\.data\.locations\.map\(l => word\(l\)\)\]/, 'template: SKU, name and one column per regular location, in the reader’s language');
+  assert.match(src, /'us la warehouse'/); assert.match(src, /'dongguan factory'/); assert.match(src, /'jinan factory'/); assert.match(src, /'in transit'/);
   assert.match(src, /批量更新库存/); assert.doesNotMatch(src, /data-wms="new-sku"/, 'no 新增 SKU button: library SKUs are stock SKUs');
   assert.match(src, /us:\['美国LA仓', '美国仓'/, 'old 美国仓 headers still import');
   assert.match(src, /'美国LA仓缺货'/);

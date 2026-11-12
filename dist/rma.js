@@ -84,7 +84,7 @@
       <div class="rma-bar"><div class="rma-views" role="tablist">${views.map(([id, label, n]) => `<button class="${ui.view === id ? 'on' : ''}" data-rma="view" data-v="${id}">${esc(label)} <b>${n}</b></button>`).join('')}</div>
         <label class="wms-search">${icon('magnifying-glass')}<input data-rma-search value="${esc(ui.q)}" placeholder="${tr('搜索单号、SKU、序列号、客户、订单号', 'Search number, SKU, serial, customer, order')}"></label></div>
       <div class="wms-table-wrap"><table class="wms-table rma-table"><thead><tr><th>${tr('单号', 'Case')}</th><th>${tr('产品', 'Product')}</th><th>${tr('序列号', 'Serial')}</th><th>${tr('类别', 'Class')}</th><th>${tr('客户 / 订单', 'Customer / order')}</th><th>${tr('收货', 'Received')}</th><th>${tr('状态', 'Status')}</th><th>${tr('处理人', 'Handler')}</th><th>${tr('维修人员', 'Technician')}</th><th class="num">${tr('货值', 'Value')}</th><th class="num">${tr('用时', 'Days')}</th><th class="num">${tr('售价', 'Price')}</th></tr></thead><tbody>
-        ${rows.map(c => `<tr class="rma-row" data-rma="open" data-id="${esc(c.id)}" tabindex="0"><td class="mono">${esc(c.number)}</td><td><b>${esc(c.mainName || c.name || c.sku)}</b><small class="mono">${esc(c.sku)}${c.mainSku && c.mainSku.toLowerCase() !== String(c.sku).toLowerCase() ? ` → ${esc(c.mainSku)}` : ''}${c.qty > 1 ? ` × ${c.qty}` : ''}</small></td><td class="mono">${esc(c.serial || '—')}</td><td>${esc(c.productClass ? w(CLASS[c.productClass]) : w(KIND[c.kind]))}</td><td>${esc(c.customer || '—')}<small>${esc(c.orderRef || '')}</small></td><td>${esc(c.receivedAt)}</td><td>${badge(c)}${stageOf(c) === 'waiting_parts' && c.waitingFor ? `<small>${esc(c.waitingFor)}</small>` : ''}</td><td>${esc(c.handlerName || '—')}</td><td>${esc(c.technicianName || '—')}</td><td class="num">${money(c.valueCost ?? c.valueMsrp)}</td><td class="num ${(c.openDays || 0) > 7 ? 'late' : ''}">${c.repairDays ?? (c.openDays != null ? c.openDays + (lang() === 'en' ? 'd so far' : ' 天（进行中）') : '—')}</td><td class="num">${c.status === 'restocked' && (c.salePrice != null) ? `${money(c.salePrice)}<small>${esc(w(LISTING[c.listing]))}</small>` : '—'}</td></tr>`).join('') || `<tr><td colspan="10" class="wms-empty">${data.items.length ? tr('没有符合条件的记录。', 'No matching cases.') : tr('还没有退货记录。点右上角“登记退货”开始。', 'No returns yet. Use “Register a return” to start.')}</td></tr>`}
+        ${rows.map(c => `<tr class="rma-row" data-rma="open" data-id="${esc(c.id)}" tabindex="0"><td class="mono">${esc(c.number)}</td><td><b>${esc((lang() === 'en' ? c.mainNameEn : '') || c.mainName || retName(c.name) || c.sku)}</b><small class="mono">${esc(c.sku)}${c.mainSku && c.mainSku.toLowerCase() !== String(c.sku).toLowerCase() ? ` → ${esc(c.mainSku)}` : ''}${c.qty > 1 ? ` × ${c.qty}` : ''}</small></td><td class="mono">${esc(c.serial || '—')}</td><td>${esc(c.productClass ? w(CLASS[c.productClass]) : w(KIND[c.kind]))}</td><td>${esc(c.customer || '—')}<small>${esc(c.orderRef || '')}</small></td><td>${esc(c.receivedAt)}</td><td>${badge(c)}${stageOf(c) === 'waiting_parts' && c.waitingFor ? `<small>${esc(c.waitingFor)}</small>` : ''}</td><td>${esc(c.handlerName || '—')}</td><td>${esc(c.technicianName || '—')}</td><td class="num">${money(c.valueCost ?? c.valueMsrp)}</td><td class="num ${(c.openDays || 0) > 7 ? 'late' : ''}">${c.repairDays ?? (c.openDays != null ? c.openDays + (lang() === 'en' ? 'd so far' : ' 天（进行中）') : '—')}</td><td class="num">${c.status === 'restocked' && (c.salePrice != null) ? `${money(c.salePrice)}<small>${esc(w(LISTING[c.listing]))}</small>` : '—'}</td></tr>`).join('') || `<tr><td colspan="10" class="wms-empty">${data.items.length ? tr('没有符合条件的记录。', 'No matching cases.') : tr('还没有退货记录。点右上角“登记退货”开始。', 'No returns yet. Use “Register a return” to start.')}</td></tr>`}
       </tbody></table></div></div>`;
   }
 
@@ -99,12 +99,12 @@
   }
   /* Register a return (warehouse managers). */
   function newDialog() {
-    const skus = data.skus.map(s => `<option value="${esc(s.sku)}">${esc(s.name)}</option>`).join('');
+    const skus = data.skus.map(s => `<option value="${esc(s.sku)}">${esc(retName(s.name))}</option>`).join('');
     newPhotos = [];
     window.WorkOSUpload?.register('rma-new-photos', { lang:lang(), accept:IMG_MIME, multiple:true, maxBytes:5 * 1024 * 1024, onFiles:files => { newPhotos.push(...files); paintNewPhotos(); return tr(`已选 ${newPhotos.length} 张`, `${newPhotos.length} selected`); } });
     ctx.modal(tr('登记退货', 'Register a return'), `<form id="rma-new" class="wms-form" data-upload-scope="rma-new-photos">
       <div class="form-grid">
-        <label class="field"><span>${tr('主 SKU（产品资料里的）', 'Main SKU (from the product library)')}</span><input name="mainSku" required list="rma-main-skus" autocomplete="off" placeholder="${tr('输入或选择产品资料里的 SKU', 'Type or pick a product-library SKU')}" data-rma-main><datalist id="rma-main-skus">${(data.mainSkus || []).map(s => `<option value="${esc(s.sku)}">${esc(s.name)}</option>`).join('')}</datalist><small class="hint" data-rma-main-hint></small></label>
+        <label class="field"><span>${tr('主 SKU（产品资料里的）', 'Main SKU (from the product library)')}</span><input name="mainSku" required list="rma-main-skus" autocomplete="off" placeholder="${tr('输入或选择产品资料里的 SKU', 'Type or pick a product-library SKU')}" data-rma-main><datalist id="rma-main-skus">${(data.mainSkus || []).map(s => `<option value="${esc(s.sku)}">${esc(mainName(s))}</option>`).join('')}</datalist><small class="hint" data-rma-main-hint></small></label>
         <label class="field"><span>${tr('退货 SKU（选填，可自己编）', 'Return SKU (optional, your own code)')}</span><input name="sku" list="rma-skus" autocomplete="off" placeholder="${tr('不填就用 REF-主SKU', 'Blank = REF-main SKU')}" data-rma-retsku><datalist id="rma-skus">${skus}</datalist><small class="hint rma-sku-hint">${tr('以 REF- 打头，例如 REF-XRF38；货值按主 SKU 算。', 'Starts with REF-, e.g. REF-XRF38; the value follows the main SKU.')}</small></label>
         <label class="field"><span>${tr('处理人（负责这单退货）', 'Handler (owns this return)')}</span><select name="handlerId" required>${(data.handlers || []).map(p => `<option value="${esc(p.id)}" ${p.id === data.me ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
         <label class="field"><span>${tr('类别', 'Item class')}</span><select name="productClass" required data-rma-class><option value="">${tr('请选择', 'Choose')}</option>${Object.entries(CLASS).map(([k, v]) => `<option value="${k}">${esc(w(v))}</option>`).join('')}</select></label>
@@ -117,7 +117,7 @@
         <label class="field full"><span>${tr('退货原因 + 退款情况描述', 'Return reason + refund details')}</span><textarea name="reason" required minlength="2" maxlength="2000" rows="3" placeholder="${tr('例如：开机不出光；已全额退款 $3,499', 'e.g. no laser output; refunded $3,499 in full')}"></textarea></label>
         <label class="field full"><span>${tr('退货外观与配件情况', 'Condition and accessories on return')}</span><input name="condition" required minlength="2" maxlength="1000" placeholder="${tr('例如：外箱破损，缺少排风管', 'e.g. box damaged, exhaust hose missing')}"></label>
         <div class="field full"><span>${tr('收货照片', 'Photos on receipt')}</span><p class="wms-hint" style="margin:2px 0 6px">${tr('拍下收到时的样子：外箱、机身各面、铭牌和序列号、损坏的地方、缺少的配件，用来做退货分析。', 'Show it as it arrived: the box, every side, the label and serial, any damage and missing parts, for the return analysis.')}</p>
-          ${window.WorkOSUpload ? window.WorkOSUpload.html({ id:'rma-new-photos', lang:lang(), accept:IMG_MIME, multiple:true, maxBytes:5 * 1024 * 1024, hint:'PNG、JPG、WebP' }) : ''}<div class="rma-new-thumbs" data-rma-new-thumbs></div></div>
+          ${window.WorkOSUpload ? window.WorkOSUpload.html({ id:'rma-new-photos', lang:lang(), accept:IMG_MIME, multiple:true, maxBytes:5 * 1024 * 1024, hint:tr('PNG、JPG、WebP', 'PNG, JPG, WebP') }) : ''}<div class="rma-new-thumbs" data-rma-new-thumbs></div></div>
       </div><p class="wms-hint">${tr('退货 SKU 物料表里还没有时，登记会自动新建；大货 SKU 照常从列表里选。', 'A return SKU not in the item list yet is created when you register; pick regular SKUs from the list.')}</p><p class="wms-error" role="alert"></p></form>`,
       `<button class="btn" data-live-action="close">${tr('取消', 'Cancel')}</button><button class="btn primary" type="submit" form="rma-new">${tr('登记', 'Register')}</button>`);
   }
@@ -156,9 +156,9 @@
     const c = detail, open = OPEN.includes(c.status), opt = (v, label, cur) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(label)}</option>`;
     const timeline = c.events.slice().reverse().map(e => `<li><b>${esc(e.byName)}</b> ${esc(eventText(e))} <time>${esc(when(e.at))}</time></li>`).join('');
     const body = `<div class="rma-detail" data-rma-case="${esc(c.id)}">
-      <div class="rma-head">${badge(c)}<span class="mono">${esc(c.sku)}${c.qty > 1 ? ` × ${c.qty}` : ''}</span><span>${esc(c.name)}</span>${c.serial ? `<span class="mono">SN ${esc(c.serial)}</span>` : ''}</div>
+      <div class="rma-head">${badge(c)}<span class="mono">${esc(c.sku)}${c.qty > 1 ? ` × ${c.qty}` : ''}</span><span>${esc(retName(c.name))}</span>${c.serial ? `<span class="mono">SN ${esc(c.serial)}</span>` : ''}</div>
       <dl class="rma-facts">
-        <div><dt>${tr('主 SKU', 'Main SKU')}</dt><dd><span class="mono">${esc(c.mainSku || '—')}</span> ${esc(c.mainName || '')}</dd></div>
+        <div><dt>${tr('主 SKU', 'Main SKU')}</dt><dd><span class="mono">${esc(c.mainSku || '—')}</span> ${esc((lang() === 'en' ? c.mainNameEn : '') || c.mainName || '')}</dd></div>
         <div><dt>${tr('货值', 'Value')}</dt><dd>${money(c.valueMsrp)} <small>MSRP</small>${c.valueCost != null ? ` · ${money(c.valueCost)} <small>${tr('到岸成本', 'landed')}</small>` : ''}</dd></div>
         <div><dt>${tr('处理人', 'Handler')}</dt><dd>${esc(c.handlerName || '—')}</dd></div>
         <div><dt>${tr('维修人员', 'Technician')}</dt><dd>${esc(c.technicianName || tr('未指派', 'Not assigned'))}</dd></div>
@@ -205,8 +205,11 @@
     else { const host = document.querySelector('[data-rma-case]'); host.outerHTML = body; }
     syncClose();
   }
+  /* Return SKUs are stored as “退货 · <name>” (wms.ts); main SKUs carry both names. */
+  const retName = n => lang() === 'en' ? String(n || '').replace(/^退货 · /, 'Return · ') : String(n || '');
+  const mainName = s => lang() === 'en' ? (s.nameEn || s.name || '') : (s.name || s.nameEn || '');
   function eventText(e) {
-    const a = e.action, n = e.note ? `：${e.note}` : '';
+    const a = e.action, n = e.note ? tr('：', ': ') + e.note : '';
     if (a === 'created') return tr('登记退货', 'registered the return') + n;
     if (a === 'updated') return tr('更新了', 'updated ') + (lang() === 'en' ? (e.note || '') : String(e.note || '').replace(/status:(\w+)/, (_, x) => '进度（' + w(STATUS[x]) + '）').replace('technician', '维修人员').replace('diagnosis', '问题诊断').replace('repair notes', '维修记录').replace(/waiting for: /, '等待配件：').replace(/\bparts\b/, '配件').replace(/, /g, '、'));
     if (a === 'repaired') return tr('标记维修完成', 'marked it repaired') + n;
@@ -252,7 +255,7 @@
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches?.('.rma-row')) openCase(e.target.dataset.id); });
   document.addEventListener('input', e => {
     if (e.target.matches?.('[data-rma-main]')) { const v = e.target.value.trim().toLowerCase(), hit = (data?.mainSkus || []).find(s => s.sku.toLowerCase() === v), hint = e.target.closest('label')?.querySelector('[data-rma-main-hint]'), ret = document.querySelector('[data-rma-retsku]');
-      if (hint) hint.textContent = hit ? hit.name : v ? tr('产品资料里没有这个 SKU', 'Not in the product library') : '';
+      if (hint) hint.textContent = hit ? mainName(hit) : v ? tr('产品资料里没有这个 SKU', 'Not in the product library') : '';
       if (ret && hit) ret.placeholder = 'REF-' + hit.sku; }
     if (e.target.matches?.('[data-rma-search]')) { ui.q = e.target.value; const pos = e.target.selectionStart; ctx.rerender(); const i = document.querySelector('[data-rma-search]'); if (i) { i.focus(); try { i.setSelectionRange(pos, pos); } catch { /* ignore */ } } return; }
     if (e.target.matches?.('[data-rma-pct]') && detail?.msrp != null) { const p = Number(e.target.value); const price = e.target.form.querySelector('[data-rma-price]'); if (price && e.target.value !== '' && p >= 0 && p <= 95) price.value = (Math.round(detail.msrp * (100 - p)) / 100).toFixed(2); }

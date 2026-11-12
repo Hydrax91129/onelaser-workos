@@ -105,9 +105,9 @@
     const v = it.values[f.key], dis = f.writable ? '' : 'disabled', id = `pl-i-${f.key}`, a = `id="${id}" data-pl-f="${esc(f.key)}" ${dis}`;
     if (f.type === 'enum') return `<select ${a}><option value="">${tr('请选择', 'Choose')}</option>${f.opts.map(o => `<option value="${esc(o.key)}" ${v === o.key ? 'selected' : ''}>${esc(L(o))}</option>`).join('')}</select>`;
     if (f.type === 'date') return `<input type="date" ${a} value="${esc(v)}">`;
-    if (f.type === 'number' || f.type === 'price') return `<div class="pl-affix"><input type="text" class="n" inputmode="decimal" ${a} value="${esc(v)}" placeholder="${esc(f.type === 'price' && !f.ph ? '0.00' : f.ph)}"${f.type === 'price' ? ` title="${tr('最多两位小数，例如 27.09', 'At most two decimals, e.g. 27.09')}"` : ''}><span>${esc(f.unit || 'USD')}</span></div>`;
-    if (f.type === 'list') return `<input type="text" ${a} list="pl-dl-${esc(f.key)}" value="${esc(v)}" placeholder="${esc(f.ph)}"><datalist id="pl-dl-${esc(f.key)}">${f.opts.map(o => `<option value="${esc(o.key)}">`).join('')}</datalist>`;
-    return `<input type="text" ${a} value="${esc(v)}" placeholder="${esc(f.ph)}">`;
+    if (f.type === 'number' || f.type === 'price') return `<div class="pl-affix"><input type="text" class="n" inputmode="decimal" ${a} value="${esc(v)}" placeholder="${esc(f.type === 'price' && !f.ph ? '0.00' : tr(f.ph, f.phEn || f.ph))}"${f.type === 'price' ? ` title="${tr('最多两位小数，例如 27.09', 'At most two decimals, e.g. 27.09')}"` : ''}><span>${esc(f.unit || 'USD')}</span></div>`;
+    if (f.type === 'list') return `<input type="text" ${a} list="pl-dl-${esc(f.key)}" value="${esc(v)}" placeholder="${esc(tr(f.ph, f.phEn || f.ph))}"><datalist id="pl-dl-${esc(f.key)}">${f.opts.map(o => `<option value="${esc(o.key)}">`).join('')}</datalist>`;
+    return `<input type="text" ${a} value="${esc(v)}" placeholder="${esc(tr(f.ph, f.phEn || f.ph))}">`;
   }
   function fieldHTML(f, it) {
     const fam = it.values.family, code = f.key === 'refbSku' ? (it.values.goodsType === 'refb' ? 'req' : 'na') : famCode(f.code, fam);
@@ -130,7 +130,7 @@
     return `<div class="pl-fields pl-slots">${spec().slots.map(s => { const code = famCode(s.code, it.values.family), list = files[s.key] || [];
       return `<div class="pl-fld ${code === 'na' ? 'na' : ''} ${code === 'req' && !list.length ? 'miss' : ''}"><label><b>${esc(L(s))}</b>${badge(code)}${visChip('sens')}</label>
         ${list.length ? `<ul class="pl-files">${list.map(x => `<li><a href="${apiBase()}/products/library/files/${encodeURIComponent(x.id)}" target="_blank" rel="noopener">${esc(x.name)}</a><span class="pl-meta">${kb(x.size)}${x.at ? ' · ' + esc(String(x.at).slice(0, 10)) : ''}</span>${s.writable ? `<button class="pl-x" data-pl-rmfile="${esc(x.id)}">${tr('删除', 'Delete')}</button>` : ''}</li>`).join('')}</ul>` : ''}
-        ${s.writable ? drop(s.key, s.hint + tr('，单个文件 ≤ 20 MB', ', ≤ 20 MB each'), s.mode === 'pdf' ? '.pdf' : '.pdf,.png,.jpg,.jpeg,.webp,.csv,.txt', true) : ''}</div>`; }).join('')}</div>
+        ${s.writable ? drop(s.key, tr(s.hint + '，单个文件 ≤ 20 MB', (s.hintEn || s.hint) + ', ≤ 20 MB each'), s.mode === 'pdf' ? '.pdf' : '.pdf,.png,.jpg,.jpeg,.webp,.csv,.txt', true) : ''}</div>`; }).join('')}</div>
       <p class="pl-note pl-slots-note">${tr('可上传 PDF、图片（PNG / JPG / WebP）、CSV、TXT。Excel 和 Word 文件请先另存为 PDF 或 CSV。', 'PDF, images (PNG / JPG / WebP), CSV and TXT. Save Excel and Word files as PDF or CSV first.')}</p>`;
   }
   const grpHead = (no, name, extra = '') => `<summary><span class="no">${esc(no)}</span>${esc(name)} ${extra}</summary>`;
@@ -181,7 +181,7 @@
       <h4>${tr('批发档位', 'Wholesale tiers')} <span class="pl-seg" role="group" aria-label="${tr('运费承担方', 'Freight paid by')}"><button data-pl-freight="dealer" aria-pressed="${wf === 'dealer'}" ${canFreight ? '' : 'disabled'}>${tr('经销商付运费', 'Dealer pays freight')}</button><button data-pl-freight="us" aria-pressed="${wf === 'us'}" ${canFreight ? '' : 'disabled'}>${tr('我们付运费', 'We pay freight')}</button></span>
         <small>${tr('批发价 = MSRP × (1 − 折扣)，全员可见；贡献利润只有成本权限的同事能看到', 'Wholesale = MSRP × (1 − discount), visible to everyone; margins to cost access only')}</small></h4>
       ${P('whRate') ? `<div class="pl-fields" style="padding:0 0 10px">${ratePin('whRate', 'wh', it)}</div>` : ''}
-      <div class="pl-tbl"><table><thead><tr><th>${tr('档位', 'Tier')}</th><th>${tr('折扣', 'Discount')}</th><th>${tr('批发价', 'Wholesale')}</th><th>${tr('手动调整', 'Override')}</th><th>${tr('经销商每台利润', 'Dealer margin / unit')}</th><th>${tr('我们的贡献利润', 'Our contribution')}（${wf === 'dealer' ? tr('经销商付运费', 'dealer freight') : tr('我们付运费', 'our freight')}）</th><th>${tr('另一种运费方式', 'Other freight option')}</th></tr></thead>
+      <div class="pl-tbl"><table><thead><tr><th>${tr('档位', 'Tier')}</th><th>${tr('折扣', 'Discount')}</th><th>${tr('批发价', 'Wholesale')}</th><th>${tr('手动调整', 'Override')}</th><th>${tr('经销商每台利润', 'Dealer margin / unit')}</th><th>${tr(`我们的贡献利润（${wf === 'dealer' ? '经销商付运费' : '我们付运费'}）`, `Our contribution (${wf === 'dealer' ? 'dealer freight' : 'our freight'})`)}</th><th>${tr('另一种运费方式', 'Other freight option')}</th></tr></thead>
       <tbody>${rows || `<tr><td colspan="7" class="l">${tr('还没有设置批发档位', 'No wholesale tiers yet')}</td></tr>`}</tbody></table></div>${note}</div></div></details>`;
   }
 
@@ -370,7 +370,7 @@
   }
   async function download(path, fallbackName) {
     try {
-      const r = await fetch(apiBase() + path, { credentials:'same-origin', cache:'no-store' });
+      const r = await fetch(apiBase() + path, { credentials:'same-origin', cache:'no-store', headers:{ 'Accept-Language': tr('zh-CN', 'en') } });
       if (!r.ok) { let m = ''; try { m = (await r.json()).error?.message; } catch { /* not JSON */ } throw new Error(m || tr('下载失败', 'Download failed')); }
       const cd = r.headers.get('content-disposition') || '', name = decodeURIComponent((cd.match(/filename\*=UTF-8''([^;]+)/) || [])[1] || fallbackName);
       const url = URL.createObjectURL(await r.blob()), a = document.createElement('a');
@@ -424,7 +424,7 @@
       const sku = val('sku'); if (!sku) { S.errs._new = tr('请填写 SKU', 'Enter a SKU'); return rerender(); }
       const values = Object.fromEntries(['family', 'nameZh', 'nameEn'].map(k => [k, val(k)]).filter(([, v]) => v));
       t.disabled = true; ctx.api.post('/products/library', { sku, values }).then(r => { S.creating = false; S.cur = r.sku; S.errs = {}; toast(tr('已创建，继续补齐其他字段', 'Created; fill in the other fields')); load(true); }).catch(x => { S.errs._new = x.message; t.disabled = false; rerender(); }); return; }
-    if (a === 'template') return download(`/products/library/template?format=${t.dataset.format === 'csv' ? 'csv' : 'xlsx'}`, `OneLaser_产品资料.${t.dataset.format === 'csv' ? 'csv' : 'xlsx'}`);
+    if (a === 'template') return download(`/products/library/template?format=${t.dataset.format === 'csv' ? 'csv' : 'xlsx'}`, `${tr('OneLaser_产品资料', 'OneLaser_products')}.${t.dataset.format === 'csv' ? 'csv' : 'xlsx'}`);
     if (a === 'report' && S.preview) return download(`/products/library/import/${encodeURIComponent(S.preview.id)}/report`, '导入预览报告.csv');
     if (a === 'preview-cancel') { S.preview = null; S.view = 'products'; return rerender(); }
     if (a === 'confirm') return confirmImport(t);

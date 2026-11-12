@@ -22,6 +22,9 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.65', date:'2026-11-13T09:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      zh:['供应链（产品资料、定价、库存、退货维修、供应链管理）切到英文后全部是英文：输入提示、文件说明、库存流水里系统写的原因（移库、发柜、完工入库、到港入仓、期初导入）、采购单和到港的站内通知、看板提示和标点', '产品资料标准模板按你的语言下载（英文版说明页、表头和下拉选项），上传时中英文表头都认，清空可写 [清空] 或 [clear]；库存模板和导出也按语言'],
+      en:['Supply chain pages read fully in English: placeholders, file hints, system-written stock-log reasons, purchase-order and arrival notices, dashboard tips and punctuation', 'The product template downloads in your language (English guide, headers and dropdowns) and uploads accept either language; stock template and export follow the language too'] },
     { version:'1.64', date:'2026-11-12T23:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       zh:['产品资料里的价格（MSRP、MAP、促销底价、到岸价、尾程运费、批发档价、成本等）最多两位小数，例如 27.09；页面上的金额显示到分'],
       en:['Prices in the product library take at most two decimals (e.g. 27.09); amounts show their cents'] },

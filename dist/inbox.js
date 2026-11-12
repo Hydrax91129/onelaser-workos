@@ -9,6 +9,14 @@
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   // Task titles and messages people wrote are shown in the interface language (translate.js).
   const tx = v => window.WorkOSTranslate ? window.WorkOSTranslate.html(v) : esc(v);
+  /* Supply-chain notices are written in Chinese by the server (scm.ts); English readers get the same facts in English. */
+  const SYS = [
+    [/^采购单草稿：(.*)$/, m => `Draft purchase order: ${m[1]}`], [/^采购单已下达生产：(.*)$/, m => `Purchase order in production: ${m[1]}`], [/^到港入仓：(.*)$/, m => `Arrival to receive: ${m[1]}`],
+    [/^(.*) · (\d+) 个 SKU、(\d+) 件 · 预计交期 (\S+?)。/, m => `${m[1]} · ${m[2]} SKUs, ${m[3]} units · expected ${m[4]}. Review it in Supply chain → Purchase orders and click “Issue” once the factory confirms.`],
+    [/^(.*) · 预计交期 (\S+?)。$/, m => `${m[1]} · expected ${m[2]}.`],
+    [/^(\d+) 个 SKU、(\d+) 件已到港/, m => `${m[1]} SKUs, ${m[2]} units at port. Confirm the quantity and bin of each line in Inventory → Arrivals.`],
+  ];
+  const sysText = (i, v) => { if (lang() !== 'en' || !['scm_order', 'wms_arrival'].includes(i.kind)) return null; for (const [re, f] of SYS) { const m = re.exec(String(v || '')); if (m) return esc(f(m)); } return null; };
   let ctx = null, data = { items:[], unread:0 }, open = null, loading = false, timer = null; // open: null | 'action' | 'update'
   const lang = () => ctx?.lang?.() === 'en' ? 'en' : 'zh';
   const tr = (zh, en) => lang() === 'en' ? en : zh;
@@ -20,6 +28,7 @@
     hr_reminder:['identification-card', '人事提醒', 'HR reminder', '#fdab3d'],
     it_reminder:['key', 'IT 提醒', 'IT reminder', '#579bfc'],
     quality:['shield-warning', '品质问题', 'Quality issue', '#e2445c'],
+    scm_order:['clipboard-text', '采购单', 'Purchase order', '#579bfc'], wms_arrival:['boat', '到港入仓', 'Arrival', '#00a86b'],
   };
   const ago = iso => { const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
     if (m < 1) return tr('刚刚', 'just now'); if (m < 60) return tr(`${m} 分钟前`, `${m} min ago`); const h = Math.round(m / 60); if (h < 24) return tr(`${h} 小时前`, `${h} h ago`); return tr(`${Math.round(h / 24)} 天前`, `${Math.round(h / 24)} d ago`); };
@@ -39,7 +48,7 @@
   const updatesUnread = () => updates().filter(i => !i.read).length;
   function item(i) {
     const k = KIND[i.kind] || KIND.nudge, name = who(i), cta = isAction(i) ? (CTA[i.kind] || ['去处理', 'Open']) : null;
-    return `<button class="inbox-item ${i.read ? '' : 'unread'} ${cta ? 'act' : ''}" data-inbox-open="${esc(i.id)}"><span class="inbox-ico" style="--c:${k[3]}"><i class="ph ph-${k[0]}" aria-hidden="true"></i></span><span class="inbox-text"><span class="inbox-line"><b>${tr(k[1], k[2])}</b>${name ? ` · ${esc(name)}` : ''}<em>${ago(i.createdAt)}</em></span>${i.title ? `<strong>${tx(i.title)}</strong>` : ''}${i.body ? `<span class="inbox-body">${tx(String(i.body).slice(0, 140))}</span>` : ''}${cta ? `<span class="inbox-cta">${tr(cta[0], cta[1])} →</span>` : ''}</span>${i.read ? '' : '<span class="inbox-unread-dot" aria-hidden="true"></span>'}</button>`;
+    return `<button class="inbox-item ${i.read ? '' : 'unread'} ${cta ? 'act' : ''}" data-inbox-open="${esc(i.id)}"><span class="inbox-ico" style="--c:${k[3]}"><i class="ph ph-${k[0]}" aria-hidden="true"></i></span><span class="inbox-text"><span class="inbox-line"><b>${tr(k[1], k[2])}</b>${name ? ` · ${esc(name)}` : ''}<em>${ago(i.createdAt)}</em></span>${i.title ? `<strong>${sysText(i, i.title) || tx(i.title)}</strong>` : ''}${i.body ? `<span class="inbox-body">${sysText(i, i.body) || tx(String(i.body).slice(0, 140))}</span>` : ''}${cta ? `<span class="inbox-cta">${tr(cta[0], cta[1])} →</span>` : ''}</span>${i.read ? '' : '<span class="inbox-unread-dot" aria-hidden="true"></span>'}</button>`;
   }
   function html() {
     if (!ctx?.state().actor) return '';
