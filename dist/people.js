@@ -163,9 +163,9 @@
             <dt>${tr('管理员', 'Administrator')}</dt><dd>${yes(a.isAdmin)}</dd>
             <dt>${tr('老板看板', 'Executive overview')}</dt><dd>${yes(a.executiveAccess)}</dd>
             <dt>${tr('客服工作台', 'Support workspace')}</dt><dd>${yes(a.supportAccess?.read)}</dd>
-            <dt>${tr('产品+供应链', 'Product hub')}</dt><dd>${yes(grants.includes('products'))}</dd>
+            <dt>${tr('产品资料', 'Products')}</dt><dd>${yes(grants.includes('products'))}</dd>
             <dt>${tr('看成本', 'Cost access')}</dt><dd>${yes(grants.includes('product_cost_detail'))}</dd></dl>
-          <p class="pp-hint">${tr('权限由管理员在“组织与权限”中设置。', 'Access is set by an administrator in Organization & permissions.')}</p>
+          <p class="pp-hint">${tr('权限由主管理员在各模块的“权限”按钮里设置。', 'Access is set by a main admin with the permissions button on each module.')}</p>
         </section>
       </div>${(() => { const body = ctx.integrations?.(); return body ? `<section class="pp-panel pp-admin-int"><div class="pp-panel-head"><h2>${icon('plugs-connected')} ${tr('集成与通知（仅系统管理员可见）', 'Integrations & notifications (administrators only)')}</h2></div>${body}</section>` : ''; })()}</div>`;
   }
