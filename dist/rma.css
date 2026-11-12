@@ -29,3 +29,5 @@ html[data-theme=dark] .rma-add{border-color:#3a4252;color:#b7c0d1}html[data-them
 .rma-new-thumb img{width:100%;height:100%;object-fit:cover}.rma-new-thumb button{position:absolute;top:2px;right:2px;width:20px;height:20px;padding:0;border-radius:50%;background:#000a;color:#fff;border:0;font-size:13px;line-height:20px}
 #rma-new .form-grid{align-items:start}
 .rma-sku-hint{margin-top:-2px}
+.rma-values .rma-kpi.warn b{color:#b54708}.rma-values .rma-kpi.good b{color:#0f8a5f}
+.rma-kpis.rma-values{grid-template-columns:repeat(5,minmax(0,1fr))}@media (max-width:1100px){.rma-kpis.rma-values{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -27,3 +27,4 @@
 @media (max-width:1100px){.erpa-legend{grid-template-columns:repeat(2,minmax(0,1fr))}}
 html[data-theme=dark] .erpa-card,html[data-theme=dark] .erpa-table-wrap,html[data-theme=dark] .erpa-search{background:#1d1f27;border-color:#343745}
 html[data-theme=dark] .erpa-table th{background:#23252f;color:#b8bccb}html[data-theme=dark] .erpa-table td{border-color:#2a2d38}html[data-theme=dark] .erpa-seg{background:#23252f}html[data-theme=dark] .erpa-seg button.on{background:#343745;color:#fff}html[data-theme=dark] .erpa-note{background:#1f2c4d;color:#a9c2ff}
+.erpa-back{display:inline-flex;align-items:center;gap:6px;color:#3c64f4;font-size:13px;text-decoration:none;margin-bottom:-4px}.erpa-back:hover{text-decoration:underline}

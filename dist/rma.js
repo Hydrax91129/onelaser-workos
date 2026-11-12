@@ -73,20 +73,30 @@
     const rows = filtered();
     return `<div class="rma">
       <div class="page-heading"><div><div class="eyebrow">WORK OS · RMA</div><h1>${tr('退货维修', 'Returns & repairs')}</h1><p>${tr('每一台退回的产品一条记录：收货、诊断、维修人员、维修前后照片、维修用时；修好后入库待上架，再设定折扣在网站销售。退货维修自成一块，不进常规库存。', 'One case per returned unit: receipt, diagnosis, technician, photos, repair time; repaired units go put away for sale and can be discounted for the website. Returns are their own stock, not regular stock.')}</p></div>
-        <div class="heading-actions">${data.canOperate ? `<button class="btn primary" data-rma="new">${icon('plus')} ${tr('登记退货', 'Register a return')}</button>` : ''}</div></div>
+        <div class="heading-actions">${data.canOperate ? `<button class="btn primary" data-rma="new">${icon('plus')} ${tr('登记退货', 'Register a return')}</button>` : ''}${window.WorkOSErpAccess?.button?.('returns') || ''}</div></div>
       <div class="rma-kpis">
         <div class="rma-kpi"><span>${tr('处理中', 'Open')}</span><b>${open.length}</b><em>${tr(`其中超过 7 天 ${open.filter(c => (c.openDays || 0) > 7).length} 件`, `${open.filter(c => (c.openDays || 0) > 7).length} older than 7 days`)}</em></div>
         <div class="rma-kpi"><span>${tr('平均维修用时', 'Average repair time')}</span><b>${avg(done.map(c => c.repairDays)) ?? '—'}<small>${tr(' 天', ' days')}</small></b><em>${tr(`按 ${done.length} 件已修好计算`, `from ${done.length} repaired`)}</em></div>
         <div class="rma-kpi"><span>${tr('翻新品待售', 'Refurbished for sale')}</span><b>${toSell.length}</b><em>${tr(`待上架 ${toSell.filter(c => c.listing === 'pending').length} · 已上架 ${toSell.filter(c => c.listing === 'listed').length}`, `${toSell.filter(c => c.listing === 'pending').length} to list · ${toSell.filter(c => c.listing === 'listed').length} listed`)}</em></div>
         <div class="rma-kpi"><span>${tr('本月登记', 'Registered this month')}</span><b>${month}</b><em>${tr(`共 ${data.items.length} 条`, `${data.items.length} in total`)}</em></div>
       </div>
+      ${valueCards()}
       <div class="rma-bar"><div class="rma-views" role="tablist">${views.map(([id, label, n]) => `<button class="${ui.view === id ? 'on' : ''}" data-rma="view" data-v="${id}">${esc(label)} <b>${n}</b></button>`).join('')}</div>
         <label class="wms-search">${icon('magnifying-glass')}<input data-rma-search value="${esc(ui.q)}" placeholder="${tr('搜索单号、SKU、序列号、客户、订单号', 'Search number, SKU, serial, customer, order')}"></label></div>
-      <div class="wms-table-wrap"><table class="wms-table rma-table"><thead><tr><th>${tr('单号', 'Case')}</th><th>${tr('产品', 'Product')}</th><th>${tr('序列号', 'Serial')}</th><th>${tr('类别', 'Class')}</th><th>${tr('客户 / 订单', 'Customer / order')}</th><th>${tr('收货', 'Received')}</th><th>${tr('状态', 'Status')}</th><th>${tr('维修人员', 'Technician')}</th><th class="num">${tr('用时', 'Days')}</th><th class="num">${tr('售价', 'Price')}</th></tr></thead><tbody>
-        ${rows.map(c => `<tr class="rma-row" data-rma="open" data-id="${esc(c.id)}" tabindex="0"><td class="mono">${esc(c.number)}</td><td><b>${esc(c.name || c.sku)}</b><small class="mono">${esc(c.sku)}${c.qty > 1 ? ` × ${c.qty}` : ''}</small></td><td class="mono">${esc(c.serial || '—')}</td><td>${esc(c.productClass ? w(CLASS[c.productClass]) : w(KIND[c.kind]))}</td><td>${esc(c.customer || '—')}<small>${esc(c.orderRef || '')}</small></td><td>${esc(c.receivedAt)}</td><td>${badge(c)}${stageOf(c) === 'waiting_parts' && c.waitingFor ? `<small>${esc(c.waitingFor)}</small>` : ''}</td><td>${esc(c.technicianName || '—')}</td><td class="num ${(c.openDays || 0) > 7 ? 'late' : ''}">${c.repairDays ?? (c.openDays != null ? c.openDays + (lang() === 'en' ? 'd so far' : ' 天（进行中）') : '—')}</td><td class="num">${c.status === 'restocked' && (c.salePrice != null) ? `${money(c.salePrice)}<small>${esc(w(LISTING[c.listing]))}</small>` : '—'}</td></tr>`).join('') || `<tr><td colspan="10" class="wms-empty">${data.items.length ? tr('没有符合条件的记录。', 'No matching cases.') : tr('还没有退货记录。点右上角“登记退货”开始。', 'No returns yet. Use “Register a return” to start.')}</td></tr>`}
+      <div class="wms-table-wrap"><table class="wms-table rma-table"><thead><tr><th>${tr('单号', 'Case')}</th><th>${tr('产品', 'Product')}</th><th>${tr('序列号', 'Serial')}</th><th>${tr('类别', 'Class')}</th><th>${tr('客户 / 订单', 'Customer / order')}</th><th>${tr('收货', 'Received')}</th><th>${tr('状态', 'Status')}</th><th>${tr('处理人', 'Handler')}</th><th>${tr('维修人员', 'Technician')}</th><th class="num">${tr('货值', 'Value')}</th><th class="num">${tr('用时', 'Days')}</th><th class="num">${tr('售价', 'Price')}</th></tr></thead><tbody>
+        ${rows.map(c => `<tr class="rma-row" data-rma="open" data-id="${esc(c.id)}" tabindex="0"><td class="mono">${esc(c.number)}</td><td><b>${esc(c.mainName || c.name || c.sku)}</b><small class="mono">${esc(c.sku)}${c.mainSku && c.mainSku.toLowerCase() !== String(c.sku).toLowerCase() ? ` → ${esc(c.mainSku)}` : ''}${c.qty > 1 ? ` × ${c.qty}` : ''}</small></td><td class="mono">${esc(c.serial || '—')}</td><td>${esc(c.productClass ? w(CLASS[c.productClass]) : w(KIND[c.kind]))}</td><td>${esc(c.customer || '—')}<small>${esc(c.orderRef || '')}</small></td><td>${esc(c.receivedAt)}</td><td>${badge(c)}${stageOf(c) === 'waiting_parts' && c.waitingFor ? `<small>${esc(c.waitingFor)}</small>` : ''}</td><td>${esc(c.handlerName || '—')}</td><td>${esc(c.technicianName || '—')}</td><td class="num">${money(c.valueCost ?? c.valueMsrp)}</td><td class="num ${(c.openDays || 0) > 7 ? 'late' : ''}">${c.repairDays ?? (c.openDays != null ? c.openDays + (lang() === 'en' ? 'd so far' : ' 天（进行中）') : '—')}</td><td class="num">${c.status === 'restocked' && (c.salePrice != null) ? `${money(c.salePrice)}<small>${esc(w(LISTING[c.listing]))}</small>` : '—'}</td></tr>`).join('') || `<tr><td colspan="10" class="wms-empty">${data.items.length ? tr('没有符合条件的记录。', 'No matching cases.') : tr('还没有退货记录。点右上角“登记退货”开始。', 'No returns yet. Use “Register a return” to start.')}</td></tr>`}
       </tbody></table></div></div>`;
   }
 
+  /* Value of the returns by stage. Cost (landed) for people with cost access; otherwise MSRP. */
+  function valueCards() {
+    const V = data.values; if (!V) return '';
+    const basis = V.cost ? 'cost' : 'msrp', x = V[basis], label = basis === 'cost' ? tr('按到岸成本', 'at landed cost') : tr('按 MSRP', 'at MSRP');
+    const card = (k, title, note, cls = '') => `<div class="rma-kpi ${cls}"><span>${title}</span><b>${money(x[k])}</b><em>${note}</em></div>`;
+    return `<div class="rma-kpis rma-values">${card('total', tr('退货总值', 'All returns'), label)}${card('unrepaired', tr('还没修的', 'Not repaired yet'), tr('等待维修 + 等待配件', 'waiting repair + parts'), x.unrepaired ? 'warn' : '')}
+      ${card('toSell', tr('修好待售', 'Repaired, to sell'), tr('完成维修到完成上架，已扣成色折扣', 'repaired to listed, after the grade discount'))}${card('recovered', tr('已挽回（售出）', 'Recovered (sold)'), tr('售出的实际售价', 'actual sale prices'), 'good')}
+      ${card('writtenOff', tr('报废 / 退回客户', 'Scrapped / returned'), label)}</div>`;
+  }
   /* Register a return (warehouse managers). */
   function newDialog() {
     const skus = data.skus.map(s => `<option value="${esc(s.sku)}">${esc(s.name)}</option>`).join('');
@@ -94,7 +104,9 @@
     window.WorkOSUpload?.register('rma-new-photos', { lang:lang(), accept:IMG_MIME, multiple:true, maxBytes:5 * 1024 * 1024, onFiles:files => { newPhotos.push(...files); paintNewPhotos(); return tr(`已选 ${newPhotos.length} 张`, `${newPhotos.length} selected`); } });
     ctx.modal(tr('登记退货', 'Register a return'), `<form id="rma-new" class="wms-form" data-upload-scope="rma-new-photos">
       <div class="form-grid">
-        <label class="field"><span>SKU</span><input name="sku" required list="rma-skus" autocomplete="off" placeholder="${tr('从列表选，或输入 REF-机器型号', 'Pick one, or type REF-model')}"><datalist id="rma-skus">${skus}</datalist><small class="hint rma-sku-hint">${tr('可以手动输入：以 REF- 打头，后面接机器型号即可，例如 REF-XRF38。', 'You can type it: start with REF- and add the machine model, e.g. REF-XRF38.')}</small></label>
+        <label class="field"><span>${tr('主 SKU（产品资料里的）', 'Main SKU (from the product library)')}</span><input name="mainSku" required list="rma-main-skus" autocomplete="off" placeholder="${tr('输入或选择产品资料里的 SKU', 'Type or pick a product-library SKU')}" data-rma-main><datalist id="rma-main-skus">${(data.mainSkus || []).map(s => `<option value="${esc(s.sku)}">${esc(s.name)}</option>`).join('')}</datalist><small class="hint" data-rma-main-hint></small></label>
+        <label class="field"><span>${tr('退货 SKU（选填，可自己编）', 'Return SKU (optional, your own code)')}</span><input name="sku" list="rma-skus" autocomplete="off" placeholder="${tr('不填就用 REF-主SKU', 'Blank = REF-main SKU')}" data-rma-retsku><datalist id="rma-skus">${skus}</datalist><small class="hint rma-sku-hint">${tr('以 REF- 打头，例如 REF-XRF38；货值按主 SKU 算。', 'Starts with REF-, e.g. REF-XRF38; the value follows the main SKU.')}</small></label>
+        <label class="field"><span>${tr('处理人（负责这单退货）', 'Handler (owns this return)')}</span><select name="handlerId" required>${(data.handlers || []).map(p => `<option value="${esc(p.id)}" ${p.id === data.me ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
         <label class="field"><span>${tr('类别', 'Item class')}</span><select name="productClass" required data-rma-class><option value="">${tr('请选择', 'Choose')}</option>${Object.entries(CLASS).map(([k, v]) => `<option value="${k}">${esc(w(v))}</option>`).join('')}</select></label>
         <label class="field"><span>${tr('序列号', 'Serial number')}</span><input name="serial" maxlength="80" placeholder="${tr('机器铭牌上的 SN（机器必填）', 'SN on the label (required for machines)')}"></label>
         <label class="field"><span>${tr('数量', 'Quantity')}</span><input name="qty" type="number" min="1" max="500" value="1" required></label>
@@ -146,6 +158,10 @@
     const body = `<div class="rma-detail" data-rma-case="${esc(c.id)}">
       <div class="rma-head">${badge(c)}<span class="mono">${esc(c.sku)}${c.qty > 1 ? ` × ${c.qty}` : ''}</span><span>${esc(c.name)}</span>${c.serial ? `<span class="mono">SN ${esc(c.serial)}</span>` : ''}</div>
       <dl class="rma-facts">
+        <div><dt>${tr('主 SKU', 'Main SKU')}</dt><dd><span class="mono">${esc(c.mainSku || '—')}</span> ${esc(c.mainName || '')}</dd></div>
+        <div><dt>${tr('货值', 'Value')}</dt><dd>${money(c.valueMsrp)} <small>MSRP</small>${c.valueCost != null ? ` · ${money(c.valueCost)} <small>${tr('到岸成本', 'landed')}</small>` : ''}</dd></div>
+        <div><dt>${tr('处理人', 'Handler')}</dt><dd>${esc(c.handlerName || '—')}</dd></div>
+        <div><dt>${tr('维修人员', 'Technician')}</dt><dd>${esc(c.technicianName || tr('未指派', 'Not assigned'))}</dd></div>
         <div><dt>${tr('类别', 'Item class')}</dt><dd>${c.productClass ? esc(w(CLASS[c.productClass])) : esc(w(KIND[c.kind]))}${c.channel ? ' · ' + esc(w(CHANNEL[c.channel])) : ''}${c.repairable ? ` · ${c.repairable === 'yes' ? tr('可维修', 'Repairable') : tr('不可维修', 'Not repairable')}` : ''}</dd></div>
         <div><dt>${tr('客户 / 订单', 'Customer / order')}</dt><dd>${esc(c.customer || '—')} ${esc(c.orderRef || '')}</dd></div>
         <div><dt>${tr('收货日期', 'Received')}</dt><dd>${open && c.canOperate ? `<input type="date" data-rma-received value="${esc(c.receivedAt)}" min="2000-01-01" max="${today()}" aria-label="${tr('修改收货日期', 'Change the received date')}" title="${tr('填错了可以直接改', 'Fix it here if it was entered wrong')}">` : esc(c.receivedAt)}</dd></div>
@@ -235,6 +251,9 @@
   });
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches?.('.rma-row')) openCase(e.target.dataset.id); });
   document.addEventListener('input', e => {
+    if (e.target.matches?.('[data-rma-main]')) { const v = e.target.value.trim().toLowerCase(), hit = (data?.mainSkus || []).find(s => s.sku.toLowerCase() === v), hint = e.target.closest('label')?.querySelector('[data-rma-main-hint]'), ret = document.querySelector('[data-rma-retsku]');
+      if (hint) hint.textContent = hit ? hit.name : v ? tr('产品资料里没有这个 SKU', 'Not in the product library') : '';
+      if (ret && hit) ret.placeholder = 'REF-' + hit.sku; }
     if (e.target.matches?.('[data-rma-search]')) { ui.q = e.target.value; const pos = e.target.selectionStart; ctx.rerender(); const i = document.querySelector('[data-rma-search]'); if (i) { i.focus(); try { i.setSelectionRange(pos, pos); } catch { /* ignore */ } } return; }
     if (e.target.matches?.('[data-rma-pct]') && detail?.msrp != null) { const p = Number(e.target.value); const price = e.target.form.querySelector('[data-rma-price]'); if (price && e.target.value !== '' && p >= 0 && p <= 95) price.value = (Math.round(detail.msrp * (100 - p)) / 100).toFixed(2); }
   });
@@ -296,11 +315,11 @@
     const err = f.querySelector('.wms-error'); if (err) err.textContent = '';
     try {
       if (f.id === 'rma-new') {
-        const v = Object.fromEntries(new FormData(f)), sku = String(v.sku).trim();
-        if (!data.skus.some(s => s.sku.toLowerCase() === sku.toLowerCase()) && !/^REF-[A-Za-z0-9]/i.test(sku)) {
-          f.elements.sku.focus(); throw new Error(tr('列表里没有这个 SKU。退货 SKU 请以 REF- 打头，后面接机器型号，例如 REF-XRF38。', 'This SKU is not in the list. A return SKU starts with REF- followed by the machine model, e.g. REF-XRF38.'));
-        }
-        const r = await ctx.api.post('/rma', { sku, serial:String(v.serial || '').trim() || undefined, qty:Number(v.qty) || 1, productClass:v.productClass, channel:v.channel || undefined, customer:String(v.customer || '').trim() || undefined, orderRef:String(v.orderRef || '').trim() || undefined, reason:String(v.reason).trim(), condition:String(v.condition || '').trim(), receivedAt:v.receivedAt });
+        const v = Object.fromEntries(new FormData(f)), main = String(v.mainSku || '').trim(), mainHit = (data.mainSkus || []).find(s => s.sku.toLowerCase() === main.toLowerCase());
+        if (!mainHit) throw new Error(tr('请选择产品资料里已有的主 SKU。', 'Pick a main SKU from the product library.'));
+        const sku = String(v.sku || '').trim() || 'REF-' + mainHit.sku;
+        if (!data.skus.some(s => s.sku.toLowerCase() === sku.toLowerCase()) && !/^REF-[A-Za-z0-9]/i.test(sku)) throw new Error(tr('退货 SKU 请以 REF- 打头，例如 REF-XRF38；也可以不填。', 'A return SKU starts with REF-, e.g. REF-XRF38; or leave it blank.'));
+        const r = await ctx.api.post('/rma', { sku, mainSku:mainHit.sku, handlerId:v.handlerId || undefined, serial:String(v.serial || '').trim() || undefined, qty:Number(v.qty) || 1, productClass:v.productClass, channel:v.channel || undefined, customer:String(v.customer || '').trim() || undefined, orderRef:String(v.orderRef || '').trim() || undefined, reason:String(v.reason).trim(), condition:String(v.condition || '').trim(), receivedAt:v.receivedAt });
         for (const f of newPhotos) { const name = f.name && f.name !== 'image.png' ? f.name : `received-${Date.now()}.${(f.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`; await ctx.api.post(`/rma/${encodeURIComponent(r.id)}/photos`, { kind:'received', name, mime:f.type, dataBase64:await b64(f) }).catch(() => {}); }
         newPhotos = [];
         ctx.closeOverlay(); ctx.toast?.(tr(`已登记 ${r.number}`, `Registered ${r.number}`)); busy = false; await openCase(r.id); data = null; load(); return;
