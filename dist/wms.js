@@ -78,12 +78,12 @@
     const today = data.movements.filter(m => new Date(m.createdAt).toDateString() === new Date().toDateString()).length;
     return `<div class="wms">
       <div class="page-heading"><div><div class="eyebrow">WORK OS · WMS</div><h1>${tr('库存管理', 'Inventory')}</h1><p>${tr('按 SKU 和库位记录库存。每一次入库、出库、调拨和盘点调整都会留下流水；盘点调整要由另一位有库存管理权限的同事确认后才生效。', 'Stock per SKU and location. Every goods-in, goods-out, transfer and count adjustment is logged; count adjustments take effect once another warehouse manager confirms.')}${data.lastImport ? `<br><small class="wms-hint">${tr(`期初库存截至 ${String(data.lastImport.asOf).slice(0, 10)}`, `Opening stock as of ${String(data.lastImport.asOf).slice(0, 10)}`)}</small>` : ''}</p></div>
-        <div class="heading-actions">${data.items.length ? `<button class="btn" data-wms="export" title="${tr('按当前筛选和排序导出库存', 'Exports the stock with the current filter and sort')}">${icon('download-simple')} ${tr('导出 CSV', 'Export CSV')}</button>` : ''}${data.canImport ? `<button class="btn" data-wms="import">${icon('upload-simple')} ${tr('导入期初库存', 'Import opening stock')}</button>` : ''}${data.canOperate ? `<button class="btn" data-wms="new-sku">${icon('plus')} ${tr('新增 SKU', 'New SKU')}</button>` : ''}${window.WorkOSErpAccess?.button?.('warehouse') || ''}</div></div>
+        <div class="heading-actions"><button class="btn" data-wms="template">${icon('file-arrow-down')} ${tr('下载标准模板', 'Download template')}</button>${data.items.length ? `<button class="btn" data-wms="export" title="${tr('用标准模板导出全部 SKU 的现有库存，改完可以直接用“批量更新库存”传回来', 'All SKUs in the standard template; edit and upload it back with Bulk update')}">${icon('download-simple')} ${tr('导出所有库存', 'Export all stock')}</button>` : ''}${data.canImport ? `<button class="btn" data-wms="import">${icon('upload-simple')} ${tr('批量更新库存', 'Bulk update stock')}</button>` : ''}<button class="btn" data-wms="records">${icon('clock-counter-clockwise')} ${tr('导入 / 导出记录', 'Import / export log')}</button>${window.WorkOSErpAccess?.button?.('warehouse') || ''}</div></div>
       ${data.canOperate ? '' : `<div class="wms-note">${icon('eye')} ${tr('你的仓库库存权限是“查看”：可以看库存和流水，不能加减数量。需要管理权限请联系主管在“供应链权限管理”里开通。', 'Your warehouse access is view-only: you can see stock and movements but not change quantities. Ask a manager to grant Manage in Supply chain permissions.')}</div>`}
       <div class="wms-kpis">${data.locations.map(l => `<button class="wms-kpi ${ui.loc === l.id ? 'on' : ''}" data-wms="loc" data-v="${esc(l.id)}"><span>${esc(word(l))}</span><b>${fmtN(data.items.reduce((s, it) => s + Number(it.qty?.[l.id] || 0), 0))}</b><em>${data.items.filter(it => Number(it.qty?.[l.id] || 0) > 0).length} SKU${data.values ? ` · ${data.values.cost ? tr('成本货值', 'cost') : tr('零售货值', 'retail')} ${usd(data.values.cost ? data.values.cost[l.id] : data.values.msrp[l.id])}` : ''}</em></button>`).join('')}
         <div class="wms-kpi ${pending.length ? 'warn' : ''}"><span>${tr('待确认', 'Awaiting confirmation')}</span><b>${pending.length}</b><em>${tr('盘点调整', 'count adjustments')}</em></div>
         <div class="wms-kpi"><span>${tr('今日流水', 'Today')}</span><b>${today}</b><em>${tr('条操作', 'movements')}</em></div></div>
-      ${!data.items.length ? `<div class="wms-note">${icon('info')} ${data.canImport ? tr('还没有库存数据。请点右上角“导入期初库存”，上传库存表（Excel 另存为 CSV）。', 'No stock yet. Use “Import opening stock” at the top right and upload the stock sheet (Excel saved as CSV).') : tr('还没有库存数据，等待管理员导入期初库存。', 'No stock yet; waiting for an administrator to import the opening balance.')}</div>` : ''}
+      ${!data.items.length ? `<div class="wms-note">${icon('info')} ${data.canImport ? tr('还没有库存数据。请点右上角“下载标准模板”，填好后用“批量更新库存”上传（Excel 另存为 CSV）。', 'No stock yet. Download the standard template at the top right, fill it in and upload it with Bulk update stock (Excel saved as CSV).') : tr('还没有库存数据，等待管理员导入期初库存。', 'No stock yet; waiting for an administrator to import the opening balance.')}</div>` : ''}
       ${mineToDecide.length ? `<section class="wms-pending"><h3>${icon('seal-question')} ${tr('待你确认的盘点调整', 'Count adjustments awaiting you')} <b>${mineToDecide.length}</b></h3>${mineToDecide.map(m => `<div class="wms-pend-row"><span class="wms-type adjust">${tr('盘点调整', 'Adjust')}</span><strong>${esc(m.sku)}</strong><span>${esc(word(loc(m.location)))}</span><span class="${m.qty < 0 ? 'neg' : 'pos'}">${m.qty > 0 ? '+' : ''}${fmtN(m.qty)}</span><span class="wms-by">${tr(`系统 ${fmtN(m.systemQty)} → 实盘 ${fmtN(m.counted)}`, `system ${fmtN(m.systemQty)} → counted ${fmtN(m.counted)}`)}</span><span class="wms-reason">${esc(m.reason)}</span><span class="wms-by">${esc(m.byName)} · ${when(m.createdAt)}</span><button class="btn small primary" data-wms="approve" data-id="${esc(m.id)}">${tr('确认生效', 'Confirm')}</button><button class="btn small" data-wms="reject" data-id="${esc(m.id)}">${tr('驳回', 'Reject')}</button></div>`).join('')}</section>` : ''}
       ${data.canOperate ? opGroups() : ''}
       <div class="wms-tabs"><button class="${ui.tab === 'stock' ? 'on' : ''}" data-wms="tab" data-v="stock">${icon('package')} ${tr('库存', 'Stock')}</button><button class="${ui.tab === 'log' ? 'on' : ''}" data-wms="tab" data-v="log">${icon('list-bullets')} ${tr('出入库流水', 'Movements')}</button></div>
@@ -149,14 +149,23 @@
       ${items.slice(0, ui.limit).map(row).join('') || `<tr><td colspan="${cols}" class="wms-empty">${data.items.length ? tr('没有匹配的 SKU。', 'No matching SKU.') : tr('还没有 SKU。', 'No SKUs yet.')}</td></tr>`}
     </tbody></table></div>${items.length > ui.limit ? `<p class="wms-count">${tr(`为保持流畅只显示前 ${fmtN(ui.limit)} 行`, `Showing the first ${fmtN(ui.limit)} rows`)} <button class="wms-link" data-wms="more">${tr(`再显示 ${fmtN(Math.min(PAGE, items.length - ui.limit))} 行`, `Show ${fmtN(Math.min(PAGE, items.length - ui.limit))} more`)}</button><button class="wms-link" data-wms="all">${tr(`全部显示（${fmtN(items.length)}）`, `Show all (${fmtN(items.length)})`)}</button></p>` : ''}`;
   }
-  function exportCsv() {
-    const cell = v => { const s = String(v ?? ''); return /[",\n\r]/.test(s) || /^[=+\-@]/.test(s) ? `"${(/^[=+\-@]/.test(s) ? "'" : '') + s.replace(/"/g, '""')}"` : s; };
-    const head = ['SKU', '中文名', 'English name', tr('产品族', 'Family'), tr('系列', 'Series'), 'MSRP', ...data.locations.map(l => l.zh), tr('合计', 'Total'), ...data.locations.flatMap(l => [`${l.zh} 首选库位`, `${l.zh} 备选库位1`, `${l.zh} 备选库位2`])];
-    const rows = filtered().map(it => [it.sku, it.nameZh || it.name, it.nameEn, famName(it.family), it.series, it.msrp ?? '', ...data.locations.map(l => n(it, l.id)), total(it), ...data.locations.flatMap(l => binsOf(it, l.id))]);
-    const csv = '﻿' + [head, ...rows].map(r => r.map(cell).join(',')).join('\r\n') + '\r\n';
-    const d = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' })); a.download = `wms-stock-${d}.csv`;
-    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  const TEMPLATE_HEAD = () => ['SKU', '产品名称', ...data.locations.map(l => l.zh)];
+  const csvCell = v => { const s = String(v ?? ''); return /[",\n\r]/.test(s) || /^[=+\-@]/.test(s) ? `"${(/^[=+\-@]/.test(s) ? "'" : '') + s.replace(/"/g, '""')}"` : s; };
+  const saveCsv = (rows, name) => { const csv = '﻿' + rows.map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' })); a.download = name;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); };
+  /** 导出所有库存: every SKU in the standard template (not only the filtered rows), so it can be edited and uploaded back. */
+  async function exportCsv() {
+    const rows = data.items.map(it => [it.sku, it.nameZh || it.name || it.nameEn || '', ...data.locations.map(l => n(it, l.id))]);
+    saveCsv([TEMPLATE_HEAD(), ...rows], `wms-stock-${new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)}.csv`);
+    try { await ctx.api.post('/wms/exports', { rows:rows.length }); } catch { /* the file is already saved; the log entry is best effort */ }
+  }
+  async function recordsDialog() {
+    let items = [];
+    try { items = (await ctx.api.get('/wms/imports')).items; } catch (x) { return ctx.toast?.(x.message || tr('读取失败', 'Could not load')); }
+    ctx.modal(tr('导入 / 导出记录', 'Import / export log'), `<div class="wms-form">${items.length ? `<table class="wms-table"><thead><tr><th>${tr('时间', 'When')}</th><th>${tr('类型', 'Kind')}</th><th>${tr('操作人', 'By')}</th><th class="num">${tr('SKU 行数', 'Rows')}</th><th class="num">${tr('改动的库位数', 'Changed')}</th><th>${tr('库存截至', 'As of')}</th></tr></thead><tbody>
+      ${items.map(r => `<tr><td class="nowrap">${esc(new Date(r.at).toLocaleString(lang() === 'en' ? 'en-US' : 'zh-CN'))}</td><td><span class="wms-type ${r.kind === 'export' ? 'out' : 'in'}">${r.kind === 'export' ? tr('导出所有库存', 'Export') : tr('批量更新库存', 'Bulk update')}</span></td><td>${esc(r.by)}</td><td class="num">${fmtN(r.rows)}</td><td class="num">${r.changed == null ? '—' : fmtN(r.changed)}</td><td>${r.kind === 'export' ? '—' : esc(r.asOf)}</td></tr>`).join('')}</tbody></table>`
+      : `<p class="wms-hint">${tr('还没有导入或导出记录。', 'No imports or exports yet.')}</p>`}</div>`, `<button class="btn" data-live-action="close">${tr('关闭', 'Close')}</button>`);
   }
   function logTable(list) {
     const types = [['', tr('全部', 'All')], ...Object.entries(TYPES).map(([k, [zh, en]]) => [k, tr(zh, en)])];
@@ -447,19 +456,16 @@
   function importDialog() {
     importRows = null;
     const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-    ctx.modal(tr('导入期初库存', 'Import opening stock'), `<form id="wms-import" class="wms-form">
-      <p class="wms-hint">${tr('把库存表在 Excel 里“另存为 CSV（UTF-8）”后上传。表头需要包含：SKU、产品名称、类型、美国LA仓、东莞工厂仓、济南工厂仓、在途运输中（没有的库位列可以不放）。退货品（REF- 开头）在“退货维修”里管理，不要放进这张表。', 'In Excel, save the stock sheet as “CSV UTF-8” and upload it. Headers: SKU, 产品名称, 类型, 美国LA仓, 东莞工厂仓, 济南工厂仓, 在途运输中 (location columns you do not have can be left out). Returned goods (REF-…) are handled in Returns & repairs, not in this sheet.')} <button type="button" class="wms-link" data-wms="template">${icon('download-simple')} ${tr('下载模板', 'Download template')}</button></p>
+    ctx.modal(tr('批量更新库存', 'Bulk update stock'), `<form id="wms-import" class="wms-form">
+      <p class="wms-hint">${tr('用“下载标准模板”或“导出所有库存”拿到表格，改好数量后在 Excel 里“另存为 CSV（UTF-8）”上传。表头：SKU、产品名称、美国LA仓、东莞工厂仓、济南工厂仓、在途运输中（没有的库位列可以不放）。退货品（REF- 开头）在“退货维修”里管理，不要放进这张表。', 'Start from Download template or Export all stock, change the quantities, save as “CSV UTF-8” in Excel and upload. Headers: SKU, 产品名称, 美国LA仓, 东莞工厂仓, 济南工厂仓, 在途运输中 (location columns you do not have can be left out). Returned goods (REF-…) are handled in Returns & repairs, not in this sheet.')} <button type="button" class="wms-link" data-wms="template">${icon('download-simple')} ${tr('下载模板', 'Download template')}</button></p>
       <label class="field"><span>${tr('库存截至日期', 'Stock as of')}</span><input name="asOf" type="date" required value="${today}"></label>
       <label class="field"><span>${tr('库存表（CSV）', 'Stock sheet (CSV)')}</span><input name="file" type="file" accept=".csv,text/csv" required data-wms-file></label>
       <div data-wms-import-preview></div>
       <p class="wms-note">${icon('warning')} ${tr('导入会把表里每个 SKU 在每个库位的数量设成表里的数字，差额会作为“期初导入”写进流水。表里没有的 SKU 不受影响。', 'Import sets each listed SKU’s quantity at each listed location to the number in the file; the difference is logged as “opening import”. SKUs not in the file are unchanged.')}</p>
       <p class="wms-error" role="alert"></p></form>`, `<button class="btn" data-live-action="close">${tr('取消', 'Cancel')}</button><button class="btn primary" type="submit" form="wms-import">${tr('确认导入', 'Import')}</button>`);
   }
-  function downloadTemplate() {
-    const csv = '\uFEFFSKU,产品名称,类型,美国LA仓,东莞工厂仓,济南工厂仓,在途运输中\nEXAMPLE-SKU-01,示例产品,整机,0,0,0,0\n';
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' })); a.download = 'wms-opening-stock-template.csv';
-    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-  }
+  /** 下载标准模板: the columns 批量更新库存 reads, with one example row. */
+  function downloadTemplate() { saveCsv([TEMPLATE_HEAD(), ['EXAMPLE-SKU-01', '示例产品', ...data.locations.map(() => 0)]], 'wms-stock-template.csv'); }
 
   async function act(fn, ok) {
     try { await fn(); ctx.toast?.(ok); data = null; await load(); return true; }
@@ -489,6 +495,8 @@
     if (a === 'more') { ui.limit += PAGE; return ctx.rerender(); }
     if (a === 'all') { ui.limit = Infinity; return ctx.rerender(); }
     if (a === 'export') return exportCsv();
+    if (a === 'template') return downloadTemplate();
+    if (a === 'records') return recordsDialog();
     if (a === 'sort') { if (ui.sort === b.dataset.v) ui.dir = -ui.dir; else { ui.sort = b.dataset.v; ui.dir = ['sku', 'name', 'type', 'bin'].includes(b.dataset.v) ? 1 : -1; } return ctx.rerender(); }
     if (a === 'history') { ui.sku = b.dataset.sku || null; ui.tab = 'log'; ui.q = ''; return ctx.rerender(); }
     if (a === 'op') return openOp(b.dataset.type, b.dataset.sku);

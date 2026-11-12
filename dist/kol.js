@@ -75,7 +75,7 @@
     const stages = [['all', tr('全部', 'All'), data.items.length], ...Object.keys(STAGE).map(s => [s, w(STAGE[s]), data.items.filter(k => k.stage === s).length]).filter(([s, , n]) => n || ui.stage === s)];
     return `<div class="rma kol">
       <div class="page-heading"><div><div class="eyebrow">WORK OS · KOL</div><h1>${tr('KOL 管理', 'KOL management')}</h1><p>${tr('所有合作 KOL 的资料、合作进度和带货业绩。联系方式、优惠码、佣金和订单从 UpPromote 自动同步；合作阶段、等级、负责人、寄样和发布记录在这里维护。', 'Every KOL’s details, cooperation progress and sales. Contact details, coupons, commission and orders sync from UpPromote; stage, tier, owner, samples and published content are kept here.')}</p></div>
-        <div class="kol-head-actions">${window.WorkOSErpAccess?.button?.('kol') || ''}<button class="btn" data-kol="export">${icon('download-simple')} ${tr('导出 CSV', 'Export CSV')}</button>${data.canManage ? `<button class="btn primary" data-kol="new">${icon('plus')} ${tr('新增 KOL', 'Add KOL')}</button>` : ''}</div></div>
+        <div class="kol-head-actions"><button class="btn" data-kol="export">${icon('download-simple')} ${tr('导出 CSV', 'Export CSV')}</button>${data.canManage ? `<button class="btn primary" data-kol="new">${icon('plus')} ${tr('新增 KOL', 'Add KOL')}</button>` : ''}${window.WorkOSErpAccess?.button?.('kol') || ''}</div></div>
       ${syncBar()}
       <div class="rma-kpis">
         <div class="rma-kpi"><span>${tr('KOL 总数', 'KOLs')}</span><b>${data.items.length}</b><em>${tr(`联盟正常 ${active} 位`, `${active} active in UpPromote`)}</em></div>

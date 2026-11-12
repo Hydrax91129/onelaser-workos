@@ -50,10 +50,11 @@ test('movement log filters by type and search; one SKU loads its full history fr
   assert.equal(w.render().querySelectorAll('.wms-table tbody tr').length, 3, 'shows the server history, including the older movement');
 });
 
-test('opening-stock import and template use the four regular locations; returns are not regular stock', () => {
+test('bulk stock update and the standard template use the four regular locations; returns are not regular stock', () => {
   const src = read('wms.js');
   assert.doesNotMatch(src, /refurb|翻新品/, 'no returns warehouse in regular stock');
-  assert.match(src, /SKU,产品名称,类型,美国LA仓,东莞工厂仓,济南工厂仓,在途运输中\\nEXAMPLE-SKU-01,示例产品,整机,0,0,0,0\\n/);
+  assert.match(src, /const TEMPLATE_HEAD = \(\) => \['SKU', '产品名称', \.\.\.data\.locations\.map\(l => l\.zh\)\]/, 'template: SKU, name and one column per regular location');
+  assert.match(src, /批量更新库存/); assert.doesNotMatch(src, /data-wms="new-sku"/, 'no 新增 SKU button: library SKUs are stock SKUs');
   assert.match(src, /us:\['美国LA仓', '美国仓'/, 'old 美国仓 headers still import');
   assert.match(src, /'美国LA仓缺货'/);
 });

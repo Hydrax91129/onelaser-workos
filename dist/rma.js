@@ -73,7 +73,7 @@
     const rows = filtered();
     return `<div class="rma">
       <div class="page-heading"><div><div class="eyebrow">WORK OS · RMA</div><h1>${tr('退货维修', 'Returns & repairs')}</h1><p>${tr('每一台退回的产品一条记录：收货、诊断、维修人员、维修前后照片、维修用时；修好后入库待上架，再设定折扣在网站销售。退货维修自成一块，不进常规库存。', 'One case per returned unit: receipt, diagnosis, technician, photos, repair time; repaired units go put away for sale and can be discounted for the website. Returns are their own stock, not regular stock.')}</p></div>
-        <div class="heading-actions">${window.WorkOSErpAccess?.button?.('returns') || ''}${data.canOperate ? `<button class="btn primary" data-rma="new">${icon('plus')} ${tr('登记退货', 'Register a return')}</button>` : ''}</div></div>
+        <div class="heading-actions">${data.canOperate ? `<button class="btn primary" data-rma="new">${icon('plus')} ${tr('登记退货', 'Register a return')}</button>` : ''}${window.WorkOSErpAccess?.button?.('returns') || ''}</div></div>
       <div class="rma-kpis">
         <div class="rma-kpi"><span>${tr('处理中', 'Open')}</span><b>${open.length}</b><em>${tr(`其中超过 7 天 ${open.filter(c => (c.openDays || 0) > 7).length} 件`, `${open.filter(c => (c.openDays || 0) > 7).length} older than 7 days`)}</em></div>
         <div class="rma-kpi"><span>${tr('平均维修用时', 'Average repair time')}</span><b>${avg(done.map(c => c.repairDays)) ?? '—'}<small>${tr(' 天', ' days')}</small></b><em>${tr(`按 ${done.length} 件已修好计算`, `from ${done.length} repaired`)}</em></div>
