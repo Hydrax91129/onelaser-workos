@@ -24,7 +24,9 @@ test('sidebar sections follow the requested order, and restricted pages are gate
   const order = [...block.matchAll(/\['([a-z-]+)','[a-z]+','([^']+)','[^']+','([a-z]+)'\]/g)].map(m => [m[1], m[2], m[3]]);
   const ids = s => order.filter(o => o[2] === s).map(o => o[0]);
   assert.deepEqual(ids('work'), ['overview', 'okr', 'projects', 'tasks'], 'workbench is the first page of the Workspace');
-  assert.deepEqual(ids('reports'), ['okr-analysis', 'project-analysis', 'team']);
+  assert.deepEqual(ids('reports'), [], 'no Reports group in the sidebar: the analysis pages are tabs of their parent pages');
+  for (const id of ['okr-analysis', 'project-analysis', 'team']) assert.ok(ids('hidden').includes(id), `${id} keeps its route for links`);
+  assert.doesNotMatch(live.match(/const navSections = \[([\s\S]*?)\];/)[1], /'reports'/);
   assert.deepEqual(ids('product'), ['products', 'wms', 'erp-access'], 'product hub: Product PIM and WMS modules, plus ERP permissions');
   assert.ok(ids('hidden').includes('product-cost') && ids('hidden').includes('supply-chain'), 'pricing and supply chain are tabs now; old links still open them');
   assert.deepEqual(ids('marketing'), ['kol'], 'KOL management sits in its own Marketing section');

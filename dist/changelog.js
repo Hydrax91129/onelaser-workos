@@ -22,6 +22,12 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.58', date:'2026-11-11T19:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('分析页并入各自页面，左侧不再有“报表区”', 'Analysis pages moved into their own pages; no Reports group in the sidebar'),
+      title:c('分析页改为页签', 'Analysis pages become tabs'),
+      changes:[c('“OKR 分析”放到 OKR 目标页，排在“团队 OKR”“对齐视图”后面。', 'OKR analysis is now a tab on the OKRs page, after Team OKRs and Alignment.'),
+        c('“项目分析”放到项目管理页，排在“我的任务”后面；“任务分析”放到个人任务页，排在“汇总”旁边。', 'Project analysis is a tab on Projects after My tasks; Task analysis is a tab on My tasks next to Summary.'),
+        c('左侧导航去掉“报表区”。打开分析页签时，左侧高亮所在的页面；原来的链接照样能打开。', 'The Reports group is gone from the sidebar. While an analysis tab is open the sidebar highlights its page; old links still work.')] },
     { version:'1.57', date:'2026-11-11T18:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('新增“财务 · 应收账款”；登录后加载更快', 'New Finance · Receivables; faster start after sign-in'),
       title:c('财务 · 应收账款；登录提速', 'Finance · Receivables; faster start'),
