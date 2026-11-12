@@ -33,12 +33,15 @@
   const CHANNEL = { website:['官网', 'Website'], amazon:['Amazon', 'Amazon'], dealer:['经销商', 'Dealer'], other:['其他', 'Other'] };
   /* Three photo groups per return; 维修后 only shows for photos uploaded before it was dropped. */
   const PHOTO = { received:['收货照片', 'Photos on receipt'], diagnosis:['问题诊断照片', 'Diagnosis photos'], listing:['上架照片', 'Listing photos'], repaired:['维修后（旧）', 'After repair (old)'] };
+  // One photo in the history: “上传了一张收货照片” / “uploaded a receipt photo”.
+  const PHOTO_ONE = { received:['收货照片', 'receipt photo'], diagnosis:['问题诊断照片', 'diagnosis photo'], listing:['上架照片', 'listing photo'], repaired:['维修后照片', 'after-repair photo'] };
   const CLASS = { machine:['机器', 'Machine'], accessory:['配件', 'Accessory'], material:['材料', 'Material'], other:['其他', 'Other'] };
   const IMG_MIME = ['image/png', 'image/jpeg', 'image/webp'];
   let newPhotos = [];
   const LISTING = { pending:['已入库待上架', 'To list'], listed:['完成上架', 'Listed'], sold:['售出', 'Sold'], none:['不上架', 'Not for sale'] };
-  /* Grade sets the discount (server: GRADE_DISCOUNT in rma.ts): A untouched, back as new stock; B 10% off; C 20% off. */
-  const GRADE = { A:['A 品（原封不动，当新货卖，不打折）', 'A (untouched, sold as new, no discount)'], B:['B 品（10% off）', 'B (10% off)'], C:['C 品（20% off）', 'C (20% off)'] };
+  /* Grade sets the discount (server: GRADE_DISCOUNT in rma.ts, owner 2026-11-12). */
+  const GRADE = { A:['A 全新（不打折）', 'A · Completely new (no discount)'], B:['B 开箱品（5% off）', 'B · Open box (5% off)'], C:['C 开箱有使用痕迹（10% off）', 'C · Open box, signs of use (10% off)'],
+    D:['D 一般二手（15% off）', 'D · Regular used (15% off)'], E:['E 有损伤但功能正常（20% off）', 'E · Damaged but functional (20% off)'] };
   const w = pair => pair ? tr(pair[0], pair[1]) : '';
   const stageOf = c => c.stage || (c.status === 'restocked' ? ({ listed:'listed', sold:'sold' })[c.listing] || 'restocked' : c.status);
   const badge = c => { const k = stageOf(c); return `<span class="rma-badge ${STAGE[k]?.[2] || ''}">${esc(w(STAGE[k]))}</span>`; };
@@ -149,7 +152,7 @@
   }
   function photoGroup(kind) {
     const list = detail.photos.filter(p => p.kind === kind);
-    return `<div class="rma-photos"><h4>${esc(w(PHOTO[kind]))} <small>${list.length}</small></h4><div class="rma-thumbs">${list.map(p => `<a class="rma-thumb" href="#" data-rma="zoom" data-id="${esc(p.id)}" title="${esc(p.name)} · ${esc(p.byName)}"><img data-rma-photo="${esc(p.id)}" alt="${esc(p.name)}" src="${esc(photoCache.get(p.id) || '')}"></a>`).join('')}
+    return `<div class="rma-photos"><h4>${esc(w(PHOTO[kind]))} <small>${list.length}</small></h4><div class="rma-thumbs">${list.map(p => `<span class="rma-thumb-wrap"><a class="rma-thumb" href="#" data-rma="zoom" data-id="${esc(p.id)}" title="${esc(p.name)} · ${esc(p.byName)}"><img data-rma-photo="${esc(p.id)}" alt="${esc(p.name)}" src="${esc(photoCache.get(p.id) || '')}"></a>${detail.canOperate || (detail.canWork && p.mine) ? `<button type="button" class="rma-thumb-del" data-rma="del-photo" data-id="${esc(p.id)}" title="${tr('删除这张照片', 'Delete this photo')}" aria-label="${tr(`删除照片 ${p.name}`, `Delete photo ${p.name}`)}">${icon('x')}</button>` : ''}</span>`).join('')}
       ${detail.canWork ? `<label class="rma-add" data-rma-drop="${kind}">${icon('camera-plus')}<span>${tr('上传 / 粘贴 / 拖入', 'Upload, paste or drop')}</span><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden data-rma-file="${kind}"></label>` : ''}</div></div>`;
   }
   function drawDetail(first) {
@@ -188,9 +191,9 @@
       <section class="rma-sec"><h3>${icon('images')} ${tr('照片', 'Photos')}</h3>${['received', 'diagnosis', 'listing', ...(detail.photos.some(p => p.kind === 'repaired') ? ['repaired'] : [])].map(photoGroup).join('')}<p class="wms-error" data-rma-photo-error role="alert"></p></section>
       ${open && c.canOperate ? `<section class="rma-sec"><h3>${icon('flag-checkered')} ${tr('结案', 'Close the case')}</h3><form id="rma-close" class="form-grid">
         <label class="field"><span>${tr('处理结果', 'Outcome')}</span><select name="outcome"><option value="restock">${tr('退回库存', 'Back into stock')}</option><option value="scrap">${tr('报废', 'Scrap')}</option><option value="return_customer">${tr('修好寄回客户', 'Return to customer')}</option></select></label>
-        <label class="field" data-rma-restock><span>${tr('成色', 'Grade')}</span><select name="grade" data-rma-grade>${Object.entries(GRADE).map(([k, v]) => opt(k, w(v), 'B')).join('')}</select></label>
+        <label class="field" data-rma-restock><span>${tr('成色', 'Grade')}</span><select name="grade" data-rma-grade>${Object.entries(GRADE).map(([k, v]) => opt(k, w(v), 'C')).join('')}</select></label>
         <label class="field"><span>${tr('备注', 'Note')}</span><input name="note" maxlength="1000"></label>
-        <div class="full rma-actions"><button class="btn primary" type="submit">${tr('确认结案', 'Close case')}</button><span class="wms-hint">${tr('成色决定折扣：A 品原封不动当新货卖（不打折），B 品 10% off，C 品 20% off。入库只在退货维修里记录，不改常规库存。', 'The grade sets the discount: A untouched, sold as new (no discount, into US stock), B 10% off, C 20% off. Putting it away is recorded here only; regular stock does not change.')}</span></div>
+        <div class="full rma-actions"><button class="btn primary" type="submit">${tr('确认结案', 'Close case')}</button><span class="wms-hint">${tr('成色决定折扣：A 全新不打折，B 开箱品 5% off，C 开箱有使用痕迹 10% off，D 一般二手 15% off，E 有损伤但功能正常 20% off。入库只在退货维修里记录，不改常规库存。', 'The grade sets the discount: A completely new (none), B open box 5% off, C open box with signs of use 10% off, D regular used 15% off, E damaged but functional 20% off. Putting it away is recorded here only; regular stock does not change.')}</span></div>
         <p class="wms-error" role="alert"></p></form></section>` : ''}
       ${c.status === 'restocked' ? `<section class="rma-sec"><h3>${icon('tag')} ${tr('上架与销售', 'Listing & sale')}</h3>${c.canPrice ? `<form id="rma-price" class="form-grid">
         <label class="field"><span>${tr('零售价 MSRP', 'MSRP')}</span><input value="${esc(money(c.msrp))}" readonly></label>
@@ -213,7 +216,8 @@
     if (a === 'created') return tr('登记退货', 'registered the return') + n;
     if (a === 'updated') return tr('更新了', 'updated ') + (lang() === 'en' ? (e.note || '') : String(e.note || '').replace(/status:(\w+)/, (_, x) => '进度（' + w(STATUS[x]) + '）').replace('technician', '维修人员').replace('diagnosis', '问题诊断').replace('repair notes', '维修记录').replace(/waiting for: /, '等待配件：').replace(/\bparts\b/, '配件').replace(/, /g, '、'));
     if (a === 'repaired') return tr('标记维修完成', 'marked it repaired') + n;
-    if (a.startsWith('photo:')) return tr(`上传了${w(PHOTO[a.slice(6)])}照片`, `uploaded a ${w(PHOTO[a.slice(6)])} photo`);
+    if (a.startsWith('photo:')) return tr(`上传了一张${w(PHOTO_ONE[a.slice(6)] || ['照片', 'photo'])}`, `uploaded a ${w(PHOTO_ONE[a.slice(6)] || ['照片', 'photo'])}`);
+    if (a.startsWith('photo_deleted:')) return tr(`删除了一张${w(PHOTO_ONE[a.slice(14)] || ['照片', 'photo'])}`, `deleted a ${w(PHOTO_ONE[a.slice(14)] || ['照片', 'photo'])}`) + n;
     if (a.startsWith('closed:')) return ({ restock:tr('结案：退回库存', 'closed: back into stock'), scrap:tr('结案：报废', 'closed: scrapped'), return_customer:tr('结案：寄回客户', 'closed: returned to customer') })[a.slice(7)] + n;
     if (a === 'priced') return tr('设置售价 ', 'set the price ') + String(e.note || '').replace(/listing:(\w+)/, (_, x) => tr('上架：', 'listing: ') + w(LISTING[x]));
     return a + n;
@@ -244,6 +248,14 @@
     if (a === 'zoom') {
       e.preventDefault(); const p = detail?.photos.find(x => x.id === el.dataset.id); if (!p) return;
       if (window.WorkOSPreview) { window.WorkOSPreview.open({ url:`${apiBase()}/rma/${encodeURIComponent(detail.id)}/photos/${encodeURIComponent(p.id)}`, name:p.name, meta:`${w(PHOTO[p.kind])} · ${p.byName}` }); return; }
+      return;
+    }
+    if (a === 'del-photo') {
+      // Delete a photo (owner, 2026-11-12): managers any photo, the technician their own; the history keeps a line.
+      const p = detail?.photos.find(x => x.id === el.dataset.id); if (!p) return;
+      if (!window.confirm?.(tr(`删除这张照片（${p.name}）？删除后不能恢复，处理记录里会留下一条。`, `Delete this photo (${p.name})? It cannot be restored; the history keeps a line.`))) return;
+      try { await ctx.api.post(`/rma/${encodeURIComponent(detail.id)}/photos/${encodeURIComponent(p.id)}/delete`, {}); photoCache.delete(p.id); ctx.toast?.(tr('照片已删除', 'Photo deleted')); await refresh(); }
+      catch (x) { ctx.toast?.(x.message || tr('删除失败', 'Could not delete')); }
       return;
     }
     if (a === 'repaired') {
