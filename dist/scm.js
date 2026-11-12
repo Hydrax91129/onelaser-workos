@@ -59,7 +59,41 @@
     </div>`;
   }
 
-  const sortTh = (k, label, cls = '') => `<th class="${cls} scm-sort ${ui.sort === k ? 'on' : ''}" data-scm="sort" data-v="${k}">${label}${ui.sort === k ? (ui.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
+  /* Reorder columns: key, header, the hover explanation, class. A key of '' is not sortable. */
+  const COLS = () => { const s = data.settings; return [
+    ['sku', 'SKU', tr('产品资料里的 SKU。', 'The SKU in the product library.')],
+    ['', tr('产品', 'Product'), tr('产品资料里的名称。', 'Name from the product library.')],
+    ['ds365', tr('DS · 365 天', 'DS · 365d'), tr('过去 365 天平均每天卖出的件数（Shopify 订单，取消和测试单不算）。', 'Average units sold per day over the last 365 days (Shopify).'), 'num'],
+    ['ds90', tr('DS · 90 天', 'DS · 90d'), tr('过去 90 天平均每天卖出的件数。', 'Average units sold per day over the last 90 days.'), 'num'],
+    ['ds30', tr('DS · 30 天', 'DS · 30d'), tr('过去 30 天平均每天卖出的件数；▲▼ 是和近 90 天比的涨跌（30% 以上算短期爆发或下滑）。', 'Average per day over the last 30 days; ▲▼ against the 90-day rate (30%+ is a burst or dip).'), 'num'],
+    ['forecast', tr('预测日销', 'Forecast / day'), tr('40% 近 30 天 + 30% 近 90 天 + 30% 全年 × 季节系数；短期爆发最多按近 90 天的 2 倍计入。后面的天数都按它算。', '40% last 30 + 30% last 90 + 30% the year × season; bursts count up to 2× the 90-day rate. Everything after uses it.'), 'num'],
+    ['us', tr('美国LA仓', 'US LA'), tr('美国LA仓现在的数量（WMS）。', 'In the US LA warehouse now (WMS).'), 'num'],
+    ['transit', tr('在途', 'In transit'), tr('已经发出、还没入美国仓的数量（WMS 在途运输中）。', 'Shipped, not yet in the US warehouse (WMS in transit).'), 'num'],
+    ['dg', tr('东莞工厂仓', 'Dongguan'), tr('东莞工厂仓的成品数量。', 'Finished goods at the Dongguan factory.'), 'num'],
+    ['jn', tr('济南工厂仓', 'Jinan'), tr('济南工厂仓的成品数量。', 'Finished goods at the Jinan factory.'), 'num'],
+    ['finished', tr('成品合计', 'Finished'), tr('美国LA仓 + 在途 + 东莞 + 济南。建议发货按它算。', 'US LA + in transit + Dongguan + Jinan. Shipping is worked out on it.'), 'num scm-tot'],
+    ['wip', tr('在产（半成品）', 'In production'), tr('采购单里已下单、还没完工的数量。', 'Ordered on purchase orders, not finished yet.'), 'num'],
+    ['pipeline', tr('成品 + 在产', 'Finished + WIP'), tr('成品合计 + 在产。建议生产按它算，所以不会重复下单。', 'Finished + in production. Production is worked out on it, so nothing is ordered twice.'), 'num scm-tot'],
+    ['cover', tr('可售天数', 'Days of cover'), tr('(美国LA仓 + 在途) ÷ 预测日销：现有货还能卖几天。小字是成品合计、成品 + 在产能卖的天数。', '(US LA + in transit) ÷ forecast: how many days the stock lasts. Below: finished, and finished + in production.'), 'num'],
+    ['', tr('最小起订量', 'MOQ'), tr('产品资料里的最小起订量 / 采购单位。', 'MOQ / purchase unit from the product library.')],
+    ['productionDays', tr('生产（天）', 'Production (d)'), tr('产品资料里的生产交期；带 * 是没填，用补货参数的默认值。', 'Production lead time from the product library; * = default from the settings.'), 'num'],
+    ['firstLegDays', tr('头程（天）', 'First leg (d)'), tr('产品资料里的头程时间；带 * 是没填，用补货参数的默认值。', 'First-leg time from the product library; * = default from the settings.'), 'num'],
+    ['leadDays', tr('预测到仓天数', 'Days to warehouse'), tr(`现在补货，多少天能到美国仓：下单 ${s.orderDays} + 生产交期 + 头程 + 清关收货 ${s.receiveDays} + 意外 ${s.bufferDays} 天。工厂有成品时不算生产交期，小字是要重新生产时的天数。`, `If reordered now, days until it is in the US warehouse: order ${s.orderDays} + production + first leg + receiving ${s.receiveDays} + buffer ${s.bufferDays}. No production while the factory has finished goods; below: the days if it must be made.`), 'num'],
+    ['arriveOn', tr('预计到仓日期', 'Arrives on'), tr('今天 + 预测到仓天数。', 'Today + days to warehouse.'), 'num'],
+    ['shortDays', tr('预测缺货天数', 'Days out of stock'), tr('现有货卖完到补货到仓之间会断货的天数 = 预测到仓天数 − 可售天数；小字是预计卖完的日期。“—”表示不会断货。', 'Days with no stock before a reorder arrives = days to warehouse − days of cover; below: the day it runs out. “—” = no gap.'), 'num'],
+    ['ship', tr('建议发货', 'Ship'), tr('按成品算：补货目标 − 美国LA仓 − 在途，从工厂成品里发。补货目标 = 预测日销 × (到仓天数 + 目标 + 安全天数)。', 'From finished goods: target − US LA − in transit, from factory stock. Target = forecast × (days to warehouse + target + safety days).'), 'num'],
+    ['make', tr('建议生产', 'Produce'), tr('按成品 + 在产算：补货目标 − 成品 − 在产。点“下单”带着数量去建采购单。', 'From finished + in production: target − finished − in production. “Order” opens a purchase order with it.'), 'num'],
+    ['', tr('状态', 'Status'), tr('缺货风险：会断货；库存过多：成品比目标多 90 天以上（或一年没销量）；其余正常。', 'Risk: a gap is coming; overstock: finished goods 90+ days past the target (or no sales in a year); otherwise normal.')],
+    ['', tr('系统判断', 'Why'), tr('系统怎么得出状态和建议：销量变化、季节、库存能卖多久、要发多少、要生产多少。', 'How the system got there: sales trend, season, cover, what to ship and to produce.'), 'scm-why-h'],
+  ]; };
+  const headTh = (k, label, tip, cls = '') => k ? sortTh(k, label, cls, tip) : `<th class="${cls}" data-tip="${esc(tip)}" tabindex="0">${label}</th>`;
+  const sortTh = (k, label, cls = '', tip = '') => `<th class="${cls} scm-sort ${ui.sort === k ? 'on' : ''}" data-scm="sort" data-v="${k}"${tip ? ` data-tip="${esc(tip)}" tabindex="0"` : ''}>${label}${ui.sort === k ? (ui.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
+  /** 2026-12-01 → "Dec 1st" (owner, 2026-11-12); another year gets the year: "Jan 8th, 2027". */
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ({ 1:'st', 2:'nd', 3:'rd' })[n % 10] || 'th');
+  const md = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); if (!m) return '—';
+    return `${MON[Number(m[2]) - 1]} ${ord(Number(m[3]))}${Number(m[1]) !== new Date().getFullYear() ? `, ${m[1]}` : ''}`; };
+  const outOn = x => { const d = new Date(Date.now() + x.cover * 86400000); return md(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`); };
   const daysWhy = x => { const s = data.settings;
     return tr(`下单 ${s.orderDays} + ${x.factory > 0 ? '生产 0（工厂有现货）' : `生产 ${x.productionDays}`} + 头程 ${x.firstLegDays} + 清关收货 ${s.receiveDays} + 意外 ${s.bufferDays} = ${x.leadDays} 天`,
       `order ${s.orderDays} + ${x.factory > 0 ? 'production 0 (factory stock)' : `production ${x.productionDays}`} + first leg ${x.firstLegDays} + receiving ${s.receiveDays} + buffer ${s.bufferDays} = ${x.leadDays} days`); };
@@ -91,11 +125,7 @@
     return `<div class="scm-bar"><label class="scm-search">${icon('magnifying-glass')}<input data-scm-q value="${esc(ui.q)}" placeholder="${tr('搜索 SKU 或名称', 'Search SKU or name')}"></label>
         <div class="scm-chips">${chips.map(([k, label, n]) => `<button class="${ui.status === k ? 'on' : ''}" data-scm="status" data-v="${k}">${esc(label)} <b>${n}</b></button>`).join('')}</div>
         <span class="scm-sp"></span>${data.canManage ? `<button class="btn" data-scm="settings">${icon('sliders-horizontal')} ${tr('补货参数', 'Reorder settings')}</button><button class="btn primary" data-scm="sync" ${busy ? 'disabled' : ''}>${icon('arrows-clockwise')} ${busy ? tr('同步中…', 'Syncing…') : tr('同步 Shopify 销量', 'Sync Shopify sales')}</button>` : ''}</div>
-      <div class="scm-table-wrap"><table class="scm-table"><thead><tr>${sortTh('sku', 'SKU')}<th>${tr('产品', 'Product')}</th>${sortTh('ds365', tr('DS · 365 天', 'DS · 365d'), 'num')}${sortTh('ds90', tr('DS · 90 天', 'DS · 90d'), 'num')}${sortTh('ds30', tr('DS · 30 天', 'DS · 30d'), 'num')}${sortTh('forecast', tr('预测日销', 'Forecast / day'), 'num')}
-        ${sortTh('us', tr('美国LA仓', 'US LA'), 'num')}${sortTh('transit', tr('在途', 'In transit'), 'num')}${sortTh('dg', tr('东莞工厂仓', 'Dongguan'), 'num')}${sortTh('jn', tr('济南工厂仓', 'Jinan'), 'num')}
-        ${sortTh('finished', tr('成品合计', 'Finished'), 'num scm-tot')}${sortTh('wip', tr('在产（半成品）', 'In production'), 'num')}${sortTh('pipeline', tr('成品 + 在产', 'Finished + WIP'), 'num scm-tot')}${sortTh('cover', tr('可售天数', 'Days of cover'), 'num')}
-        <th>${tr('最小起订量', 'MOQ')}</th>${sortTh('productionDays', tr('生产（天）', 'Production (d)'), 'num')}${sortTh('firstLegDays', tr('头程（天）', 'First leg (d)'), 'num')}${sortTh('leadDays', tr('到仓（天）', 'To warehouse (d)'), 'num')}${sortTh('arriveOn', tr('预计到仓', 'Arrives'), 'num')}
-        ${sortTh('ship', tr('建议发货', 'Ship'), 'num')}${sortTh('make', tr('建议生产', 'Produce'), 'num')}<th>${tr('状态', 'Status')}</th><th class="scm-why-h">${tr('系统判断', 'Why')}</th></tr></thead><tbody>
+      <div class="scm-table-wrap"><table class="scm-table"><thead><tr>${COLS().map(([k, label, tip, cls]) => headTh(k, label, tip, cls)).join('')}</tr></thead><tbody>
         ${list.map(x => { const st = STATUS[x.status] || STATUS.ok;
           return `<tr><td class="mono">${esc(x.sku)}</td><td>${esc(nameOf(x))}</td><td class="num">${x.ds365}</td><td class="num">${x.ds90}</td><td class="num">${x.ds30}${trend(x)}</td>
             <td class="num" title="${tr(`季节系数 ${x.season}`, `season ${x.season}`)}"><b>${x.forecast}</b></td>
@@ -103,9 +133,10 @@
             <td class="num scm-tot"><b>${fmt(x.finished)}</b></td><td class="num">${x.wip ? fmt(x.wip) : '—'}</td><td class="num scm-tot"><b>${fmt(x.pipeline)}</b></td>
             <td class="num ${x.status === 'risk' ? 'red' : ''}" title="${tr('美国仓 + 在途能卖的天数；成品合计和成品 + 在产能卖的天数在下面', 'Days that US + in transit last; below: finished, and finished + in production')}">${x.cover == null ? '—' : fmt(x.cover) + tr(' 天', 'd')}${x.coverAll != null ? `<small class="scm-sub">${tr(`成品 ${fmt(x.coverFinished)} · 含在产 ${fmt(x.coverAll)}`, `fin. ${fmt(x.coverFinished)} · +WIP ${fmt(x.coverAll)}`)}</small>` : ''}</td>
             <td>${esc(x.moq || '—')}</td><td class="num">${x.productionDays}${x.productionFromLibrary ? '' : '*'}</td><td class="num">${x.firstLegDays}${x.firstLegFromLibrary ? '' : '*'}</td>
-            <td class="num" title="${esc(daysWhy(x))}"><b>${x.leadDays}</b>${x.factory > 0 ? `<small class="scm-sub">${tr('现货', 'stock')} · ${tr('生产要', 'make')} ${x.supplyDays}</small>` : ''}</td><td class="num">${esc(String(x.arriveOn || '').slice(5))}</td>
+            <td class="num scm-days" title="${esc(daysWhy(x))}"><b>${x.leadDays} ${tr('天', 'd')}</b>${x.factory > 0 ? `<small class="scm-sub">${tr(`工厂现货 · 重新生产要 ${x.supplyDays} 天`, `factory stock · ${x.supplyDays}d if made`)}</small>` : ''}</td><td class="num nowrap" title="${esc(x.arriveOn || '')}">${esc(md(x.arriveOn))}</td>
+            <td class="num ${x.shortDays ? 'red' : ''}">${x.shortDays ? `<b>${x.shortDays} ${tr('天', 'd')}</b>${x.cover != null ? `<small class="scm-sub">${tr(`${outOn(x)} 卖完`, `runs out ${outOn(x)}`)}</small>` : ''}` : '—'}</td>
             <td class="num">${x.ship ? `<b>${fmt(x.ship)}</b>` : '—'}</td><td class="num">${x.make ? `<b class="red">${fmt(x.make)}</b>${data.canManage ? `<button class="scm-link" data-scm="order-sku" data-sku="${esc(x.sku)}" data-qty="${x.make}">${tr('下单', 'Order')}</button>` : ''}` : '—'}</td>
-            <td><span class="scm-pill ${st[2]}">${w(st)}</span></td><td class="scm-why">${esc(why(x))}</td></tr>`; }).join('') || `<tr><td colspan="23" class="scm-empty">${tr('没有符合的 SKU', 'No matching SKU')}</td></tr>`}
+            <td><span class="scm-pill ${st[2]}">${w(st)}</span></td><td class="scm-why">${esc(why(x))}</td></tr>`; }).join('') || `<tr><td colspan="24" class="scm-empty">${tr('没有符合的 SKU', 'No matching SKU')}</td></tr>`}
       </tbody></table></div>
       <section class="scm-legend"><h4>${icon('info')} ${tr('字段说明', 'What the columns mean')}</h4><dl>${[
         [tr('DS · 365 / 90 / 30 天', 'DS · 365 / 90 / 30d'), tr('过去 365 / 90 / 30 天平均每天卖出的件数（Shopify 订单，取消和测试单不算）。', 'Average units sold per day over the last 365 / 90 / 30 days (Shopify; cancelled and test orders excluded).')],
@@ -116,8 +147,9 @@
         [tr('成品 + 在产', 'Finished + WIP'), tr('成品合计 + 在产。', 'Finished + in production.')],
         [tr('可售天数', 'Days of cover'), tr('(美国LA仓 + 在途) ÷ 预测日销。下面的小字是成品合计、成品 + 在产分别能卖多少天。', '(US LA + in transit) ÷ forecast. Below: the days that finished goods, and finished + in production, would last.')],
         [tr('生产 / 头程（天）', 'Production / first leg (d)'), tr('取产品资料里这个 SKU 的生产交期和头程时间；带 * 的是产品资料没填，用补货参数的默认值。', 'From the SKU in the product library; * = not filled in, the default from the settings.')],
-        [tr('到仓（天）', 'To warehouse (d)'), tr(`下单 ${s.orderDays} + 生产交期 + 头程 + 清关收货 ${s.receiveDays} + 意外 ${s.bufferDays} 天。工厂仓有成品时不算生产交期，下面小字是要重新生产时的天数。`, `Order ${s.orderDays} + production + first leg + receiving ${s.receiveDays} + buffer ${s.bufferDays} days. No production while the factory has finished goods; below: the days if it has to be made.`)],
-        [tr('预计到仓', 'Arrives'), tr('今天 + 到仓天数。', 'Today + days to warehouse.')],
+        [tr('预测到仓天数', 'Days to warehouse'), tr(`下单 ${s.orderDays} + 生产交期 + 头程 + 清关收货 ${s.receiveDays} + 意外 ${s.bufferDays} 天。工厂仓有成品时不算生产交期，下面小字是要重新生产时的天数。`, `Order ${s.orderDays} + production + first leg + receiving ${s.receiveDays} + buffer ${s.bufferDays} days. No production while the factory has finished goods; below: the days if it has to be made.`)],
+        [tr('预计到仓日期', 'Arrives on'), tr('今天 + 预测到仓天数。', 'Today + days to warehouse.')],
+        [tr('预测缺货天数', 'Days out of stock'), tr('预测到仓天数 − 可售天数：现有货卖完到补货到仓之间会断货几天；小字是预计卖完的日期。', 'Days to warehouse − days of cover: the gap with no stock; below, the day it runs out.')],
         [tr('补货目标', 'Target'), tr(`预测日销 × (到仓天数 + 目标 ${s.targetDays} 天 + 安全 ${s.safetyDays} 天)。`, `Forecast × (days to warehouse + target ${s.targetDays} + safety ${s.safetyDays} days).`)],
         [tr('建议发货', 'Ship'), tr('按成品算：补货目标 − 美国LA仓 − 在途，从工厂成品里发，最多发工厂有的数量。', 'From finished goods: target − US LA − in transit, shipped from factory stock (no more than it holds).')],
         [tr('建议生产', 'Produce'), tr('按成品 + 在产算：补货目标 − 成品 + 在产。在产已经算进去，不会重复下单。', 'From finished + in production: target − (finished + in production), so nothing is ordered twice.')],
