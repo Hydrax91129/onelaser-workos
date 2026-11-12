@@ -50,7 +50,7 @@
     const s = data.summary;
     return `<div class="wms dealers">
       <div class="page-heading"><div><div class="eyebrow">WORK OS · DEALERS</div><h1>${tr('经销商订单', 'Dealer orders')}</h1><p>${tr('经销商在 /dealer/ 申请账户、按经销商价下单并用 ACH 付款。在这里审核经销商、确认到账后发货并填写物流单号，经销商会收到邮件并在门户里看到物流。', 'Dealers apply on /dealer/, order at dealer prices and pay by ACH. Review dealers here, ship once payment clears and record tracking; the dealer is emailed and sees it in the portal.')}</p></div>
-        <div class="heading-actions"><a class="btn" href="/dealer/" target="_blank" rel="noopener">${icon('arrow-square-out')} ${tr('打开经销商门户', 'Open dealer portal')}</a></div></div>
+        <div class="heading-actions">${window.WorkOSErpAccess?.button?.('dealers') || ''}<a class="btn" href="/dealer/" target="_blank" rel="noopener">${icon('arrow-square-out')} ${tr('打开经销商门户', 'Open dealer portal')}</a></div></div>
       ${!s.payments ? `<div class="wms-note">${icon('info')} ${tr('还没有配置 Stripe，经销商暂时不能在线付款。', 'Stripe is not configured; dealers cannot pay online yet.')}</div>` : s.paymentMode === 'test' ? `<div class="wms-note">${icon('flask')} ${tr('Stripe 测试模式：付款不会真实扣款。', 'Stripe test mode: no real money moves.')}</div>` : ''}
       ${s.canManage ? '' : `<div class="wms-note">${icon('eye')} ${tr('你的经销商权限是“查看”：可以看订单和经销商，不能审核或发货。', 'You have view access: you can see orders and dealers but not approve or ship.')}</div>`}
       <div class="wms-kpis">

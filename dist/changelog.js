@@ -22,6 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.61', date:'2026-11-12T15:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('权限放回各模块；左侧“供应链运营”= PIM / WMS / SCM；钉钉账号可加邮箱密码登录', 'Permissions live in each module; Supply chain operations = PIM / WMS / SCM; DingTalk accounts can add email sign-in'),
+      title:c('权限下放到各模块', 'Permissions in each module'),
+      changes:[c('左侧去掉“供应链权限管理”。产品资料、定价、库存、退货维修、供应链、经销商订单、KOL 各自右上角有“权限”按钮，只显示这个模块的权限。', 'The Supply chain permissions menu is gone. Products, Pricing, Stock, Returns, Supply chain, Dealer orders and KOL each have a permissions button showing only that module.'),
+        c('退货维修有了自己的权限（无 / 查看 / 管理），不再跟着仓库库存走；原来有仓库权限的人自动保留同样的退货权限，之后可以分开设置。主管可以给下属设置库存和退货权限。', 'Returns & repairs has its own access (None / View / Manage) instead of following warehouse access; people keep what they had and can now be set separately. Managers can set stock and returns access for their reports.'),
+        c('左侧“产品+供应链”改名“供应链运营”，下面三个模块：SKU管理(PIM)、库存管理(WMS)、供应链管理(SCM)。智能供应链从库存管理里拿出来，成为 SCM。', 'Product & supply chain is now Supply chain operations with three modules: PIM, WMS and SCM; the supply-chain board moved out of inventory into SCM.'),
+        c('个人设置新增“邮箱密码登录”：用钉钉登录的人可以自己设置登录邮箱和密码，之后两种方式都能登录。', 'Personal settings: people who sign in with DingTalk can set their own sign-in email and password and use either way.')] },
     { version:'1.60', date:'2026-11-12T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('库存：产品信息和小图、产品族/价格筛选、货架库位、一单多 SKU、操作日期和操作方式', 'Inventory: product details and images, family/price filters, shelf bins, many SKUs per order, dates and how each move was made'),
       title:c('库存管理升级', 'Inventory upgrade'),

@@ -48,6 +48,8 @@ function load(data, { confirm = true, prompt = '' } = {}) {
   window.fetch = async url => { fetches.push(url); return { ok:true, headers:{ get:() => "attachment; filename*=UTF-8''x.xlsx" }, blob:async () => ({}) }; };
   const context = { window, document, requestAnimationFrame:fn => fn(), Intl, Date, console, URL:{ createObjectURL:() => 'blob:x', revokeObjectURL() {} }, setTimeout, FileReader, fetch:window.fetch };
   vm.runInNewContext(read('product-library.js'), context);
+  // The permissions button comes from erp-access.js; this stub shows it as the main admin would see it.
+  window.WorkOSErpAccess = { button:(area, cls) => `<a class="${cls}" href="#erp-access/${area}">${area === 'pricing' ? '价格权限' : '产品资料权限'}</a>` };
   const api = {
     get:async p => { calls.push(['GET', p]); return p === '/products/library' ? data : p.endsWith('/history') ? { items:[{ id:'h1', field:'status', from:'dev', to:'launch', source:'edit', actor:'KC', at:'2026-11-04T10:00:00Z' }] } : p === '/products/library/imports' ? { items:[{ id:'imp1', fileName:'update.xlsx', summary:{ new:1, update:1, skipped:1 }, by:'KC', at:'2026-11-04T10:00:00Z' }] } : {}; },
     post:async (p, b) => { calls.push(['POST', p, b]); return p.endsWith('/preview') ? j(PREVIEW) : p.endsWith('/confirm') ? { new:1, update:1 } : p.endsWith('/undo') ? { restored:2, removed:1, kept:[] } : p === '/products/library' ? { sku:b.sku } : {}; },
@@ -102,7 +104,7 @@ test('template download, upload preview with before/after and analysis, skip-err
   assert.equal(document.querySelector('.pl-tabs'), null, 'no 产品资料 / 批量更新 sub-tabs');
   const labels = [...document.querySelectorAll('.pl-bar .pl-btn')].map(b => b.textContent.replace(/[＋\s]/g, ''));
   assert.deepEqual(labels, ['新建产品', '批量更新', '下载标准模板', '导入记录', '产品资料权限']);
-  assert.equal(document.querySelector('.pl-bar a.pl-btn').getAttribute('href'), '#erp-access', '产品资料权限 opens 供应链权限管理');
+  assert.equal(document.querySelector('.pl-bar a.pl-btn').getAttribute('href'), '#erp-access/products', '产品资料权限 opens the product permissions');
   assert.ok(document.querySelector('.pl-layout'), 'the product list stays on the page');
   const inp = document.querySelector('[data-pl-import]'); assert.equal(inp.getAttribute('accept'), '.xlsx,.csv');
   Object.defineProperty(inp, 'files', { value:[{ name:'update.xlsx', size:10, text:'x' }] }); fire(inp, 'change');
@@ -141,7 +143,7 @@ test('定价 is the same library in pricing mode: basic facts, cost and NPCR; MS
   assert.ok(document.querySelector('.pl-facts'), 'basic facts, read only'); assert.match(html, /基本信息在“产品资料”里修改/);
   assert.match(html, /NPCR 价格阶梯/); assert.match(html, /到岸价/); assert.doesNotMatch(html, /产品基本参数/, 'no basic-parameter editor on the pricing page');
   const labels = [...document.querySelectorAll('.pl-bar .pl-btn')].map(b => b.textContent.replace(/[＋\s]/g, ''));
-  assert.deepEqual(labels, ['新建产品', '批量更新', '下载标准模板', '导入记录', '价格参数（NPCR）', '产品资料权限']);
+  assert.deepEqual(labels, ['新建产品', '批量更新', '下载标准模板', '导入记录', '价格参数（NPCR）', '价格权限'], 'the pricing page has its own 价格权限');
   const m = document.querySelector('[data-pl-f="msrp"]'); m.value = '2199'; fire(m, 'change'); for (let i = 0; i < 4; i++) await tick();
   assert.deepEqual(JSON.parse(JSON.stringify(calls.filter(c => c[0] === 'PATCH').at(-1))).slice(2), [{ values:{ msrp:'2199' } }], 'MSRP is saved on the product record');
   // 产品资料 keeps the price groups, folded

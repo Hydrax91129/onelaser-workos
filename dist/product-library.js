@@ -292,7 +292,7 @@
       <button class="pl-btn" data-pl="template" data-format="xlsx" title="${tr('导出你有权限查看的全部列（含当前数据），改完用“批量更新”上传', 'Export every column you may see, with current data; upload it with Bulk update')}">${tr('下载标准模板', 'Download template')}</button>
       ${v.canImport ? `<button class="pl-btn" data-pl="view" data-v="imports" ${S.view === 'imports' ? 'aria-pressed="true"' : ''}>${tr('导入记录', 'Import history')}</button>` : ''}
       ${S.mode === 'pricing' && v.canEditSettings ? `<button class="pl-btn" data-pl="view" data-v="settings" ${S.view === 'settings' ? 'aria-pressed="true"' : ''} title="${tr('销售费率、零售与批发档位、NPCR 阶梯和利润底线；改动后所有产品的建议价自动重算', 'Selling rates, retail and wholesale tiers, NPCR steps and floors; every suggested price is recalculated')}">${tr('价格参数（NPCR）', 'Pricing parameters (NPCR)')}</button>` : ''}
-      ${v.admin ? `<a class="pl-btn" href="#erp-access" title="${tr('在“供应链权限管理”里设置谁能查看、编辑、批量更新产品资料', 'Set who can view, edit and bulk-update products in Supply chain permissions')}">${tr('产品资料权限', 'Product permissions')}</a>` : ''}</div>`;
+      ${window.WorkOSErpAccess?.button?.(S.mode === 'pricing' ? 'pricing' : 'products', 'pl-btn') || ''}</div>`;
     const ro = !v.editCatalog && !v.editCost && !v.editPrices ? `<div class="pl-notice">${tr('你目前只有查看权限。', 'You have view access only.')}</div>` : '';
     const body = S.view === 'import' ? importView() : S.view === 'imports' ? importsView() : S.view === 'settings' ? settingsView() : `<div class="pl-layout">${rail()}<main class="pl-editor" id="pl-editor">${editor()}</main></div>`;
     return `<div class="pl">${bar}${S.view === 'products' ? ro : ''}${body}</div>`;

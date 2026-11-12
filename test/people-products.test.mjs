@@ -27,7 +27,7 @@ test('sidebar sections follow the requested order, and restricted pages are gate
   assert.deepEqual(ids('reports'), [], 'no Reports group in the sidebar: the analysis pages are tabs of their parent pages');
   for (const id of ['okr-analysis', 'project-analysis', 'team']) assert.ok(ids('hidden').includes(id), `${id} keeps its route for links`);
   assert.doesNotMatch(live.match(/const navSections = \[([\s\S]*?)\];/)[1], /'reports'/);
-  assert.deepEqual(ids('product'), ['products', 'wms', 'erp-access'], 'product hub: Product PIM and WMS modules, plus ERP permissions');
+  assert.deepEqual(ids('product'), ['products', 'wms', 'scm'], '供应链运营: PIM, WMS and SCM; permissions live on each module, not in the menu');
   assert.ok(ids('hidden').includes('product-cost') && ids('hidden').includes('supply-chain'), 'pricing and supply chain are tabs now; old links still open them');
   assert.deepEqual(ids('marketing'), ['kol'], 'KOL management sits in its own Marketing section');
   assert.deepEqual(ids('labs'), ['support', 'knowledge', 'quality']);
@@ -37,10 +37,12 @@ test('sidebar sections follow the requested order, and restricted pages are gate
   assert.match(live, /hr:!!window\.WorkOSHr && state\.capabilities\?\.hr===true/, 'HR records appear only when the server offers them');
   assert.ok(ids('hidden').includes('executive') && ids('hidden').includes('integrations'), 'executive board removed; integrations moved into settings');
   assert.match(live, /const productAccess = \(\) => !!window\.WorkOSProducts && \(\(state\.actor\?\.grants\|\|\[\]\)\.includes\('products'\) \|\| state\.actor\?\.executiveAccess === true\)/, 'products follow grants; only the deployment-configured owner bypasses them');
-  assert.match(live, /products:libraryAccess\(\)\|\|productAccess\(\)\|\|dealersAccess\(\), 'product-cost':productAccess\(\), 'supply-chain':productAccess\(\), wms:wmsAccess\(\)\|\|productAccess\(\)/);
+  assert.match(live, /products:libraryAccess\(\)\|\|productAccess\(\)\|\|dealersAccess\(\), 'product-cost':productAccess\(\), 'supply-chain':scmAccess\(\), wms:wmsAccess\(\)\|\|productAccess\(\)/);
   assert.match(live, /org:!!window\.WorkOSPeople && state\.actor\?\.isAdmin===true/);
-  for (const id of ['product-cost', 'supply-chain']) assert.match(live, new RegExp(`'?${id}'?: \\(\\) => productAccess\\(\\) \\?`), `direct URL for ${id} is gated too`);
-  assert.match(live, /if \(!tabs\.length\) return noAccess[\s\S]*libraryAccess\(\) && \['catalog'[\s\S]*productAccess\(\) && \['pricing'[\s\S]*wmsAccess\(\) && \['stock'[\s\S]*productAccess\(\) && \['supply'/, 'each module shows only the tabs the person may see');
+  assert.match(live, /'product-cost': \(\) => productAccess\(\) \?/, 'direct URL for product-cost is gated too');
+  for (const id of ['scm', 'supply-chain']) assert.match(live, new RegExp(`'?${id}'?: \\(\\) => scmAccess\\(\\) \\?`), `direct URL for ${id} is gated by supply-chain access`);
+  assert.match(live, /const scmAccess = \(\) => !!window\.WorkOSProducts && \(\(state\.actor\?\.grants\|\|\[\]\)\.some\(g => g === 'supply' \|\| g === 'products'\)/, 'SCM: supply-chain or product people, and main admins');
+  assert.match(live, /if \(!tabs\.length\) return noAccess[\s\S]*libraryAccess\(\) && \['catalog'[\s\S]*productAccess\(\) && \['pricing'[\s\S]*wmsAccess\(\) && \['stock'/, 'each module shows only the tabs the person may see');
   assert.match(live, /function integrationPage\(\) \{ return state\.actor\?\.isAdmin===true/, 'integrations page is admin-only');
 });
 

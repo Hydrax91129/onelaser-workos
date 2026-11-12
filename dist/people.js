@@ -6,7 +6,7 @@
 (() => {
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
   let ctx = null;
-  const ui = { team:null, teamLoading:false, teamError:'', teamScope:'reports', teamOpen:new Set(), org:null, orgLoading:false, orgError:'', orgView:'table', chart:null, chartLoading:false, chartError:'', chartCollapsed:new Set(), chartLoc:'', saving:false, profileMsg:'', invites:null, inviteOpen:false, inviteResult:null, inviteError:'', inviteBusy:false, disabling:null };
+  const ui = { login:null, loginLoading:false, loginMsg:'', loginOk:false, team:null, teamLoading:false, teamError:'', teamScope:'reports', teamOpen:new Set(), org:null, orgLoading:false, orgError:'', orgView:'table', chart:null, chartLoading:false, chartError:'', chartCollapsed:new Set(), chartLoc:'', saving:false, profileMsg:'', invites:null, inviteOpen:false, inviteResult:null, inviteError:'', inviteBusy:false, disabling:null };
   const S = () => ctx.state();
   const lang = () => ctx.lang() === 'en' ? 'en' : 'zh';
   const tr = (zh, en) => lang() === 'en' ? en : zh;
@@ -157,6 +157,7 @@
             <div class="pp-form-actions full"><span class="pp-hint" role="status">${esc(ui.profileMsg)}</span><button class="btn primary" type="submit" ${caps() ? '' : 'disabled'}>${tr('保存', 'Save')}</button></div>
           </form>
         </section>
+        ${loginPanel()}
         <section class="pp-panel"><h2>${tr('我的权限', 'My access')}</h2>
           <dl class="pp-facts"><dt>${tr('角色', 'Role')}</dt><dd>${a.role === 'manager' ? tr('主管（可管理本部门任务和目标）', 'Manager (manages department tasks and goals)') : tr('员工', 'Employee')}</dd>
             <dt>${tr('管理员', 'Administrator')}</dt><dd>${yes(a.isAdmin)}</dd>
@@ -167,6 +168,21 @@
           <p class="pp-hint">${tr('权限由管理员在“组织与权限”中设置。', 'Access is set by an administrator in Organization & permissions.')}</p>
         </section>
       </div>${(() => { const body = ctx.integrations?.(); return body ? `<section class="pp-panel pp-admin-int"><div class="pp-panel-head"><h2>${icon('plugs-connected')} ${tr('集成与通知（仅系统管理员可见）', 'Integrations & notifications (administrators only)')}</h2></div>${body}</section>` : ''; })()}</div>`;
+  }
+  /* Email + password sign-in next to DingTalk: you set your own sign-in email and password (at least 10 characters). */
+  function loginPanel() {
+    if (!ui.login && !ui.loginLoading) { ui.loginLoading = true; ctx.api.get('/me/login').then(r => { ui.login = r; }).catch(() => { ui.login = { unavailable:true }; }).finally(() => { ui.loginLoading = false; ctx.rerender(); }); }
+    const L = ui.login; if (!L || L.unavailable) return '';
+    const pw = (name, label, extra = '') => `<label class="field"><span>${label}</span><input name="${name}" type="password" autocomplete="${name === 'currentPassword' ? 'current-password' : 'new-password'}" ${extra}></label>`;
+    return `<section class="pp-panel"><h2>${icon('key')} ${tr('邮箱密码登录', 'Email and password sign-in')}</h2>
+      <p class="pp-hint">${L.loginEmail ? tr(`现在可以用钉钉，也可以用邮箱 <b>${esc(L.loginEmail)}</b> 和密码登录。`, `You can sign in with DingTalk or with <b>${esc(L.loginEmail)}</b> and your password.`) : tr('现在只能用钉钉登录。设置登录邮箱和密码后，在登录页的“邮箱登录”里也能登录。', 'You sign in with DingTalk only. Set a sign-in email and password to also sign in with email on the sign-in page.')}</p>
+      <form id="pp-login" class="form-grid">
+        <label class="field full"><span>${tr('登录邮箱', 'Sign-in email')}</span><input name="email" type="email" required maxlength="200" autocomplete="username" value="${esc(L.loginEmail || '')}" placeholder="name@company.com"></label>
+        ${pw('newPassword', tr('新密码（至少 10 位）', 'New password (10+ characters)'), 'required minlength="10" maxlength="200"')}
+        ${pw('confirm', tr('再输入一次新密码', 'Repeat the new password'), 'required minlength="10" maxlength="200"')}
+        ${L.hasPassword ? pw('currentPassword', tr('当前密码', 'Current password'), 'required') : ''}
+        <div class="pp-form-actions full"><span class="pp-hint ${ui.loginOk ? 'ok' : ''}" role="status">${esc(ui.loginMsg)}</span><button class="btn primary" type="submit">${L.hasPassword ? tr('更新登录邮箱和密码', 'Update email and password') : tr('设置邮箱密码登录', 'Set up email sign-in')}</button></div>
+      </form><p class="pp-hint">${tr('设置后，你在其他设备上的登录会退出，需要重新登录。', 'Your sessions on other devices sign out after this.')}</p></section>`;
   }
   function resizeImage(file) {
     return new Promise((resolve, reject) => {
@@ -269,7 +285,7 @@
       ${disabled.length ? `<section class="pp-panel pp-disabled"><h3 class="pp-sub-h">${icon('user-minus')} ${tr('已停用成员', 'Disabled members')} <b>${disabled.length}</b></h3><table class="pp-table"><tbody>${disabled.map(u => `<tr><td><div class="pp-person dim">${avatar(u, 26)}<div><strong>${esc(u.display_name)}</strong><span>${esc(u.title || '')} ${loginBadge(u)}</span></div></div></td><td class="pp-muted">${u.disabled_at ? tr(`${fmtDay(u.disabled_at)} 停用`, `Disabled ${fmtDay(u.disabled_at)}`) : tr('已离开钉钉', 'Left DingTalk')}</td><td class="pp-right">${canDisable() ? `<button class="pp-btn small" data-pp="enable" data-id="${esc(u.id)}">${icon('arrow-counter-clockwise')} ${tr('恢复', 'Restore')}</button>` : ''}</td></tr>`).join('')}</tbody></table></section>` : ''}
       <div class="pp-notes"><p>${icon('git-branch')} <b>${tr('第二领导（虚线汇报）', 'Second leader (dotted line)')}</b>：${tr('第一领导不方便时，由第二领导日常查看和指导；第二领导对这个人的权限和第一领导完全相同：可以查看和管理 TA 的 OKR、任务和项目，验收、领导评分和审批；薪资等 HR 敏感信息仍只给 HR。', 'When the first leader is unavailable, the second leader follows and guides day to day, with exactly the same rights over the person as the first leader: they view and manage the person’s OKRs, tasks and projects, and can review, give leader scores and approve; salary and other sensitive HR data stay with HR.')}</p>
       <p>${icon('info')} ${tr('修改后立即保存并记录审计日志。“角色”设为主管后，可以管理本部门的任务和目标；钉钉重新登录不会覆盖这里的设置。', 'Changes save immediately and are audited. Managers can manage department tasks and goals; DingTalk re-login keeps these settings.')}</p>
-      ${erp() ? `<p>${icon('shield')} ${tr('产品、价格构成、供应链和仓库库存的权限已移到“产品+供应链 → 供应链权限管理”统一设置。', 'Product, pricing, supply-chain and warehouse access now live in Product hub → Supply chain permissions.')} <button class="btn small" data-live-page="erp-access">${tr('前往 供应链权限管理', 'Open Supply chain permissions')}</button></p>` : `<p>${icon('lock-simple')} ${tr('“产品+供应链”只给需要的人开通；“成本明细”可以看到价格的计算过程，开通前请确认。客服工作台目前由部署配置管理。', 'Grant Product hub only to those who need it; Cost detail reveals how prices are calculated. Support access is currently managed in deployment config.')}</p>`}
+      ${erp() ? `<p>${icon('shield')} ${tr('产品资料、定价、库存、退货、供应链、经销商和 KOL 的权限，在各自页面右上角的“权限”按钮里设置。', 'Product, pricing, stock, returns, supply-chain, dealer and KOL access is set with the permissions button at the top right of each page.')} <button class="btn small" data-live-page="erp-access">${tr('前往 供应链权限管理', 'Open Supply chain permissions')}</button></p>` : `<p>${icon('lock-simple')} ${tr('“产品+供应链”只给需要的人开通；“成本明细”可以看到价格的计算过程，开通前请确认。客服工作台目前由部署配置管理。', 'Grant Product hub only to those who need it; Cost detail reveals how prices are calculated. Support access is currently managed in deployment config.')}</p>`}
       <p>${icon('identification-card')} ${tr('“人事档案”：中国和海外其他地区分别授权，只读可以查看这个地区的全部资料（包括证件号、银行信息、薪资和附件），可管理还能修改、上传和删除。美国区只有主管理员能看，不能授权给别人。', 'HR records: China and other countries are granted separately. Read-only sees everything in that region (ID numbers, bank details, salary, attachments); manage can also edit, upload and delete. The US region is for the company owner only and cannot be granted.')}</p></div>
     </div>`;
   }
@@ -436,6 +452,14 @@
       catch (err) { ui.inviteError = ctx.explainError(err); }
       ui.inviteBusy = false; return ctx.rerender();
     }
+    if (ctx && f.id === 'pp-login') {
+      e.preventDefault();
+      const v = Object.fromEntries(new FormData(f));
+      if (v.newPassword !== v.confirm) { ui.loginOk = false; ui.loginMsg = tr('两次输入的新密码不一样。', 'The two new passwords differ.'); return ctx.rerender(); }
+      try { ui.login = await ctx.api.post('/me/login', { email:String(v.email).trim(), newPassword:v.newPassword, ...(v.currentPassword ? { currentPassword:v.currentPassword } : {}) }); ui.loginOk = true; ui.loginMsg = tr('已设置，以后可以用这个邮箱和密码登录。', 'Done: you can now sign in with this email and password.'); }
+      catch (err) { ui.loginOk = false; ui.loginMsg = ctx.explainError(err); }
+      return ctx.rerender();
+    }
     if (!ctx || f.id !== 'pp-profile') return;
     e.preventDefault();
     const v = Object.fromEntries(new FormData(f));
@@ -444,5 +468,5 @@
     ctx.rerender();
   });
 
-  window.WorkOSPeople = { configure(next) { ctx = next; }, avatar, workbench, team, settings, org, chart:chartPage, _dotted:{ links:dottedLinks, path:dottedPath, draw:drawDotted }, reset() { ui.team = null; ui.org = null; ui.chart = null; ui.teamOpen.clear(); }, _ui:ui };
+  window.WorkOSPeople = { configure(next) { ctx = next; }, avatar, workbench, team, settings, org, chart:chartPage, _dotted:{ links:dottedLinks, path:dottedPath, draw:drawDotted }, reset() { ui.login = null; ui.loginMsg = ''; ui.team = null; ui.org = null; ui.chart = null; ui.teamOpen.clear(); }, _ui:ui };
 })();
