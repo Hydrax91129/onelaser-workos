@@ -217,7 +217,7 @@
           <td class="num"><input class="wms-qty ${short ? 'bad' : ''}" data-wms-line="${i}" type="number" min="${adj ? 0 : 1}" step="1" required value="${esc(x.qty)}" aria-label="${esc(x.sku)} ${adj ? tr('实盘数量', 'counted') : tr('数量', 'quantity')}"></td>
           ${adj ? `<td class="num ${v == null ? '' : v - have < 0 ? 'neg' : v - have > 0 ? 'pos' : ''}" data-wms-diff="${i}">${v == null ? '' : (v - have > 0 ? '+' : '') + fmtN(v - have)}</td>` : ''}
           <td><button type="button" class="wms-link" data-wms-rm="${i}" aria-label="${tr('移除', 'Remove')}">${icon('x')}</button></td></tr>`; }).join('')}</tbody></table></div>
-      <p class="wms-hint">${tr(`共 ${op.lines.length} 个 SKU`, `${op.lines.length} SKUs`)}${adj ? '' : tr(`，${fmtN(op.lines.reduce((s2, x) => s2 + (Number(x.qty) || 0), 0))} 件`, `, ${fmtN(op.lines.reduce((s2, x) => s2 + (Number(x.qty) || 0), 0))} units`)}</p>`
+      <p class="wms-hint" data-wms-total>${tr(`共 ${op.lines.length} 个 SKU`, `${op.lines.length} SKUs`)}${adj ? '' : tr(`，${fmtN(op.lines.reduce((s2, x) => s2 + (Number(x.qty) || 0), 0))} 件`, `, ${fmtN(op.lines.reduce((s2, x) => s2 + (Number(x.qty) || 0), 0))} units`)}</p>`
       : `<p class="wms-hint wms-lines-empty">${icon('arrow-up')} ${tr('从上面的列表添加 SKU，一单可以加多个 SKU，每个填自己的数量。', 'Add SKUs from the list above; one order can hold several SKUs, each with its own quantity.')}</p>`;
   }
   /* Batch goods in: paste two columns (SKU, quantity) straight from Excel; one location, reason and reference for all lines. */
@@ -393,6 +393,8 @@
       const cell = document.querySelector(`[data-wms-diff="${i}"]`), it = data.items.find(y => y.sku === op.lines[i].sku), have = n(it || {}, opLoc()), v = e.target.value === '' ? null : Number(e.target.value);
       if (cell) { cell.textContent = v == null ? '' : (v - have > 0 ? '+' : '') + fmtN(v - have); cell.className = 'num ' + (v == null ? '' : v - have < 0 ? 'neg' : v - have > 0 ? 'pos' : ''); }
       if (op.type === 'out' || op.type === 'transfer') e.target.classList.toggle('bad', v > have);
+      const tot = document.querySelector('[data-wms-total]'), units = op.lines.reduce((s2, x) => s2 + (Number(x.qty) || 0), 0);
+      if (tot && op.type !== 'adjust') tot.textContent = tr(`共 ${op.lines.length} 个 SKU，${fmtN(units)} 件`, `${op.lines.length} SKUs, ${fmtN(units)} units`);
     }
   });
   document.addEventListener('submit', async e => {
