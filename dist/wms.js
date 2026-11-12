@@ -89,7 +89,7 @@
       <div class="wms-toolbar"><label class="wms-search">${icon('magnifying-glass')}<input data-wms-search value="${esc(ui.q)}" placeholder="${ui.tab === 'stock' ? tr('搜索 SKU 或产品名', 'Search SKU or product') : tr('搜索 SKU、原因、单号或操作人', 'Search SKU, reason, reference or person')}"></label>
         ${ui.tab === 'stock' && data.items.length ? `<button class="btn" data-wms="export" title="${tr('按当前筛选和排序导出', 'Exports the current filter and sort')}">${icon('download-simple')} ${tr('导出 CSV', 'Export CSV')}</button>` : ''}
         <span class="wms-spacer"></span>
-        ${data.canOperate ? `<button class="btn primary" data-wms="batch">${icon('stack')} ${tr('批量入库', 'Batch goods in')}</button>` + Object.entries(TYPES).map(([k, [zh, en, ic]]) => `<button class="btn" data-wms="op" data-type="${k}">${icon(ic)} ${tr(zh, en)}</button>`).join('') : ''}</div>
+        ${data.canOperate ? `<button class="btn primary" data-wms="batch">${icon('stack')} ${tr('批量入库', 'Batch goods in')}</button>` + Object.entries(TYPES).filter(([k]) => k !== 'move').map(([k, [zh, en, ic]]) => `<button class="btn" data-wms="op" data-type="${k}">${icon(ic)} ${tr(zh, en)}</button>`).join('') : ''}</div>
       ${ui.tab === 'stock' ? stockTable(items) : logTable(logList())}
     </div>`;
   }
