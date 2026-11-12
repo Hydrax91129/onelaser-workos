@@ -22,6 +22,12 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.62', date:'2026-11-12T18:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('供应链管理（SCM）改为精简决策看板：Shopify 日销、补货建议、在途货柜', 'SCM becomes a lean board: Shopify daily sales, reorder suggestions, containers in transit'),
+      title:c('SCM 决策看板', 'SCM decision board'),
+      changes:[c('从 Shopify 读 365 天订单，算每个 SKU 每天卖多少（DS，365 天和最近 30 天，看涨跌）和一个月要多少货。', 'Reads 365 days of Shopify orders: each SKU’s daily sales (DS over 365 and the last 30 days, with the trend) and monthly need.'),
+        c('补货建议：美国仓 + 在途对比 DS × (交期 + 目标天数 + 安全天数)，先建议从工厂仓发现货，不够的建议下单生产；按缺货风险、需补货、库存过多排序。交期取产品资料的“生产交期 + 头程时间”。', 'Reorder: US + in transit against DS × (lead + target + safety days); ship from factory stock first, produce the rest; sorted by stockout risk, reorder and overstock. Lead time comes from the product library.'),
+        c('在途货柜：柜号、海运/空运、承运商、tracking、发货日期、几天到（自动算到港日期）、每个 SKU 的数量。新建时货转到“在途运输中”，到港点“到港入仓”转进美国LA仓，都记库存流水。', 'In transit: container, sea/air, carrier, tracking, ship date, days to arrive (ETA worked out) and the quantity per SKU. Creating one moves goods to In transit; Arrived moves them into the US LA warehouse, logged in stock.')] },
     { version:'1.61', date:'2026-11-12T15:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('权限放回各模块；左侧“供应链运营”= PIM / WMS / SCM；钉钉账号可加邮箱密码登录', 'Permissions live in each module; Supply chain operations = PIM / WMS / SCM; DingTalk accounts can add email sign-in'),
       title:c('权限下放到各模块', 'Permissions in each module'),
