@@ -20,7 +20,7 @@ a.pl-btn{text-decoration:none;color:inherit;display:inline-flex;align-items:cent
 .pl-status{font-size:12.5px;color:var(--pl-mute)}.pl-status.ok{color:var(--pl-ok)}.pl-status.err{color:var(--pl-req)}
 .pl-note{font-size:12px;color:var(--pl-mute);margin:6px 0 0}
 .pl-notice{background:var(--pl-warn-bg);color:var(--pl-warn);border-radius:7px;padding:6px 10px;font-size:12.5px;margin-bottom:8px}
-.pl-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:12px;align-items:start}
+.pl-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
 .pl-rail{background:var(--pl-panel);border:1px solid var(--pl-line);border-radius:10px;position:sticky;top:8px;max-height:calc(100vh - 96px);display:flex;flex-direction:column;min-width:0}
 .pl-rail .head{padding:8px;border-bottom:1px solid var(--pl-line);display:flex;flex-direction:column;gap:6px}
 .pl-list{overflow:auto;padding:4px}
@@ -100,9 +100,10 @@ details.pl-grp>summary .no{font-family:var(--pl-num);font-size:12px;color:var(--
 .pl-slots{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
 .pl-slots-note{padding:0 12px 10px;margin:0}
 /* Screen sizes: wide screens get a wider list; laptops a narrower one; tablets put the list above the editor; phones one column. */
-@media (min-width:1600px){.pl-layout{grid-template-columns:300px minmax(0,1fr)}.pl-fields{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}}
-@media (max-width:1280px){.pl-layout{grid-template-columns:230px minmax(0,1fr)}.pl-fields{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}}
-@media (max-width:960px){.pl-layout{grid-template-columns:minmax(0,1fr)}.pl-rail{position:static;max-height:260px}.pl-slots{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}}
+@media (min-width:1600px){.pl-fields{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}}
+@media (max-width:1280px){.pl-fields{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}}
+@media (max-width:1100px){.pl-layout{grid-template-columns:minmax(0,1fr)}.pl-rail{position:static;max-height:420px}}
+@media (max-width:960px){.pl-slots{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}}
 @media (max-width:600px){.pl-bar .pl-sp{display:none}.pl-bar .pl-btn{flex:1 1 auto;justify-content:center}.pl-fields,.pl-slots{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   .pl-fld.wide,.pl-slots .pl-fld{grid-column:1/-1}.pl-summary{grid-template-columns:minmax(0,1fr)}.pl-calc,.pl-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.pl-rail{max-height:220px}}
 @media (max-width:400px){.pl-fields{grid-template-columns:minmax(0,1fr)}}
@@ -112,3 +113,19 @@ html:root .pl select{padding-right:24px}
 .pl-facts{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;padding:8px 12px}
 .pl-facts dl{display:flex;flex-wrap:wrap;gap:4px 18px;margin:0;flex:1;min-width:0}.pl-facts dl>div{min-width:0}
 .pl-facts dt{font-size:11px;color:var(--pl-mute)}.pl-facts dd{margin:0;font-size:13px;font-weight:500;overflow-wrap:anywhere}
+/* Left half: SKU table with filters */
+.pl-flt{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.pl-price{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--pl-mute);grid-column:span 1;white-space:nowrap}
+html:root .pl .pl-price input{width:100%;min-width:0;text-align:right;padding:4px 6px}
+.pl-flt-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pl-link{border:0;background:none;color:var(--pl-opt);font:inherit;font-size:12px;cursor:pointer;padding:0}
+.pl-list{padding:0}
+.pl table.pl-skus{font-size:12.5px}
+.pl-skus th{position:sticky;top:0;z-index:1;cursor:pointer;user-select:none;text-align:left}.pl-skus th.sorted{color:var(--pl-ink)}
+.pl-skus td{text-align:left;white-space:nowrap;vertical-align:top}.pl-skus td.num,.pl-skus th.num{text-align:right}
+.pl-skus td small{display:block;color:var(--pl-mute);font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.pl-skus td.sku{font-family:var(--pl-num);font-weight:600;font-size:12px}
+.pl-skus td.nm{white-space:normal;min-width:140px}.pl-skus td.miss{color:var(--pl-req)}
+.pl-skus tbody tr{cursor:pointer}.pl-skus tbody tr:hover td{background:var(--pl-sunk)}
+.pl-skus tbody tr[aria-current=true] td{background:var(--pl-accent-soft)}.pl-skus tbody tr[aria-current=true] td:first-child{box-shadow:inset 3px 0 0 var(--pl-accent)}
+@media (max-width:600px){.pl-flt{grid-template-columns:repeat(2,minmax(0,1fr))}}

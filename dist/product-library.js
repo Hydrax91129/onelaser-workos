@@ -27,7 +27,7 @@
   };
   const toast = m => ctx?.toast?.(m);
 
-  const S = { data:null, loading:false, error:'', view:'products', cur:null, q:'', fam:'', onlyReq:false, creating:false, saving:{}, errs:{}, savedAt:null,
+  const S = { data:null, loading:false, error:'', view:'products', cur:null, q:'', fam:'', series:'', status:'', gt:'', brand:'', pmin:'', pmax:'', sort:'sku', dir:1, onlyReq:false, creating:false, saving:{}, errs:{}, savedAt:null,
     history:{}, histOpen:false, mode:'catalog', priceOpen:{}, preview:null, pvFilter:'all', skipErrors:false, imports:null, draft:null, busy:'' };
   const D = () => S.data || {};
   const spec = () => D().spec || { fields:[], slots:[], groups:[], families:[], statuses:[], visNames:{} };
@@ -53,20 +53,49 @@
   const replaceItem = it => { const list = items(), i = list.findIndex(x => x.sku === it.sku); if (i >= 0) list[i] = { ...list[i], ...it }; else list.push(it); };
 
   /* ---------- rail ---------- */
+  /* Left half: the SKU list as a table with filters (family, series, status, new/returned, brand, MSRP range,
+     incomplete only) and sortable columns; the right half is the selected product. */
+  const msrpOf = i => { const m = i.pricing?.fixed?.[0]; return m ? m.price : i.pricing?.msrp ?? (i.values.msrp === '' || i.values.msrp == null ? null : Number(i.values.msrp)); };
+  const nameOf = i => (lang() === 'en' ? i.values.nameEn : i.values.nameZh) || i.values.nameZh || i.values.nameEn || '';
+  function filteredItems() {
+    const q = S.q.trim().toLowerCase(), lo = S.pmin === '' ? null : Number(S.pmin), hi = S.pmax === '' ? null : Number(S.pmax);
+    const list = items().filter(i => { const v = i.values, m = msrpOf(i);
+      return (!S.fam || (S.fam === '-' ? !v.family : v.family === S.fam)) && (!S.series || v.series === S.series) && (!S.status || v.status === S.status)
+        && (!S.gt || (v.goodsType || 'bulk') === S.gt) && (!S.brand || v.brand === S.brand) && (lo == null || (m != null && m >= lo)) && (hi == null || (m != null && m <= hi))
+        && (!S.onlyReq || !i.completeness?.done) && (!q || [i.sku, v.nameZh, v.nameEn, v.series, v.brand, v.upc, v.refbSku].some(x => String(x || '').toLowerCase().includes(q))); });
+    const key = i => S.sort === 'name' ? nameOf(i) : S.sort === 'fam' ? famName(i.values.family) + (i.values.series || '') : S.sort === 'status' ? String(i.values.status || '')
+      : S.sort === 'msrp' ? msrpOf(i) ?? -1 : S.sort === 'cm' ? i.pricing?.fixed?.[0]?.cmPct ?? -999 : S.sort === 'req' ? (i.completeness?.need ? i.completeness.got / i.completeness.need : 1) : i.sku;
+    return list.sort((a, b) => { const x = key(a), y = key(b); return (typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'zh')) * S.dir; });
+  }
   function rail() {
-    const q = S.q.trim().toLowerCase();
-    const inc = items().filter(i => !i.completeness?.done).length;
-    const list = items().filter(i => (!S.fam || i.values.family === S.fam) && (!q || `${i.sku} ${i.values.nameZh || ''} ${i.values.nameEn || ''}`.toLowerCase().includes(q)) && (!S.onlyReq || !i.completeness?.done))
-      .sort((a, b) => a.sku.localeCompare(b.sku));
+    const all = items(), list = filteredItems(), inc = all.filter(i => !i.completeness?.done).length;
+    const uniq = k => [...new Set(all.map(i => i.values[k]).filter(Boolean))].sort();
+    const statusName = k => L(spec().statuses.find(x => x.key === k)) || '';
+    const gtOpts = fieldOf('goodsType')?.opts || [];
+    const sel = (k, label, opts) => `<select data-pl-flt="${k}" aria-label="${esc(label)}"><option value="">${esc(label)}</option>${opts.map(([v, n]) => `<option value="${esc(v)}" ${S[k] === v ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
+    const active = S.q || S.fam || S.series || S.status || S.gt || S.brand || S.pmin !== '' || S.pmax !== '' || S.onlyReq;
+    const th = (k, label, cls = '') => `<th class="${cls} ${S.sort === k ? 'sorted' : ''}" data-pl-sort="${k}">${label}${S.sort === k ? (S.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
+    const cmOn = sees('sens');
     return `<aside class="pl-rail"><div class="head">
-      <input type="search" data-pl-q placeholder="${tr('搜索 SKU / 名称', 'Search SKU / name')}" value="${esc(S.q)}" aria-label="${tr('搜索产品', 'Search products')}">
-      <select data-pl-fam aria-label="${tr('按产品族筛选', 'Filter by family')}"><option value="">${tr('全部产品族', 'All families')}</option>${spec().families.map(f => `<option value="${esc(f.key)}" ${S.fam === f.key ? 'selected' : ''}>${esc(L(f))}</option>`).join('')}</select>
-      <label class="pl-chk"><input type="checkbox" data-pl-onlyreq ${S.onlyReq ? 'checked' : ''}> ${tr('仅看必填未完成', 'Only incomplete')} ${inc ? `<span class="pl-chip req">${tr(`${inc} 个待补`, `${inc} to fill`)}</span>` : ''}</label>
-    </div><div class="pl-list">${list.length ? list.map(i => {
-      const m = i.pricing?.fixed ? i.pricing.fixed[0] : null, msrp = i.pricing?.fixed ? m.price : i.pricing?.msrp;
-      return `<button class="pl-item" data-pl-pick="${esc(i.sku)}" aria-current="${i.sku === S.cur}"><span class="sku">${i.completeness?.done ? '' : `<span class="pl-dot" title="${tr('必填未完成', 'Required fields missing')}"></span>`}${esc(i.sku)}</span><span class="pr">${msrp != null ? usd(msrp) : ''}</span>
-        <span class="nm">${esc((lang() === 'en' ? i.values.nameEn : i.values.nameZh) || i.values.nameZh || i.values.nameEn || tr('未命名', 'Unnamed'))}${i.values.family ? ' · ' + esc(famName(i.values.family)) : ''}</span><span class="cm ${m ? tone(m.cmPct, D().settings?.dtcFloor) : ''}">${m && m.cmPct != null ? 'CM ' + pct(m.cmPct) : ''}</span></button>`;
-    }).join('') : `<div class="pl-empty">${S.onlyReq ? tr('没有必填未完成的产品', 'No incomplete products') : items().length ? tr('没有匹配的产品', 'No matching products') : tr('还没有产品。产品经理可以点“新建产品”录入第一个 SKU；有批量更新权限的同事可以下载标准模板，填好后点“批量更新”上传。', 'No products yet. Product managers can add the first SKU; people allowed to bulk-update can fill in the template and upload it with Bulk update.')}</div>`}</div></aside>`;
+      <input type="search" data-pl-q placeholder="${tr('搜索 SKU、中英文名、系列、品牌、UPC', 'Search SKU, names, series, brand, UPC')}" value="${esc(S.q)}" aria-label="${tr('搜索产品', 'Search products')}">
+      <div class="pl-flt">
+        ${sel('fam', tr('全部产品族', 'All families'), [...spec().families.filter(f => all.some(i => i.values.family === f.key)).map(f => [f.key, L(f)]), ...(all.some(i => !i.values.family) ? [['-', tr('未设置产品族', 'No family')]] : [])])}
+        ${sel('series', tr('全部系列', 'All series'), uniq('series').map(x => [x, x]))}
+        ${sel('status', tr('全部状态', 'All statuses'), spec().statuses.filter(x => all.some(i => i.values.status === x.key)).map(x => [x.key, L(x)]))}
+        ${sel('gt', tr('大货 + 退货', 'New + returned'), gtOpts.map(o => [o.key, L(o)]))}
+        ${sel('brand', tr('全部品牌', 'All brands'), uniq('brand').map(x => [x, x]))}
+        <label class="pl-price">MSRP $<input data-pl-p="pmin" inputmode="decimal" value="${esc(S.pmin)}" placeholder="${tr('最低', 'min')}" aria-label="${tr('最低 MSRP', 'Min MSRP')}">–<input data-pl-p="pmax" inputmode="decimal" value="${esc(S.pmax)}" placeholder="${tr('最高', 'max')}" aria-label="${tr('最高 MSRP', 'Max MSRP')}"></label>
+      </div>
+      <div class="pl-flt-foot"><label class="pl-chk"><input type="checkbox" data-pl-onlyreq ${S.onlyReq ? 'checked' : ''}> ${tr('仅看必填未完成', 'Only incomplete')} ${inc ? `<span class="pl-chip req">${tr(`${inc} 个待补`, `${inc} to fill`)}</span>` : ''}</label>
+        <span class="pl-sp"></span><span class="pl-meta">${tr(`显示 ${list.length} / ${all.length} 个 SKU`, `${list.length} of ${all.length} SKUs`)}</span>${active ? `<button class="pl-link" data-pl="clear-filters">${tr('清除筛选', 'Clear')}</button>` : ''}</div>
+    </div><div class="pl-list">${list.length ? `<table class="pl-skus"><thead><tr>${th('sku', 'SKU')}${th('name', tr('产品', 'Product'))}${th('fam', tr('产品族 / 系列', 'Family / series'))}${th('status', tr('状态', 'Status'))}${th('msrp', 'MSRP', 'num')}${cmOn ? th('cm', 'CM', 'num') : ''}${th('req', tr('必填', 'Req.'), 'num')}</tr></thead><tbody>
+      ${list.map(i => { const v = i.values, m = i.pricing?.fixed?.[0], c = i.completeness || {}, other = lang() === 'en' ? v.nameZh : v.nameEn;
+        return `<tr data-pl-pick="${esc(i.sku)}" aria-current="${i.sku === S.cur}"><td class="sku">${c.done ? '' : `<span class="pl-dot" title="${tr('必填未完成', 'Required fields missing')}"></span>`}${esc(i.sku)}${v.goodsType === 'refb' ? ` <span class="pl-chip warn">${tr('退货', 'Ret.')}</span>` : ''}</td>
+          <td class="nm">${esc(nameOf(i) || tr('未命名', 'Unnamed'))}${other && other !== nameOf(i) ? `<small>${esc(other)}</small>` : ''}</td>
+          <td>${esc(famName(v.family) || '—')}${v.series ? `<small>${esc(v.series)}</small>` : ''}</td><td>${esc(statusName(v.status) || '—')}</td>
+          <td class="num">${msrpOf(i) != null ? usd(msrpOf(i)) : '—'}</td>${cmOn ? `<td class="num ${m ? tone(m.cmPct, D().settings?.dtcFloor) : ''}">${m && m.cmPct != null ? pct(m.cmPct) : '—'}</td>` : ''}
+          <td class="num ${c.done ? '' : 'miss'}">${c.need ? `${c.got}/${c.need}` : '—'}</td></tr>`; }).join('')}</tbody></table>`
+      : `<div class="pl-empty">${S.onlyReq ? tr('没有必填未完成的产品', 'No incomplete products') : all.length ? tr('没有匹配的产品，试试清除筛选', 'No matching products; try clearing the filters') : tr('还没有产品。产品经理可以点“新建产品”录入第一个 SKU；有批量更新权限的同事可以下载标准模板，填好后点“批量更新”上传。', 'No products yet. Product managers can add the first SKU; people allowed to bulk-update can fill in the template and upload it with Bulk update.')}</div>`}</div></aside>`;
   }
 
   /* ---------- fields ---------- */
@@ -364,8 +393,9 @@
   /* ---------- events (only inside the library) ---------- */
   const inPl = el => !!(ctx && el?.closest?.('.pl'));
   document.addEventListener('click', e => {
-    const t = e.target.closest?.('[data-pl],[data-pl-pick],[data-pl-rmfile],[data-pl-freight],[data-pl-pvf],[data-pl-undo],[data-pl-sadd],[data-pl-srm]');
+    const t = e.target.closest?.('[data-pl],[data-pl-pick],[data-pl-sort],[data-pl-rmfile],[data-pl-freight],[data-pl-pvf],[data-pl-undo],[data-pl-sadd],[data-pl-srm]');
     if (!t || !inPl(t)) return;
+    if (t.dataset.plSort) { const k = t.dataset.plSort; if (S.sort === k) S.dir = -S.dir; else { S.sort = k; S.dir = ['msrp', 'cm'].includes(k) ? -1 : 1; } return rerender(); }
     if (t.dataset.plPick) { S.cur = t.dataset.plPick; S.creating = false; S.errs = {}; S.histOpen = false; return rerender(); }
     if (t.dataset.plFreight) { e.preventDefault(); return saveField('whFreight', t.dataset.plFreight); }
     if (t.dataset.plPvf) { S.pvFilter = t.dataset.plPvf; return rerender(); }
@@ -376,6 +406,7 @@
       t.disabled = true; ctx.api.post(`/products/library/imports/${encodeURIComponent(t.dataset.plUndo)}/undo`, {}).then(r => { toast(tr(`已撤销：恢复 ${r.restored} 处，移除新增产品 ${r.removed} 个${r.kept.length ? `，保留 ${r.kept.length} 项` : ''}`, `Undone: ${r.restored} values restored, ${r.removed} new products removed${r.kept.length ? `, ${r.kept.length} kept` : ''}`)); loadImports(); load(true); }).catch(x => { toast(x.message); t.disabled = false; }); return; }
     const a = t.dataset.pl;
     if (a === 'view') { S.view = t.dataset.v; if (S.view === 'imports' && !S.imports) loadImports(); if (S.view === 'settings') S.draft = null; return rerender(); }
+    if (a === 'clear-filters') { Object.assign(S, { q:'', fam:'', series:'', status:'', gt:'', brand:'', pmin:'', pmax:'', onlyReq:false }); return rerender(); }
     if (a === 'new') { S.view = 'products'; S.creating = true; S.errs = {}; return rerender(); }
     if (a === 'create-cancel') { S.creating = false; return rerender(); }
     if (a === 'create') { const box = document.getElementById('pl-new'), val = k => box?.querySelector(`[data-pl-new="${k}"]`)?.value.trim() || '';
@@ -397,7 +428,8 @@
     if (el.matches('[data-pl-f]')) { const k = el.dataset.plF, v = el.value.trim(); setTimeout(() => saveField(k, v), 0); return; }
     if (el.matches('[data-pl-upload]')) { const files = [...(el.files || [])]; el.value = ''; return upload(el.dataset.plUpload, files); }
     if (el.matches('[data-pl-import]')) { const f = el.files?.[0]; el.value = ''; return previewFile(f); }
-    if (el.matches('[data-pl-fam]')) { S.fam = el.value; return rerender(); }
+    if (el.matches('[data-pl-flt]')) { S[el.dataset.plFlt] = el.value; if (el.dataset.plFlt === 'fam') S.series = ''; return rerender(); }
+    if (el.matches('[data-pl-p]')) { const v = el.value.trim().replace(/[$,]/g, ''); S[el.dataset.plP] = v !== '' && Number.isFinite(Number(v)) ? v : ''; return rerender(); }
     if (el.matches('[data-pl-onlyreq]')) { S.onlyReq = el.checked; return rerender(); }
     if (el.matches('[data-pl-skip]')) { S.skipErrors = el.checked; return rerender(); }
     if (el.matches('[data-pl-s]')) { const path = el.dataset.plS, d = S.draft; if (!d) return;
