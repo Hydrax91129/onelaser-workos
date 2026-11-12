@@ -106,3 +106,4 @@ html[data-theme=dark] .scm-hbars.cover .mark{background:#e6e8ef}html[data-theme=
 .scm-mini-table{font-size:12.5px}.scm-mini-table td,.scm-mini-table th{padding:5px 8px}
 .scm-inline-bar{display:flex;align-items:center;gap:6px;min-width:120px}.scm-inline-bar .seg{display:block;height:10px;border-radius:0 4px 4px 0;min-width:2px}.scm-inline-bar span{font-variant-numeric:tabular-nums;color:var(--ink2,#52514e);font-size:12px;white-space:nowrap}
 .seg.dio-green{background:var(--good,#0ca30c)}.seg.dio-amber{background:var(--warn,#fab219)}.seg.dio-red{background:var(--crit,#d03b3b)}.seg.dio-grey{background:#9aa3b5}
+.scm-pill.scm-life{font-weight:500}.scm-life-sel{height:32px;border:1px solid var(--border,#d7dbe7);border-radius:8px;padding:0 8px;background:var(--surface,#fff);color:inherit;font-size:13px}

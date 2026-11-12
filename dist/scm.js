@@ -12,7 +12,7 @@
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   const icon = n => `<i class="ph ph-${n}" aria-hidden="true"></i>`;
   let ctx = null, data = null, loading = false, error = '', busy = false;
-  const ui = { tab:'dash', q:'', status:'', sort:'', dir:1 };
+  const ui = { tab:'dash', q:'', status:'', life:'', sort:'', dir:1 };
   const lang = () => ctx?.lang() === 'en' ? 'en' : 'zh';
   const tr = (zh, en) => lang() === 'en' ? en : zh;
   const fmt = n => n == null ? '—' : Number(n).toLocaleString('en-US');
@@ -20,6 +20,8 @@
   // Three statuses (owner, 2026-11-12): 缺货风险 / 正常 / 库存过多; the 系统判断 column says why.
   const STATUS = { risk:['缺货风险', 'Stockout risk', 'red'], ok:['正常', 'Normal', 'green'], overstock:['库存过多', 'Overstock', 'blue'] };
   const ORDER = ['risk', 'ok', 'overstock'];
+  /* PIM 生命周期 (product_catalog.status); 清库存 / 计划停售 / 停售 are sold down, never produced again. */
+  const LIFE = { dev:['开发中', 'In development', 'grey'], launch:['上新中', 'Launching', 'blue'], live:['在售', 'Selling', 'green'], clearance:['清库存', 'Clearance', 'amber'], eolPlanned:['计划停售', 'Phasing out', 'amber'], eol:['停售', 'Discontinued', 'grey'] };
   // 头程 / 尾程 and their default days (owner, 2026-11-12)
   const FIRST_LEG = { air:['空运', 'Air', 7], oa:['OA 普船', 'OA standard ship', 30], fast:['快船', 'Fast ship', 20], matson:['美森特快', 'Matson express', 15] };
   const LAST_LEG = { express:['快递', 'Parcel', 3], port:['港到仓', 'Port to warehouse', 4], truck:['卡派', 'Truck delivery', 7] };
@@ -66,6 +68,7 @@
   const COLS = () => { const s = data.settings; return [
     ['sku', 'SKU', tr('产品资料里的 SKU。', 'The SKU in the product library.')],
     ['', tr('产品', 'Product'), tr('产品资料里的名称。', 'Name from the product library.')],
+    ['lifecycle', tr('SKU 状态', 'SKU status'), tr('产品资料“生命周期”里的状态：开发中 / 上新中 / 在售 / 清库存 / 计划停售 / 停售。清库存、计划停售、停售的 SKU 只卖完现有货：不建议生产，也不报缺货风险。', 'Lifecycle from the product library. Clearance, phasing out and discontinued SKUs are sold down: no production suggested and no stockout risk.')],
     ['ds365', tr('DS · 365 天', 'DS · 365d'), tr('过去 365 天平均每天卖出的件数（Shopify 订单，取消和测试单不算）。', 'Average units sold per day over the last 365 days (Shopify).'), 'num'],
     ['ds90', tr('DS · 90 天', 'DS · 90d'), tr('过去 90 天平均每天卖出的件数。', 'Average units sold per day over the last 90 days.'), 'num'],
     ['ds30', tr('DS · 30 天', 'DS · 30d'), tr('过去 30 天平均每天卖出的件数；▲▼ 是和近 90 天比的涨跌（30% 以上算短期爆发或下滑）。', 'Average per day over the last 30 days; ▲▼ against the 90-day rate (30%+ is a burst or dip).'), 'num'],
@@ -110,6 +113,11 @@
     if (x.wip) parts.push(tr(`在产 ${fmt(x.wip)} 件已算进建议生产`, `${fmt(x.wip)} in production counted in`));
     const plan = x.ship || x.make ? tr(`建议${x.ship ? `工厂现货先发 ${fmt(x.ship)} 件` : ''}${x.ship && x.make ? '，再' : ''}${x.make ? `下单生产 ${fmt(x.make)} 件${x.moq ? `（起订量 ${x.moq}）` : ''}` : ''}。`,
       `Suggest ${x.ship ? `shipping ${fmt(x.ship)} from factory stock` : ''}${x.ship && x.make ? ', then ' : ''}${x.make ? `ordering ${fmt(x.make)} from production${x.moq ? ` (MOQ ${x.moq})` : ''}` : ''}.`) : '';
+    if (x.stopping) { const life = w(LIFE[x.lifecycle] || ['', '']);
+      return tr(`产品资料里是“${life}”：只卖完现有货，不建议生产，也不报缺货风险。`, `Marked “${life}” in the product library: sell down what is left; no production and no stockout risk.`)
+        + (x.cover != null ? tr(`现有货（美国仓 + 在途）够卖 ${x.cover} 天。`, ` Stock on hand and on the way lasts ${x.cover} days.`) : '')
+        + (x.status === 'overstock' ? tr('库存还多，可考虑促销清货。', ' Still a lot left: consider a promotion.') : '')
+        + (x.ship ? tr(`工厂还有成品，可发 ${fmt(x.ship)} 件到美国仓。`, ` Factory stock can ship ${fmt(x.ship)} to the US.`) : ''); }
     if (x.status === 'overstock' && !x.forecast) return tr('有库存但最近一年没有销量：暂停补货，考虑清库存。', 'Stock but no sales in the past year: hold reorders and consider clearing it.');
     if (!x.forecast) return tr('没有销量也没有库存：不建议补货。', 'No sales and no stock: no reorder suggested.');
     const head = parts.join(sep);
@@ -129,17 +137,18 @@
     if (b) { b.classList.toggle('pinned'); b.classList.contains('pinned') ? showWhy(b) : hideWhy(); } else if (!e.target.closest?.('#scm-why-pop')) hideWhy(); });
   function reorderView() {
     const q = ui.q.trim().toLowerCase(), s = data.settings;
-    let list = data.items.filter(x => (!ui.status || x.status === ui.status) && (!q || [x.sku, x.nameZh, x.nameEn].some(v => String(v || '').toLowerCase().includes(q))));
+    let list = data.items.filter(x => (!ui.status || x.status === ui.status) && (!ui.life || x.lifecycle === ui.life) && (!q || [x.sku, x.nameZh, x.nameEn].some(v => String(v || '').toLowerCase().includes(q))));
     const key = x => ui.sort === 'sku' ? x.sku : ui.sort ? (x[ui.sort] ?? -1) : ORDER.indexOf(x.status) * 1e6 + (x.cover ?? 999999);
     list = list.slice().sort((a, b) => { const x = key(a), y = key(b); return (typeof x === 'number' ? x - y : String(x).localeCompare(String(y))) * (ui.sort ? ui.dir : 1); });
     const chips = [['', tr('全部', 'All'), data.items.length], ...ORDER.map(k => [k, w(STATUS[k]), data.items.filter(x => x.status === k).length])];
     const trend = x => x.signal === 'spike' ? ` <span class="up" title="${tr('短期爆发', 'burst')}">▲${x.trendPct != null ? x.trendPct + '%' : ''}</span>` : x.signal === 'dip' ? ` <span class="down" title="${tr('短期下滑', 'dip')}">▼${Math.abs(x.trendPct)}%</span>` : '';
     return `<div class="scm-bar"><label class="scm-search">${icon('magnifying-glass')}<input data-scm-q value="${esc(ui.q)}" placeholder="${tr('搜索 SKU 或名称', 'Search SKU or name')}"></label>
         <div class="scm-chips">${chips.map(([k, label, n]) => `<button class="${ui.status === k ? 'on' : ''}" data-scm="status" data-v="${k}">${esc(label)} <b>${n}</b></button>`).join('')}</div>
+        <select class="scm-life-sel" data-scm-life aria-label="${tr('SKU 状态', 'SKU status')}"><option value="">${tr('全部 SKU 状态', 'All SKU statuses')}</option>${Object.entries(LIFE).filter(([k]) => data.items.some(x => x.lifecycle === k)).map(([k, v]) => `<option value="${k}" ${ui.life === k ? 'selected' : ''}>${esc(w(v))} (${data.items.filter(x => x.lifecycle === k).length})</option>`).join('')}</select>
         <span class="scm-sp"></span>${data.canManage ? `<button class="btn" data-scm="settings">${icon('sliders-horizontal')} ${tr('补货参数', 'Reorder settings')}</button><button class="btn primary" data-scm="sync" ${busy ? 'disabled' : ''}>${icon('arrows-clockwise')} ${busy ? tr('同步中…', 'Syncing…') : tr('同步 Shopify 销量', 'Sync Shopify sales')}</button>` : ''}${window.WorkOSErpAccess?.button?.('supply') || ''}</div>
       <div class="scm-table-wrap"><table class="scm-table"><thead><tr>${COLS().map(([k, label, tip, cls]) => headTh(k, label, tip, cls)).join('')}</tr></thead><tbody>
         ${list.map(x => { const st = STATUS[x.status] || STATUS.ok;
-          return `<tr><td class="mono">${esc(x.sku)}</td><td class="scm-name" title="${esc(nameOf(x))}">${esc(nameOf(x))}</td><td class="num">${x.ds365}</td><td class="num">${x.ds90}</td><td class="num">${x.ds30}${trend(x)}</td>
+          return `<tr><td class="mono">${esc(x.sku)}</td><td class="scm-name" title="${esc(nameOf(x))}">${esc(nameOf(x))}</td><td>${LIFE[x.lifecycle] ? `<span class="scm-pill scm-life ${LIFE[x.lifecycle][2]}">${w(LIFE[x.lifecycle])}</span>` : '—'}</td><td class="num">${x.ds365}</td><td class="num">${x.ds90}</td><td class="num">${x.ds30}${trend(x)}</td>
             <td class="num" title="${tr(`季节系数 ${x.season}`, `season ${x.season}`)}"><b>${x.forecast}</b></td>
             <td class="num">${fmt(x.us)}</td><td class="num">${fmt(x.transit)}</td><td class="num">${fmt(x.dg)}</td><td class="num">${fmt(x.jn)}</td>
             <td class="num scm-tot"><b>${fmt(x.finished)}</b></td><td class="num">${x.wip ? fmt(x.wip) : '—'}</td><td class="num scm-tot"><b>${fmt(x.pipeline)}</b></td>
@@ -148,7 +157,7 @@
             <td class="num scm-days" title="${esc(daysWhy(x))}"><b>${x.leadDays} ${tr('天', 'd')}</b>${x.factory > 0 ? `<small class="scm-sub">${tr(`工厂现货 · 重新生产要 ${x.supplyDays} 天`, `factory stock · ${x.supplyDays}d if made`)}</small>` : ''}</td><td class="num nowrap" title="${esc(x.arriveOn || '')}">${esc(md(x.arriveOn))}</td>
             <td class="num ${x.shortDays ? 'red' : ''}">${x.shortDays ? `<b>${x.shortDays} ${tr('天', 'd')}</b>${x.cover != null ? `<small class="scm-sub">${tr(`${outOn(x)} 卖完`, `runs out ${outOn(x)}`)}</small>` : ''}` : '—'}</td>
             <td class="num">${x.ship ? `<b>${fmt(x.ship)}</b>` : '—'}</td><td class="num">${x.make ? `<b class="red">${fmt(x.make)}</b>${data.canManage ? `<button class="scm-link" data-scm="order-sku" data-sku="${esc(x.sku)}" data-qty="${x.make}">${tr('下单', 'Order')}</button>` : ''}` : '—'}</td>
-            <td><button type="button" class="scm-pill ${st[2]} scm-why-btn" data-why="${esc(why(x))}" aria-label="${esc(w(st))}: ${esc(why(x))}">${w(st)}</button></td></tr>`; }).join('') || `<tr><td colspan="23" class="scm-empty">${tr('没有符合的 SKU', 'No matching SKU')}</td></tr>`}
+            <td><button type="button" class="scm-pill ${st[2]} scm-why-btn" data-why="${esc(why(x))}" aria-label="${esc(w(st))}: ${esc(why(x))}">${w(st)}</button></td></tr>`; }).join('') || `<tr><td colspan="24" class="scm-empty">${tr('没有符合的 SKU', 'No matching SKU')}</td></tr>`}
       </tbody></table></div>
       <section class="scm-legend"><h4>${icon('info')} ${tr('字段说明', 'What the columns mean')}</h4><dl>${[
         [tr('DS · 365 / 90 / 30 天', 'DS · 365 / 90 / 30d'), tr('过去 365 / 90 / 30 天平均每天卖出的件数（Shopify 订单，取消和测试单不算）。', 'Average units sold per day over the last 365 / 90 / 30 days (Shopify; cancelled and test orders excluded).')],
@@ -348,7 +357,6 @@
     const sups = suppliersAll(), uniq = k => [...new Set(data.items.map(x => x[k]).filter(Boolean))].sort();
     const sel = (attr, all, opts, cur = '') => `<label class="wms-select"><select data-po-${attr}><option value="">${all}</option>${opts.map(([v, t]) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>`;
     const FAM = { main:['主机', 'Machine'], acc:['配件/备件', 'Accessory'], cons:['耗材', 'Consumable'], soft:['软件/服务', 'Software'], mat:['内部物料', 'Material'] };
-    const LIFE = { dev:['开发中', 'In development'], launch:['上新中', 'Launching'], live:['在售', 'Selling'], clearance:['清库存', 'Clearance'], eolPlanned:['计划停售', 'Phasing out'], eol:['停售', 'Discontinued'] };
     ctx.modal(o ? tr(`修改采购单 · ${o.number}`, `Edit purchase order · ${o.number}`) : tr('新建采购单', 'New purchase order'), `<form id="scm-po" class="scm-form"><div class="form-grid">
       <label class="field"><span>${tr('采购单号（不填自动生成）', 'PO number (blank = automatic)')}</span><input name="number" maxlength="60" value="${esc(o?.number || '')}" placeholder="PO-${today().replace(/-/g, '')}-01"></label>
       <label class="field"><span>${tr('供应商（取自产品资料）', 'Supplier (from the product library)')}</span><select name="supplier" required data-po-supplier><option value="">${tr('请选择', 'Choose')}</option>${sups.map(x => `<option value="${esc(x)}" ${x === po.supplier ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>
@@ -514,7 +522,7 @@
     if (t.matches?.('[data-scm-eta-src]')) syncEta();
   });
   // 头程 / 尾程 chosen: their default days fill in “days to arrive”
-  document.addEventListener('change', e => { const t = e.target; if (!t.matches?.('[data-scm-legs]')) return;
+  document.addEventListener('change', e => { const t = e.target; if (t.matches?.('[data-scm-life]')) { ui.life = t.value; ctx.rerender(); return; } if (!t.matches?.('[data-scm-legs]')) return;
     const f = t.closest('form'), a = FIRST_LEG[f.querySelector('[name="firstLeg"]').value], b = LAST_LEG[f.querySelector('[name="lastLeg"]').value];
     if (a && b) { f.querySelector('[name="etaDays"]').value = a[2] + b[2]; syncEta(); } });
   document.addEventListener('change', e => { if (e.target.matches?.('[data-scm-line-sku]')) paintLines(); });
