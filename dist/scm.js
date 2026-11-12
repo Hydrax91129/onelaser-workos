@@ -262,7 +262,7 @@
     const rows = it.map(x => ({ x, parts: STAGES().map(([k, label, slot]) => ({ k, label, slot, v: Number(x[k] || 0) })) })).map(r => ({ ...r, total: r.parts.reduce((n, p) => n + p.v, 0) })).sort((a, b) => b.total - a.total);
     const max = Math.max(1, ...rows.map(r => r.total));
     return `<div class="scm-hbars">${rows.map(r => `<div class="row"><span class="lab mono" title="${svgEsc(nameOf(r.x))}">${svgEsc(r.x.sku)}</span><div class="track">${r.parts.filter(p => p.v > 0).map(p =>
-      `<i class="seg s${p.slot}" style="width:${(p.v / max * 100).toFixed(2)}%" data-tip="${svgEsc(`${r.x.sku} · ${p.label}：${fmt(p.v)}`)}"></i>`).join('')}</div><span class="val">${fmt(r.total)}</span></div>`).join('')}</div>`;
+      `<i class="seg s${p.slot}" style="width:${(p.v / max * 100).toFixed(2)}%" data-tip="${svgEsc(`${r.x.sku} · ${p.label}${tr('：', ': ')}${fmt(p.v)}`)}"></i>`).join('')}</div><span class="val">${fmt(r.total)}</span></div>`).join('')}</div>`;
   }
   function coverBars(it) {
     const rows = it.filter(x => x.cover != null).sort((a, b) => (a.cover - a.leadDays) - (b.cover - b.leadDays)), cap = Math.max(60, ...rows.map(x => x.leadDays * 2));
@@ -273,13 +273,13 @@
   }
   function statusBars(it) {
     const max = Math.max(1, it.length);
-    return `<div class="scm-hbars">${ORDER.map(k => { const n = it.filter(x => x.status === k).length; return `<div class="row"><span class="lab">${w(STATUS[k])}</span><div class="track"><i class="seg st-${k}" style="width:${(n / max * 100).toFixed(2)}%" data-tip="${svgEsc(`${w(STATUS[k])}：${n} 个 SKU`)}"></i></div><span class="val">${n}</span></div>`; }).join('')}</div>`;
+    return `<div class="scm-hbars">${ORDER.map(k => { const n = it.filter(x => x.status === k).length; return `<div class="row"><span class="lab">${w(STATUS[k])}</span><div class="track"><i class="seg st-${k}" style="width:${(n / max * 100).toFixed(2)}%" data-tip="${svgEsc(tr(`${w(STATUS[k])}：${n} 个 SKU`, `${w(STATUS[k])}: ${n} SKU${n === 1 ? '' : 's'}`))}"></i></div><span class="val">${n}</span></div>`; }).join('')}</div>`;
   }
   function poBars(os) {
     const groups = [['draft', tr('草稿', 'Draft'), o => o.status === 'draft'], ['issued', tr('生产中', 'In production'), o => o.status === 'issued' && !o.overdue], ['overdue', tr('逾期中', 'Overdue'), o => o.status === 'issued' && o.overdue],
       ['ontime', tr('准时交付', 'On time'), o => o.status === 'delivered' && o.onTime], ['late', tr('延迟交付', 'Late'), o => o.status === 'delivered' && !o.onTime]];
     const max = Math.max(1, ...groups.map(g => os.filter(g[2]).length));
-    return `<div class="scm-hbars">${groups.map(([k, label, f]) => { const n = os.filter(f).length; return `<div class="row"><span class="lab">${label}</span><div class="track"><i class="seg po-${k}" style="width:${(n / max * 100).toFixed(2)}%" data-tip="${svgEsc(`${label}：${n} 张`)}"></i></div><span class="val">${n}</span></div>`; }).join('')}</div>`;
+    return `<div class="scm-hbars">${groups.map(([k, label, f]) => { const n = os.filter(f).length; return `<div class="row"><span class="lab">${label}</span><div class="track"><i class="seg po-${k}" style="width:${(n / max * 100).toFixed(2)}%" data-tip="${svgEsc(tr(`${label}：${n} 张`, `${label}: ${n} order${n === 1 ? '' : 's'}`))}"></i></div><span class="val">${n}</span></div>`; }).join('')}</div>`;
   }
   function arrivals(sh) {
     const list = sh.filter(x => x.status !== 'arrived').sort((a, b) => String(a.eta).localeCompare(String(b.eta)));
@@ -434,8 +434,8 @@
     const opt = (o, sel) => Object.entries(o).map(([k, v]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${esc(w(v))}</option>`).join('');
     ctx.modal(tr('新建货柜', 'New shipment'), `<form id="scm-ship" class="scm-form"><div class="form-grid">
       <label class="field"><span>${tr('柜号 / 单号', 'Container / reference')}</span><input name="number" required maxlength="60" placeholder="MSKU1234567"></label>
-      <label class="field"><span>${tr('头程', 'First leg')}</span><select name="firstLeg" required data-scm-legs><option value="">${tr('请选择', 'Choose')}</option>${Object.entries(FIRST_LEG).map(([k, v]) => `<option value="${k}">${esc(w(v))}（${v[2]} ${tr('天', 'd')}）</option>`).join('')}</select></label>
-      <label class="field"><span>${tr('尾程', 'Last mile')}</span><select name="lastLeg" required data-scm-legs><option value="">${tr('请选择', 'Choose')}</option>${Object.entries(LAST_LEG).map(([k, v]) => `<option value="${k}">${esc(w(v))}（${v[2]} ${tr('天', 'd')}）</option>`).join('')}</select></label>
+      <label class="field"><span>${tr('头程', 'First leg')}</span><select name="firstLeg" required data-scm-legs><option value="">${tr('请选择', 'Choose')}</option>${Object.entries(FIRST_LEG).map(([k, v]) => `<option value="${k}">${esc(w(v))}${tr(`（${v[2]} 天）`, ` (${v[2]} d)`)}</option>`).join('')}</select></label>
+      <label class="field"><span>${tr('尾程', 'Last mile')}</span><select name="lastLeg" required data-scm-legs><option value="">${tr('请选择', 'Choose')}</option>${Object.entries(LAST_LEG).map(([k, v]) => `<option value="${k}">${esc(w(v))}${tr(`（${v[2]} 天）`, ` (${v[2]} d)`)}</option>`).join('')}</select></label>
       <label class="field"><span>${tr('承运商', 'Carrier')}</span><input name="carrier" maxlength="80" placeholder="${tr('如 Matson / COSCO / DHL', 'e.g. Matson / COSCO / DHL')}"></label>
       <label class="field"><span>Tracking</span><input name="tracking" maxlength="120" placeholder="${tr('单号或查询链接', 'Number or tracking link')}"></label>
       <label class="field"><span>${tr('货从哪来', 'From')}</span><select name="source">${opt(SOURCE, 'dg')}</select></label>

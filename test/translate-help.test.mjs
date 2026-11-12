@@ -75,7 +75,7 @@ test('tasks, task details, projects and the inbox show user text through the tra
   assert.match(live, />\$\{esc\(task\.description\)\}<\/textarea>/, 'the edit form keeps the original description');
   assert.doesNotMatch(proj, /\$\{esc\(L\((t\.title|p\.name)\)\)\}/, 'project and task names are translated');
   assert.match(proj, /\$\{esc\(L\(p\.desc\)\)\}<\/textarea>/, 'the project description editor keeps the original');
-  assert.match(inbox, /<strong>\$\{tx\(i\.title\)\}<\/strong>/);
+  assert.match(inbox, /<strong>\$\{sysText\(i, i\.title\) \|\| tx\(i\.title\)\}<\/strong>/, 'titles go through the translator (supply-chain notices get a fixed English text first)');
 });
 
 test('text longer than the server limit is shown as written and never sent', async () => {
