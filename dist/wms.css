@@ -87,3 +87,5 @@ textarea[data-wms-batch-lines]{font-family:ui-monospace,Menlo,monospace;font-siz
 html[data-theme=dark] .wms-thumb.none{background:#23252f;border-color:#343745}html[data-theme=dark] .wms-find-row:hover{background:#252836}html[data-theme=dark] .wms-qty.bad{background:#3a1d22}
 /* Selects and price boxes inside the filter pills: no second box from the app's global input style */
 html:root .wms-select :is(select,input){border:0;background:transparent;min-height:0;height:28px;padding:0 4px;box-shadow:none;border-radius:0}
+.wms-table td.wms-bin{white-space:nowrap}.wms-bin .mono{font-size:12px}.wms-bin b{margin-left:4px}.wms-bin b.zero,.wms-dim{color:#c0c4ce;font-weight:400}
+.wms-table td.warn{color:#b54708;font-weight:600}.wms-slot{height:28px;min-height:0;padding:0 4px;font-size:12px;max-width:150px}

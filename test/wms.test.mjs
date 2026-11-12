@@ -61,7 +61,7 @@ test('opening-stock import and template use the four regular locations; returns 
 test('stock: PIM facts and image, family / series / MSRP filters, one warehouse shows its bins (editable for operators)', async () => {
   const families = [{ key:'main', zh:'主机', en:'Machine' }, { key:'acc', zh:'配件/备件', en:'Accessory' }];
   const items = [
-    { sku:'M-1', name:'m', nameZh:'示例主机', nameEn:'Demo machine', family:'main', series:'XRF', msrp:1999, imageId:'img1', type:'', qty:{ us:3 }, bins:{ us:['A-01', 'A-02', ''] } },
+    { sku:'M-1', name:'m', nameZh:'示例主机', nameEn:'Demo machine', family:'main', series:'XRF', msrp:1999, imageId:'img1', type:'', qty:{ us:3 }, bins:{ us:['A-01', 'A-02', ''] }, binQty:{ us:[2, 1, 0] } },
     { sku:'P-1', name:'p', nameZh:'示例配件', nameEn:'Demo part', family:'acc', series:'Hydra', msrp:49, imageId:null, type:'', qty:{ us:9, dg:2 }, bins:{} },
     { sku:'P-2', name:'p2', nameZh:'没有价格的配件', nameEn:'', family:'', series:'', msrp:null, type:'', qty:{}, bins:{} }];
   const w = load({ locations:LOCATIONS, families, items, movements:[], canOperate:true });
@@ -74,7 +74,10 @@ test('stock: PIM facts and image, family / series / MSRP filters, one warehouse 
   change('[data-wms-fam]', 'acc'); app = w.render(); assert.deepEqual([...app.querySelectorAll('.wms-table tbody .mono')].map(x => x.textContent), ['P-1']);
   change('[data-wms-fam]', ''); change('[data-wms-pmin]', '100'); app = w.render(); assert.deepEqual([...app.querySelectorAll('.wms-table tbody .mono')].map(x => x.textContent), ['M-1'], 'MSRP from $100');
   change('[data-wms-pmin]', ''); change('[data-wms-loc]', 'us'); app = w.render();
-  assert.match(app.querySelector('thead').textContent, /首选库位/); assert.equal(app.querySelector('[data-wms-bin="M-1"][data-i="0"]').getAttribute('value'), 'A-01');
+  assert.match(app.querySelector('thead').textContent, /首选库位/); assert.match(app.querySelector('thead').textContent, /未分库位/);
+  assert.equal(app.querySelector('[data-wms-bin]'), null, 'bins are not edited in the table');
+  const row = [...app.querySelectorAll('.wms-table tbody tr')].find(r => r.textContent.includes('M-1'));
+  assert.match(row.textContent, /A-01\s*2/, 'preferred bin with its quantity'); assert.ok(row.querySelector('[data-wms="bins"]'), 'operators set bins in the Bins dialog');
   assert.equal(app.querySelectorAll('.wms-table tbody tr').length, 3, 'a warehouse shows every SKU, with its quantity there');
 });
 
