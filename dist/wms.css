@@ -106,3 +106,9 @@ html[data-theme=dark] .wms-bm-table tr.editing{background:#252836}
 .wms-badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:999px;background:#fff;color:#245bdb;font-size:11px;line-height:18px;text-align:center;margin-left:4px}
 .wms-arr-table tr.ok{background:#e8f7ef}.wms-arr-table .wms-qty{width:90px}.wms-arr-table select{min-height:0;height:30px}
 html[data-theme=dark] .wms-arr-table tr.ok{background:#173326}
+.wms-opgroups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:2px 0 4px}
+.wms-opgroup{display:flex;flex-direction:column;gap:6px;border:1px solid var(--border,#e4e7ef);border-radius:12px;padding:8px 10px;background:#fff;border-left-width:4px}
+.wms-opgroup.in{border-left-color:#0f8a5f}.wms-opgroup.out{border-left-color:#d97706}.wms-opgroup.manage{border-left-color:#3c64f4}
+.wms-opgroup-name{font-size:12px;font-weight:600;color:var(--muted,#5b6170);display:flex;gap:4px;align-items:center}.wms-opgroup-btns{display:flex;gap:6px;flex-wrap:wrap}
+@media (max-width:1000px){.wms-opgroups{grid-template-columns:1fr}}
+html[data-theme=dark] .wms-opgroup{background:#1d1f27;border-color:#343745}html[data-theme=dark] .wms-opgroup.in{border-left-color:#0f8a5f}html[data-theme=dark] .wms-opgroup.out{border-left-color:#d97706}html[data-theme=dark] .wms-opgroup.manage{border-left-color:#3c64f4}

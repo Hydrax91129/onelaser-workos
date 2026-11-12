@@ -77,7 +77,7 @@
     const pending = data.movements.filter(m => m.status === 'pending'), mineToDecide = pending.filter(m => m.canDecide);
     const today = data.movements.filter(m => new Date(m.createdAt).toDateString() === new Date().toDateString()).length;
     return `<div class="wms">
-      <div class="page-heading"><div><div class="eyebrow">WORK OS · WMS</div><h1>${tr('库存管理', 'Inventory')}</h1><p>${tr('按 SKU 和库位记录库存。每一次入库、出库、调拨和盘点调整都会留下流水；盘点调整需直属主管确认后生效。', 'Stock per SKU and location. Every goods-in, goods-out, transfer and count adjustment is logged; count adjustments take effect after the submitter’s manager confirms.')}${data.lastImport ? `<br><small class="wms-hint">${tr(`期初库存截至 ${String(data.lastImport.asOf).slice(0, 10)}`, `Opening stock as of ${String(data.lastImport.asOf).slice(0, 10)}`)}</small>` : ''}</p></div>
+      <div class="page-heading"><div><div class="eyebrow">WORK OS · WMS</div><h1>${tr('库存管理', 'Inventory')}</h1><p>${tr('按 SKU 和库位记录库存。每一次入库、出库、调拨和盘点调整都会留下流水；盘点调整要由另一位有库存管理权限的同事确认后才生效。', 'Stock per SKU and location. Every goods-in, goods-out, transfer and count adjustment is logged; count adjustments take effect once another warehouse manager confirms.')}${data.lastImport ? `<br><small class="wms-hint">${tr(`期初库存截至 ${String(data.lastImport.asOf).slice(0, 10)}`, `Opening stock as of ${String(data.lastImport.asOf).slice(0, 10)}`)}</small>` : ''}</p></div>
         <div class="heading-actions">${data.items.length ? `<button class="btn" data-wms="export" title="${tr('按当前筛选和排序导出库存', 'Exports the stock with the current filter and sort')}">${icon('download-simple')} ${tr('导出 CSV', 'Export CSV')}</button>` : ''}${data.canImport ? `<button class="btn" data-wms="import">${icon('upload-simple')} ${tr('导入期初库存', 'Import opening stock')}</button>` : ''}${data.canOperate ? `<button class="btn" data-wms="new-sku">${icon('plus')} ${tr('新增 SKU', 'New SKU')}</button>` : ''}${window.WorkOSErpAccess?.button?.('warehouse') || ''}</div></div>
       ${data.canOperate ? '' : `<div class="wms-note">${icon('eye')} ${tr('你的仓库库存权限是“查看”：可以看库存和流水，不能加减数量。需要管理权限请联系主管在“供应链权限管理”里开通。', 'Your warehouse access is view-only: you can see stock and movements but not change quantities. Ask a manager to grant Manage in Supply chain permissions.')}</div>`}
       <div class="wms-kpis">${data.locations.map(l => `<button class="wms-kpi ${ui.loc === l.id ? 'on' : ''}" data-wms="loc" data-v="${esc(l.id)}"><span>${esc(word(l))}</span><b>${fmtN(data.items.reduce((s, it) => s + Number(it.qty?.[l.id] || 0), 0))}</b><em>${data.items.filter(it => Number(it.qty?.[l.id] || 0) > 0).length} SKU${data.values ? ` · ${data.values.cost ? tr('成本货值', 'cost') : tr('零售货值', 'retail')} ${usd(data.values.cost ? data.values.cost[l.id] : data.values.msrp[l.id])}` : ''}</em></button>`).join('')}
@@ -85,10 +85,10 @@
         <div class="wms-kpi"><span>${tr('今日流水', 'Today')}</span><b>${today}</b><em>${tr('条操作', 'movements')}</em></div></div>
       ${!data.items.length ? `<div class="wms-note">${icon('info')} ${data.canImport ? tr('还没有库存数据。请点右上角“导入期初库存”，上传库存表（Excel 另存为 CSV）。', 'No stock yet. Use “Import opening stock” at the top right and upload the stock sheet (Excel saved as CSV).') : tr('还没有库存数据，等待管理员导入期初库存。', 'No stock yet; waiting for an administrator to import the opening balance.')}</div>` : ''}
       ${mineToDecide.length ? `<section class="wms-pending"><h3>${icon('seal-question')} ${tr('待你确认的盘点调整', 'Count adjustments awaiting you')} <b>${mineToDecide.length}</b></h3>${mineToDecide.map(m => `<div class="wms-pend-row"><span class="wms-type adjust">${tr('盘点调整', 'Adjust')}</span><strong>${esc(m.sku)}</strong><span>${esc(word(loc(m.location)))}</span><span class="${m.qty < 0 ? 'neg' : 'pos'}">${m.qty > 0 ? '+' : ''}${fmtN(m.qty)}</span><span class="wms-by">${tr(`系统 ${fmtN(m.systemQty)} → 实盘 ${fmtN(m.counted)}`, `system ${fmtN(m.systemQty)} → counted ${fmtN(m.counted)}`)}</span><span class="wms-reason">${esc(m.reason)}</span><span class="wms-by">${esc(m.byName)} · ${when(m.createdAt)}</span><button class="btn small primary" data-wms="approve" data-id="${esc(m.id)}">${tr('确认生效', 'Confirm')}</button><button class="btn small" data-wms="reject" data-id="${esc(m.id)}">${tr('驳回', 'Reject')}</button></div>`).join('')}</section>` : ''}
+      ${data.canOperate ? opGroups() : ''}
       <div class="wms-tabs"><button class="${ui.tab === 'stock' ? 'on' : ''}" data-wms="tab" data-v="stock">${icon('package')} ${tr('库存', 'Stock')}</button><button class="${ui.tab === 'log' ? 'on' : ''}" data-wms="tab" data-v="log">${icon('list-bullets')} ${tr('出入库流水', 'Movements')}</button></div>
       <div class="wms-toolbar"><label class="wms-search">${icon('magnifying-glass')}<input data-wms-search value="${esc(ui.q)}" placeholder="${ui.tab === 'stock' ? tr('搜索 SKU 或产品名', 'Search SKU or product') : tr('搜索 SKU、原因、单号或操作人', 'Search SKU, reason, reference or person')}"></label>
-        <span class="wms-spacer"></span>
-        ${data.canOperate ? `<button class="btn primary" data-wms="arrivals">${icon('boat')} ${tr('到港入仓', 'Arrivals')}${arrivals?.arrivals?.length ? ` <b class="wms-badge">${arrivals.arrivals.length}</b>` : ''}</button>` + Object.entries(TYPES).filter(([k]) => k !== 'move').map(([k, [zh, en, ic]]) => `<button class="btn" data-wms="op" data-type="${k}">${icon(ic)} ${tr(zh, en)}</button>`).join('') + `<button class="btn" data-wms="binmgr">${icon('grid-four')} ${tr('库位管理', 'Bins')}</button>` : ''}</div>
+      </div>
       ${ui.tab === 'stock' ? stockTable(items) : logTable(logList())}
     </div>`;
   }
@@ -335,6 +335,16 @@
       arrCur = null; data = null; load(); }
     catch (x) { err.textContent = x.message || tr('入库失败', 'Could not receive'); if (go) go.disabled = false; }
   });
+  /* Stock operations in three groups (owner, 2026-11-12): 入库 (到港入仓, 普通入库), 出库 (普通出库, 调拨出库), 仓库管理 (库存盘点, 库位管理). */
+  function opGroups() {
+    const op = (type, ic, zh, en) => `<button class="btn" data-wms="op" data-type="${type}">${icon(ic)} ${tr(zh, en)}</button>`;
+    const group = (ic, zh, en, cls, buttons) => `<div class="wms-opgroup ${cls}"><span class="wms-opgroup-name">${icon(ic)} ${tr(zh, en)}</span><div class="wms-opgroup-btns">${buttons}</div></div>`;
+    return `<div class="wms-opgroups">
+      ${group('arrow-circle-down', '入库', 'Goods in', 'in', `<button class="btn primary" data-wms="arrivals">${icon('boat')} ${tr('到港入仓', 'Arrivals')}${arrivals?.arrivals?.length ? ` <b class="wms-badge">${arrivals.arrivals.length}</b>` : ''}</button>${op('in', 'arrow-circle-down', '普通入库', 'Goods in')}`)}
+      ${group('arrow-circle-up', '出库', 'Goods out', 'out', `${op('out', 'arrow-circle-up', '普通出库', 'Goods out')}${op('transfer', 'arrows-left-right', '调拨出库（仓与仓之间）', 'Transfer (between warehouses)')}`)}
+      ${group('warehouse', '仓库管理', 'Warehouse', 'manage', `${op('adjust', 'clipboard-text', '库存盘点', 'Stock count')}<button class="btn" data-wms="binmgr">${icon('grid-four')} ${tr('库位管理', 'Bins')}</button>`)}
+    </div>`;
+  }
   let binSku = null;
   function binsDialog(sku) {
     if (!bm.list) ctx.api.get('/wms/bin-codes').then(r => { bm.list = r.codes; const dl = document.getElementById('wms-bincodes'); if (dl) dl.innerHTML = bm.list.filter(c => c.location === ui.loc).map(c => `<option value="${esc(c.code)}">`).join(''); }).catch(() => {});
