@@ -13,11 +13,17 @@
       }
       this.base = url.href.replace(/\/$/, ''); this.language = language; this.fetcher = fetcher; this.csrfToken = null;
     }
+    /** The save token, fetched once: parallel saves share one request, and the app fetches it early while it loads. */
+    csrf(signal) {
+      if (this.csrfToken) return Promise.resolve(this.csrfToken);
+      if (!this.csrfPending) this.csrfPending = this.request('/auth/csrf', { signal }).then(r => (this.csrfToken = r?.csrfToken || null)).finally(() => { this.csrfPending = null; });
+      return this.csrfPending;
+    }
     url(path) { if (!path.startsWith('/') || path.startsWith('//')) throw new Error('An API path must start with one slash'); return this.base + path; }
     async request(path, { method = 'GET', body, timeout = 45000, signal } = {}) {
       if (signal?.aborted) throw new ApiError(0, 'CANCELLED', this.language() === 'en' ? 'The request was cancelled.' : '请求已取消。');
       const writing = !['GET', 'HEAD', 'OPTIONS'].includes(method);
-      if (writing && !this.csrfToken) this.csrfToken = (await this.request('/auth/csrf', { signal })).csrfToken;
+      if (writing && !this.csrfToken) await this.csrf(signal);
       if (writing && !this.csrfToken) throw new ApiError(403, 'CSRF_UNAVAILABLE', this.language() === 'en' ? 'Refresh the page before saving.' : '请刷新页面后再保存。');
       const controller = new AbortController(), timer = setTimeout(() => controller.abort(), timeout);
       const cancel = () => controller.abort();
@@ -44,6 +50,7 @@
     }
     get(path, options = {}) { return this.request(path, options); }
     post(path, body) { return this.request(path, { method: 'POST', body }); }
+    patch(path, body) { return this.request(path, { method: 'PATCH', body }); }
     delete(path) { return this.request(path, { method: 'DELETE' }); }
     clearSession() { this.csrfToken = null; }
   }

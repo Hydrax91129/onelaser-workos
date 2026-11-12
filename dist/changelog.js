@@ -22,6 +22,14 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.57', date:'2026-11-11T18:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('新增“财务 · 应收账款”；登录后加载更快', 'New Finance · Receivables; faster start after sign-in'),
+      title:c('财务 · 应收账款；登录提速', 'Finance · Receivables; faster start'),
+      changes:[c('左侧新增“财务”板块，先上线“应收账款”：每张发票记录负责人、开票日期、账期和到期日、客户和联系人、类型、订单号、金额、是否发货、付款方式，附件可粘贴、拖拽或点击上传。', 'A new Finance section starts with Receivables: each invoice records the responsible person, invoice date, term and due date, customer and contact, type, order #, total, dispatch and payment method; files can be pasted, dragged or chosen.'),
+        c('收款可以分多笔记录，支票先记“已存入待到账”，到账后再标记；系统自动算已收、待收、收款占比和状态，逾期、已发货未收款、账龄一目了然。', 'Payments can be recorded in parts; a check is first “deposited” and then marked cleared. Received, outstanding, paid % and status are worked out for you, with overdue, shipped-not-paid and aging at a glance.'),
+        c('新建应收：客户公司选填（没填时列表显示联系人姓名）；联系人姓名、邮箱、联系电话和收货地址（街道、城市、州、邮编、国家）必填。美国电话统一存成 +1 加 10 位；州用两位缩写，邮编 5 位或 5+4 位。', 'New invoice: company is optional (the list shows the contact name instead); contact name, email, phone and shipping address (street, city, state, ZIP, country) are required. US phones are stored as +1 and 10 digits; states use the two-letter code; ZIP is 5 digits or ZIP+4.'),
+        c('权限：主管理员在“财务 → 权限”里给每个人选 无 / 查看 / 管理；发票上的负责人能看到自己负责的单子，记收款、传发票、写跟进。', 'Access: main admins set None / View / Manage per person under Finance → Access; the person responsible for an invoice sees it and records its payments, files and follow-ups.'),
+        c('登录后的数据请求改为同时发出，进入系统更快。', 'Startup requests now go out together, so the app opens faster after sign-in.')] },
     { version:'1.56', date:'2026-11-11T15:00:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
       short:c('库存直接认产品资料里的 SKU，不用再“新增 SKU”', 'Inventory accepts every SKU in the product library'),
       title:c('库存认产品资料 SKU', 'Inventory uses product library SKUs'),
