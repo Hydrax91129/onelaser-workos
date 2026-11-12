@@ -11,7 +11,9 @@
   const tr = (zh, en) => lang() === 'en' ? en : zh;
   const L = o => o ? (lang() === 'en' ? o.en || o.zh : o.zh) : '';
   const apiBase = () => (window.WORKOS_CONFIG && window.WORKOS_CONFIG.apiBase) || '/api';
-  const usd = v => v == null || !isFinite(v) ? '—' : (v < 0 ? '−$' : '$') + Math.abs(Math.round(v)).toLocaleString('en-US');
+  /* Dollars and cents (owner, 2026-11-12): $27.09 keeps its cents, whole amounts stay $4,999. */
+  const usd = v => { if (v == null || !isFinite(v)) return '—'; const c = Math.round(Math.abs(v) * 100) / 100;
+    return (v < 0 ? '−$' : '$') + c.toLocaleString('en-US', { minimumFractionDigits: c % 1 ? 2 : 0, maximumFractionDigits: 2 }); };
   const pct = v => v == null || !isFinite(v) ? '—' : (v * 100).toFixed(1) + '%';
   const pct100 = v => v == null || !isFinite(v) ? '—' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
   const kb = n => n == null ? '' : n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
@@ -103,7 +105,7 @@
     const v = it.values[f.key], dis = f.writable ? '' : 'disabled', id = `pl-i-${f.key}`, a = `id="${id}" data-pl-f="${esc(f.key)}" ${dis}`;
     if (f.type === 'enum') return `<select ${a}><option value="">${tr('请选择', 'Choose')}</option>${f.opts.map(o => `<option value="${esc(o.key)}" ${v === o.key ? 'selected' : ''}>${esc(L(o))}</option>`).join('')}</select>`;
     if (f.type === 'date') return `<input type="date" ${a} value="${esc(v)}">`;
-    if (f.type === 'number' || f.type === 'price') return `<div class="pl-affix"><input type="text" class="n" inputmode="decimal" ${a} value="${esc(v)}" placeholder="${esc(f.ph)}"><span>${esc(f.unit || 'USD')}</span></div>`;
+    if (f.type === 'number' || f.type === 'price') return `<div class="pl-affix"><input type="text" class="n" inputmode="decimal" ${a} value="${esc(v)}" placeholder="${esc(f.type === 'price' && !f.ph ? '0.00' : f.ph)}"${f.type === 'price' ? ` title="${tr('最多两位小数，例如 27.09', 'At most two decimals, e.g. 27.09')}"` : ''}><span>${esc(f.unit || 'USD')}</span></div>`;
     if (f.type === 'list') return `<input type="text" ${a} list="pl-dl-${esc(f.key)}" value="${esc(v)}" placeholder="${esc(f.ph)}"><datalist id="pl-dl-${esc(f.key)}">${f.opts.map(o => `<option value="${esc(o.key)}">`).join('')}</datalist>`;
     return `<input type="text" ${a} value="${esc(v)}" placeholder="${esc(f.ph)}">`;
   }

@@ -22,6 +22,9 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.64', date:'2026-11-12T23:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      zh:['产品资料里的价格（MSRP、MAP、促销底价、到岸价、尾程运费、批发档价、成本等）最多两位小数，例如 27.09；页面上的金额显示到分'],
+      en:['Prices in the product library take at most two decimals (e.g. 27.09); amounts show their cents'] },
     { version:'1.63', date:'2026-11-12T22:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       zh:['产品资料和价格权限各分四级：产品资料 无 / 查看普通信息 / 查看保密信息 / 管理信息；价格 无 / 查看 / 单项修改 / 管理（含批量更新）', '员工离职（停用账号）时所有功能权限自动清空，恢复账号不会自动恢复',
         '产品资料只填三个价格（到岸价、尾程运费、MSRP），分组顺序：基本参数、生命周期、定价、包装物流、供应商、产品详情；定价页可以直接改基本信息，每个 SKU 可设自己的零售 / 批发销售费率',
