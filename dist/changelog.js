@@ -22,6 +22,14 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.60', date:'2026-11-12T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('库存：产品信息和小图、产品族/价格筛选、货架库位、一单多 SKU、操作日期和操作方式', 'Inventory: product details and images, family/price filters, shelf bins, many SKUs per order, dates and how each move was made'),
+      title:c('库存管理升级', 'Inventory upgrade'),
+      changes:[c('库存表从产品资料带出中英文名、产品族、系列、MSRP 和产品主图（小图）；新增产品族、系列和 MSRP 价格区间筛选，搜索也能搜中英文名和库位。', 'The stock list shows names, family, series, MSRP and a small main image from the product library; filter by family, series and MSRP range; search covers names and bins.'),
+        c('选“全部仓库”看各仓数量；选某个仓库就看这个仓库的库位：每个 SKU 一个首选库位、两个备选库位，有权限的人直接在表里改，自动保存。', 'All warehouses shows quantities per warehouse; pick one to see its shelf bins: a preferred bin and two alternates per SKU, editable in place.'),
+        c('入库、出库、调拨、盘点调整都可以一次加多个 SKU：上面按 SKU、名称、库位、产品族和“只看有货的”找产品，点添加，每个 SKU 填自己的数量；盘点和系统一致的行自动跳过。', 'Goods in, out, transfer and counts take several SKUs at once: find products by SKU, name, bin, family or in-stock, add them and give each its own quantity; count lines that match the system are skipped.'),
+        c('每次操作都要填操作日期，默认当天，可以改（不能早于 2000 年，也不能是未来）。', 'Every operation has a date, today by default and editable (not before 2000 or in the future).'),
+        c('出入库流水新增“操作日期”和“操作方式”：手动入库 / 批量入库 / 手动出库 / 批量出库 / 调拨 / 盘点 / 期初导入 / 经销商发货；批量的会注明本批共几个 SKU、几件。', 'The movement log shows the date and how each move was made (manual, batch, transfer, count, opening import, dealer shipment); batches note how many SKUs and units.')] },
     { version:'1.58', date:'2026-11-11T19:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('分析页并入各自页面，左侧不再有“报表区”', 'Analysis pages moved into their own pages; no Reports group in the sidebar'),
       title:c('分析页改为页签', 'Analysis pages become tabs'),
