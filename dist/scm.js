@@ -146,6 +146,8 @@
     if (x.wip) parts.push(tr(`在产 ${fmt(x.wip)} 件已算进建议生产`, `${fmt(x.wip)} in production counted in`));
     const plan = x.ship || x.make ? tr(`建议${x.ship ? `工厂现货先发 ${fmt(x.ship)} 件` : ''}${x.ship && x.make ? '，再' : ''}${x.make ? `下单生产 ${fmt(x.make)} 件${x.moq ? `（起订量 ${x.moq}）` : ''}` : ''}。`,
       `Suggest ${x.ship ? `shipping ${fmt(x.ship)} from factory stock` : ''}${x.ship && x.make ? ', then ' : ''}${x.make ? `ordering ${fmt(x.make)} from production${x.moq ? ` (MOQ ${x.moq})` : ''}` : ''}.`) : '';
+    if (x.dropship) return tr('产品资料里供货方式是“代发”：供应商直接发货，我们不备库存，所以不建议发货或生产，也不报缺货风险。', 'Supply mode is “Dropship” in the product library: the supplier ships directly and we keep no stock, so no shipping or production suggestion and no stockout risk.')
+      + (x.forecast ? tr(`预测每月约 ${fmt(x.monthly || 0)} 件。`, ` Forecast about ${fmt(x.monthly || 0)} a month.`) : '');
     if (x.stopping) { const life = w(LIFE[x.lifecycle] || ['', '']);
       return tr(`产品资料里是“${life}”：只卖完现有货，不建议生产，也不报缺货风险。`, `Marked “${life}” in the product library: sell down what is left; no production and no stockout risk.`)
         + (x.cover != null ? tr(`现有货（美国仓 + 在途）够卖 ${daysText(x.cover)}。`, ` Stock on hand and on the way lasts ${daysText(x.cover)}.`) : '')
@@ -181,7 +183,7 @@
         <span class="scm-sp"></span>${data.canManage ? `<button class="btn" data-scm="settings">${icon('sliders-horizontal')} ${tr('补货参数', 'Reorder settings')}</button><button class="btn primary" data-scm="sync" ${busy ? 'disabled' : ''}>${icon('arrows-clockwise')} ${busy ? tr('同步中…', 'Syncing…') : tr('同步 Shopify 销量', 'Sync Shopify sales')}</button>` : ''}${window.WorkOSErpAccess?.button?.('supply') || ''}</div>
       <div class="scm-table-wrap"><table class="scm-table"><thead><tr>${COLS().map(([k, label, tip, cls]) => headTh(k, label, tip, cls)).join('')}</tr></thead><tbody>
         ${list.map(x => { const st = STATUS[x.status] || STATUS.ok;
-          return `<tr><td class="mono">${esc(x.sku)}</td><td class="scm-name" title="${esc(nameOf(x))}">${esc(nameOf(x))}</td><td>${LIFE[x.lifecycle] ? `<span class="scm-pill scm-life ${LIFE[x.lifecycle][2]}">${w(LIFE[x.lifecycle])}</span>` : '—'}</td><td class="num" title="${esc(dsTip(x.sold60 || 0, 60))}">${fmt(x.sold60 || 0)}</td><td class="num" title="${esc(dsTip(x.sold30 || 0, 30))}">${fmt(x.sold30 || 0)}${trend(x)}</td>
+          return `<tr><td class="mono">${esc(x.sku)}${x.dropship ? ` <span class="wms-tag" title="${esc(tr('代发：供应商直接发货，我们不备库存', 'Dropship: the supplier ships directly; we keep no stock'))}">${tr('代发', 'Dropship')}</span>` : ''}</td><td class="scm-name" title="${esc(nameOf(x))}">${esc(nameOf(x))}</td><td>${LIFE[x.lifecycle] ? `<span class="scm-pill scm-life ${LIFE[x.lifecycle][2]}">${w(LIFE[x.lifecycle])}</span>` : '—'}</td><td class="num" title="${esc(dsTip(x.sold60 || 0, 60))}">${fmt(x.sold60 || 0)}</td><td class="num" title="${esc(dsTip(x.sold30 || 0, 30))}">${fmt(x.sold30 || 0)}${trend(x)}</td>
             <td class="num" title="${tr(`预测日销 ${ds2(x.forecast)} 件 = 60% × ${ds2((x.sold30 || 0) / 30)} + 40% × ${ds2((x.sold60 || 0) / 60)}`, `forecast ${ds2(x.forecast)} a day = 60% × ${ds2((x.sold30 || 0) / 30)} + 40% × ${ds2((x.sold60 || 0) / 60)}`)}"><b>${fmt(x.monthly || 0)}</b></td>
             <td class="num">${fmt(x.us)}</td><td class="num">${fmt(x.transit)}</td><td class="num">${fmt(x.dg)}</td><td class="num">${fmt(x.jn)}</td>
             <td class="num scm-tot"><b>${fmt(x.finished)}</b></td><td class="num">${x.wip ? fmt(x.wip) : '—'}</td><td class="num scm-tot"><b>${fmt(x.pipeline)}</b></td>

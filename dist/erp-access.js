@@ -31,7 +31,7 @@
   /* Each module has its own permissions page (no separate menu item): 产品资料, 定价, 库存, 退货维修, 供应链, 经销商, KOL.
      A button on the module opens #erp-access/<area>, which shows only that module's columns and a way back. */
   const PAGES = { products:{ areas:['products'], zh:'产品资料权限', en:'Product permissions', back:'products', bzh:'产品资料', ben:'Products' },
-    pricing:{ areas:['pricing'], zh:'价格权限', en:'Pricing permissions', back:'products', bzh:'定价', ben:'Pricing' },
+    pricing:{ areas:['pricing'], zh:'价格权限', en:'Pricing permissions', back:'products', bzh:'定价试算器', ben:'Pricing calculator' },
     warehouse:{ areas:['warehouse'], zh:'库存权限', en:'Stock permissions', back:'wms', bzh:'库存管理', ben:'Inventory' },
     returns:{ areas:['returns'], zh:'退货权限', en:'Returns permissions', back:'wms', bzh:'退货维修', ben:'Returns' },
     supply:{ areas:['supply'], zh:'供应链权限', en:'Supply chain permissions', back:'scm', bzh:'供应链管理', ben:'Supply chain' },
