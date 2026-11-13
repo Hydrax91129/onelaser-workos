@@ -107,3 +107,15 @@ html[data-theme=dark] .scm-hbars.cover .mark{background:#e6e8ef}html[data-theme=
 .scm-inline-bar{display:flex;align-items:center;gap:6px;min-width:120px}.scm-inline-bar .seg{display:block;height:10px;border-radius:0 4px 4px 0;min-width:2px}.scm-inline-bar span{font-variant-numeric:tabular-nums;color:var(--ink2,#52514e);font-size:12px;white-space:nowrap}
 .seg.dio-green{background:var(--good,#0ca30c)}.seg.dio-amber{background:var(--warn,#fab219)}.seg.dio-red{background:var(--crit,#d03b3b)}.seg.dio-grey{background:#9aa3b5}
 .scm-pill.scm-life{font-weight:500}.scm-life-sel{height:32px;border:1px solid var(--border,#d7dbe7);border-radius:8px;padding:0 8px;background:var(--surface,#fff);color:inherit;font-size:13px}
+
+/* SKU filters (2026-11-13), reorder-settings help, stock chart labels with names */
+.scm-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px}.scm-filters .scm-search{min-width:200px;flex:1;max-width:320px}
+.scm-range{display:inline-flex;align-items:center;gap:4px;height:32px;border:1px solid var(--border,#d7dbe7);border-radius:8px;padding:0 8px;background:var(--surface,#fff);font-size:13px;white-space:nowrap}
+.scm-range input{width:52px;border:0;outline:0;background:transparent;color:inherit;font:inherit;padding:0}
+.scm-link{border:0;background:none;color:var(--accent,#2f5bd3);cursor:pointer;font-size:13px;display:inline-flex;gap:4px;align-items:center}
+.scm-meta{font-size:12.5px;color:var(--muted,#7a8096);margin-left:6px}
+.scm-hbars.stock .row{grid-template-columns:minmax(180px,340px) minmax(0,1fr) auto}.scm-hbars.stock .lab{font-size:12px}.scm-hbars.stock .lab b{font-weight:600;margin-right:4px}
+.scm-help{display:block;margin-top:4px;font-size:12px;line-height:1.5;color:var(--muted,#7a8096);font-weight:400}
+.scm-formula{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--surface-2,#f3f5fa);font-size:12.5px;line-height:1.6}.scm-formula p{margin:2px 0}
+html[data-theme=dark] .scm-range{background:#1d2130;border-color:#343745}html[data-theme=dark] .scm-formula{background:#1f2433}
+@media (max-width:720px){.scm-hbars.stock .row{grid-template-columns:140px minmax(0,1fr) auto}}
