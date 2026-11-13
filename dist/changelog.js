@@ -22,6 +22,9 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.72', date:'2026-11-14T02:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      zh:['所有搜索框和输入框都能正常用中文输入法输入（以前拼字时页面刷新，把正在拼的字打断）','产品资料“定价”一栏在 MSRP 旁边显示零售 NPCR（MSRP 下的贡献利润率和每台利润），只有成本权限的人能看到，改到岸价、运费或 MSRP 自动重算','产品资料：产品族选了“配件”，系列下拉只剩配件的系列，品牌也跟着筛选；产品资料、库存、供应链里的系列和品牌下拉，OneLaser 自己的排在最前面','产品资料：列表和右边编辑区之间可以拖动调整宽度（也可以用键盘左右键），每个人记住自己的宽度，双击恢复默认；“显示列”改成屏幕中间的大窗口，按 Esc 或点外面关闭'],
+      en:['Chinese (and other) input methods work in every search box and field; the page no longer refreshes mid-word','Product library: retail NPCR (contribution margin and profit per unit at MSRP) beside MSRP, for cost access only, recalculated when cost or MSRP changes','Product library: picking a family narrows the series list (and brands) to that family; in the product, inventory and supply chain filters, OneLaser’s own brand and series come first','Product library: drag the divider between the list and the editor (or use the arrow keys), remembered per person, double-click to reset; Columns opens as a large centred dialog (Esc or click outside to close)'] },
     { version:'1.71', date:'2026-11-14T01:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       zh:['产品资料：左边的产品列表加宽（约占 60%）；列表右上“显示列”可以自己选显示哪些参数（产品资料里你有权限看的字段都能选），每个人分开记在自己的浏览器里，可恢复默认，任何一列都能点表头排序'],
       en:['Product library: the product list is wider (about 60%); “Columns” lets each person choose which fields the list shows (any field you may see), remembered per person in this browser, with Reset; every column sorts from its header'] },

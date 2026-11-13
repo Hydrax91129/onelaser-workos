@@ -1,6 +1,13 @@
 'use strict';
 
 (() => {
+  /* Chinese / Japanese / Korean input (owner, 2026-11-13: typing Chinese into a search box did not work). Many pages re-render on
+     every keystroke, which throws away a word the input method is still composing. While composing, keep those keystrokes from
+     the page's handlers; when the word is done, send one input event so the page updates with the finished text. */
+  if (typeof window.addEventListener === 'function') {
+    window.addEventListener('input', e => { if (e.isComposing && e.target?.matches?.('input, textarea')) e.stopImmediatePropagation(); }, true);
+    window.addEventListener('compositionend', e => { const t = e.target; if (t?.matches?.('input, textarea')) setTimeout(() => { if (t.isConnected) t.dispatchEvent(new Event('input', { bubbles: true })); }, 0); }, true);
+  }
   if (window.WORKOS_CONFIG?.mode !== 'live') return;
   const i18n = window.WorkI18n;
   const tr = (zh, en) => i18n.lang === 'en' ? en : zh;

@@ -23,9 +23,9 @@
     const el = document.activeElement, id = el && el.closest?.('.pl') ? el.id || (el.dataset?.plF ? `[data-pl-f="${el.dataset.plF}"]` : '') : '';
     let pos = null; try { pos = el?.selectionStart ?? null; } catch { pos = null; }
     // Re-rendering replaces the list, so keep the place the user scrolled to (picking row 150 must not jump to row 1).
-    const scrolls = [...document.querySelectorAll('.pl .pl-list, .pl .pl-editor')].map(n => n.scrollTop), winY = window.scrollY;
+    const scrolls = [...document.querySelectorAll('.pl .pl-list, .pl .pl-editor, .pl .pl-cols-body')].map(n => n.scrollTop), winY = window.scrollY;
     ctx?.rerender?.();
-    document.querySelectorAll('.pl .pl-list, .pl .pl-editor').forEach((n, i) => { if (scrolls[i] != null) n.scrollTop = scrolls[i]; });
+    document.querySelectorAll('.pl .pl-list, .pl .pl-editor, .pl .pl-cols-body').forEach((n, i) => { if (scrolls[i] != null) n.scrollTop = scrolls[i]; });
     if (window.scrollY !== winY) window.scrollTo(window.scrollX, winY);
     if (!id) return;
     const n = id.startsWith('[') ? document.querySelector(id) : document.getElementById(id);
@@ -100,14 +100,18 @@
     const ok = new Set([...BUILTIN().map(b => b[0]), ...colFields().map(f => f.key)]);
     return S.cols.filter(k => ok.has(k));
   }
+  // Left / right split of the product page, dragged by each person and remembered like the columns (owner, 2026-11-13).
+  const splitKey = () => `workos.pl.split.${ctx?.state?.()?.actor?.id || 'me'}`;
+  function splitPct() { if (S.split == null) { let v = NaN; try { v = Number(localStorage.getItem(splitKey())); } catch { /* blocked */ } S.split = v >= 35 && v <= 80 ? v : 60; } return S.split; }
+  function saveSplit(v) { S.split = Math.round(Math.min(80, Math.max(35, v))); try { localStorage.setItem(splitKey(), String(S.split)); } catch { /* private window */ } }
   function saveCols(next) { S.cols = next; try { localStorage.setItem(colKey(), JSON.stringify(next)); } catch { /* private window */ } }
   const colLabel = k => BUILTIN().find(b => b[0] === k)?.[1] || L(fieldOf(k)) || k;
   const isNumCol = k => ['msrp', 'cm', 'req'].includes(k) || ['number', 'price'].includes(fieldOf(k)?.type);
   function colsPanel() {
     const cur = new Set(cols()), box = (k, label) => `<label class="pl-colck"><input type="checkbox" data-pl-col="${esc(k)}" ${cur.has(k) ? 'checked' : ''}> ${esc(label)}</label>`;
     const groups = [...spec().groups].sort((a, b) => Number(a.disp || a.no) - Number(b.disp || b.no)).map(g => [L(g), colFields().filter(f => f.group === g.no)]).filter(([, fs]) => fs.length);
-    return `<div class="pl-cols" role="dialog" aria-label="${tr('选择显示的列', 'Choose columns')}"><div class="pl-cols-head"><b>${tr('列表显示哪些参数', 'Columns to show')}</b><span class="pl-meta">${tr('只影响你自己的列表，记在这个浏览器里', 'Only your own list, remembered in this browser')}</span><span class="pl-sp"></span><button class="pl-link" data-pl="cols-reset">${tr('恢复默认', 'Reset')}</button><button class="pl-btn primary" data-pl="cols">${tr('完成', 'Done')}</button></div>
-      <div class="pl-cols-grid"><fieldset><legend>${tr('常用', 'Common')}</legend>${BUILTIN().map(([k, l]) => box(k, l)).join('')}</fieldset>${groups.map(([g, fs]) => `<fieldset><legend>${esc(g)}</legend>${fs.map(f => box(f.key, L(f))).join('')}</fieldset>`).join('')}</div></div>`;
+    return `<div class="pl-cols-scrim" data-pl="cols"></div><div class="pl-cols" role="dialog" aria-modal="true" aria-label="${tr('选择显示的列', 'Choose columns')}"><div class="pl-cols-head"><b>${tr('列表显示哪些参数', 'Columns to show')}</b><span class="pl-meta">${tr('只影响你自己的列表，记在这个浏览器里', 'Only your own list, remembered in this browser')}</span><span class="pl-sp"></span><button class="pl-link" data-pl="cols-reset">${tr('恢复默认', 'Reset')}</button><button class="pl-btn primary" data-pl="cols">${tr('完成', 'Done')}</button></div>
+      <div class="pl-cols-body"><div class="pl-cols-grid"><fieldset><legend>${tr('常用', 'Common')}</legend>${BUILTIN().map(([k, l]) => box(k, l)).join('')}</fieldset>${groups.map(([g, fs]) => `<fieldset><legend>${esc(g)}</legend>${fs.map(f => box(f.key, L(f))).join('')}</fieldset>`).join('')}</div></div></div>`;
   }
   function cellOf(k, i) {
     const v = i.values, m = i.pricing?.fixed?.[0], c = i.completeness || {}, other = lang() === 'en' ? v.nameZh : v.nameEn;
@@ -122,6 +126,9 @@
     return `<td class="${isNumCol(k) ? 'num' : ''}">${raw == null || raw === '' ? '—' : esc(f?.type === 'enum' ? optLabel(f, raw) : f?.type === 'price' ? usd(Number(raw)) : String(raw))}</td>`;
   }
 
+  // OneLaser's own brand and its series come first in brand / series lists (owner, 2026-11-13), then the rest A–Z.
+  const ownFirst = (vals, k, rows, vOf = r => r) => { const own = new Set(rows.filter(r => /onelaser/i.test(String(vOf(r).brand || ''))).map(r => vOf(r)[k]));
+    return [...vals].sort((a, b) => (own.has(b) - own.has(a)) || String(a).localeCompare(String(b))); };
   /* ---------- rail ---------- */
   /* Left half: the SKU list as a table with filters (family, series, status, new/returned, brand, MSRP range,
      incomplete only) and sortable columns; the right half is the selected product. */
@@ -140,7 +147,10 @@
   }
   function rail() {
     const all = items(), list = filteredItems(), inc = all.filter(i => !i.completeness?.done).length;
-    const uniq = k => [...new Set(all.map(i => i.values[k]).filter(Boolean))].sort();
+    // Series and brand only offer what the filters to their left allow (owner, 2026-11-13: pick 配件 and the series list shows accessory series only).
+    const inFam = i => !S.fam || (S.fam === '-' ? !i.values.family : i.values.family === S.fam);
+    const uniq = k => { const rows = all.filter(i => inFam(i) && (k !== 'brand' || !S.series || i.values.series === S.series)); return ownFirst(new Set(rows.map(i => i.values[k]).filter(Boolean)), k, rows, i => i.values); };
+    if (S.series && !uniq('series').includes(S.series)) S.series = '';
     const statusName = k => L(spec().statuses.find(x => x.key === k)) || '';
     const gtOpts = fieldOf('goodsType')?.opts || [];
     const sel = (k, label, opts) => `<select data-pl-flt="${k}" aria-label="${esc(label)}"><option value="">${esc(label)}</option>${opts.map(([v, n]) => `<option value="${esc(v)}" ${S[k] === v ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
@@ -160,7 +170,7 @@
       </div>
       <div class="pl-flt-foot"><label class="pl-chk"><input type="checkbox" data-pl-onlyreq ${S.onlyReq ? 'checked' : ''}> ${tr('仅看必填未完成', 'Only incomplete')} ${inc ? `<span class="pl-chip req">${tr(`${inc} 个待补`, `${inc} to fill`)}</span>` : ''}</label>
         <span class="pl-sp"></span><span class="pl-meta">${tr(`显示 ${list.length} / ${all.length} 个 SKU`, `${list.length} of ${all.length} SKUs`)}</span>${active ? `<button class="pl-link" data-pl="clear-filters">${tr('清除筛选', 'Clear')}</button>` : ''}<button class="pl-link" data-pl="cols" aria-expanded="${!!S.colsOpen}" title="${tr('选择列表里显示哪些参数', 'Choose which fields the list shows')}">⚙ ${tr('显示列', 'Columns')}</button></div>
-    </div>${S.colsOpen ? colsPanel() : ''}${canBulk && S.sel.size ? bulkBar() : ''}<div class="pl-list">${list.length ? `<table class="pl-skus"><thead><tr>${canBulk ? `<th class="ck"><input type="checkbox" data-pl-selall ${list.every(i => S.sel.has(i.sku)) ? 'checked' : ''} aria-label="${tr('全选当前列表', 'Select all listed')}" title="${tr('全选当前筛选出的 SKU', 'Select every SKU in this list')}"></th>` : ''}${th('sku', 'SKU')}${cols().map(k => th(k, esc(colLabel(k)), isNumCol(k) ? 'num' : '')).join('')}</tr></thead><tbody>
+    </div>${canBulk && S.sel.size ? bulkBar() : ''}<div class="pl-list">${list.length ? `<table class="pl-skus"><thead><tr>${canBulk ? `<th class="ck"><input type="checkbox" data-pl-selall ${list.every(i => S.sel.has(i.sku)) ? 'checked' : ''} aria-label="${tr('全选当前列表', 'Select all listed')}" title="${tr('全选当前筛选出的 SKU', 'Select every SKU in this list')}"></th>` : ''}${th('sku', 'SKU')}${cols().map(k => th(k, esc(colLabel(k)), isNumCol(k) ? 'num' : '')).join('')}</tr></thead><tbody>
       ${list.map(i => { const v = i.values, m = i.pricing?.fixed?.[0], c = i.completeness || {}, other = lang() === 'en' ? v.nameZh : v.nameEn;
         return `<tr data-pl-pick="${esc(i.sku)}" aria-current="${i.sku === S.cur}" ${S.sel.has(i.sku) ? 'data-sel="1"' : ''}>${canBulk ? `<td class="ck"><input type="checkbox" data-pl-sel="${esc(i.sku)}" ${S.sel.has(i.sku) ? 'checked' : ''} aria-label="${tr(`选择 ${esc(i.sku)}`, `Select ${esc(i.sku)}`)}"></td>` : ''}<td class="sku">${c.done ? '' : `<span class="pl-dot" title="${tr('必填未完成', 'Required fields missing')}"></span>`}${esc(i.sku)}${v.goodsType === 'refb' ? ` <span class="pl-chip warn">${tr('退货', 'Ret.')}</span>` : ''}</td>
 ${cols().map(k => cellOf(k, i)).join('')}</tr>`; }).join('')}</tbody></table>`
@@ -279,7 +289,10 @@ ${cols().map(k => cellOf(k, i)).join('')}</tr>`; }).join('')}</tbody></table>`
       if (g.no === '5') return '';
       if (g.no === '4') {
         const list = ['landed', 'lastMile', 'msrp'].map(k => fieldOf(k)).filter(Boolean);
-        return list.length ? `<details class="pl-grp" open>${grpHead(g.show, L(g), `<span class="cnt">${groupCount(list, it)} ${tr('· 定价计算在“定价”页', '· pricing is worked out on the Pricing page')}</span>`)}<div class="pl-fields">${list.map(f => fieldHTML(f, it)).join('')}</div></details>` : '';
+        // Retail NPCR next to MSRP (owner, 2026-11-13): the contribution margin at MSRP, read-only, for people who may see cost.
+        const fx0 = it.pricing?.fixed?.[0], npcr = sees('sens') ? `<div class="pl-fld pl-npcr"><label><b>${tr('零售 NPCR（MSRP 利润率）', 'Retail NPCR (margin at MSRP)')}</b>${visChip('sens')}</label>
+          <div class="pl-npcr-v ${fx0 ? tone(fx0.cmPct, D().settings?.dtcFloor) : ''}" title="${esc(tr('MSRP × (1 − 零售销售费率) − 到岸价 − 尾程运费，再除以 MSRP；改了到岸价、运费或 MSRP 会自动重算', 'MSRP × (1 − retail selling rate) − landed − last mile, divided by MSRP; recalculated when any of them changes'))}">${fx0 && fx0.cmPct != null ? `<b>${pct(fx0.cmPct)}</b><span>${usd(fx0.cm)} / ${tr('台', 'unit')}</span>` : `<span>${tr('填好到岸价、尾程运费和 MSRP 后自动算出', 'Fill in landed cost, last mile and MSRP')}</span>`}</div></div>` : '';
+        return list.length ? `<details class="pl-grp" open>${grpHead(g.show, L(g), `<span class="cnt">${groupCount(list, it)} ${tr('· 定价计算在“定价”页', '· pricing is worked out on the Pricing page')}</span>`)}<div class="pl-fields">${list.map(f => fieldHTML(f, it)).join('')}${npcr}</div></details>` : '';
       }
       const list = fs.filter(f => f.group === g.no && !(g.no === '4' || f.key.startsWith('whOv') || f.key === 'whFreight'));
       const body = `<div class="pl-fields">${list.map(f => fieldHTML(f, it)).join('')}</div>`;
@@ -401,8 +414,8 @@ ${cols().map(k => cellOf(k, i)).join('')}</tr>`; }).join('')}</tbody></table>`
       ${S.mode === 'pricing' && v.canEditSettings ? `<button class="pl-btn" data-pl="view" data-v="settings" ${S.view === 'settings' ? 'aria-pressed="true"' : ''} title="${tr('销售费率、零售与批发档位、NPCR 阶梯和利润底线；改动后所有产品的建议价自动重算', 'Selling rates, retail and wholesale tiers, NPCR steps and floors; every suggested price is recalculated')}">${tr('价格参数（NPCR）', 'Pricing parameters (NPCR)')}</button>` : ''}
       ${window.WorkOSErpAccess?.button?.(S.mode === 'pricing' ? 'pricing' : 'products', 'pl-btn') || ''}</div>`;
     const ro = !v.editCatalog && !v.editCost && !v.editPrices ? `<div class="pl-notice">${tr('你目前只有查看权限。', 'You have view access only.')}</div>` : '';
-    const body = S.view === 'import' ? importView() : S.view === 'imports' ? importsView() : S.view === 'settings' ? settingsView() : `<div class="pl-layout">${rail()}<main class="pl-editor" id="pl-editor">${editor()}</main></div>`;
-    return `<div class="pl">${bar}${S.view === 'products' ? ro : ''}${body}</div>`;
+    const body = S.view === 'import' ? importView() : S.view === 'imports' ? importsView() : S.view === 'settings' ? settingsView() : `<div class="pl-layout" style="--pl-left:${splitPct()}fr;--pl-right:${100 - splitPct()}fr">${rail()}<div class="pl-split" role="separator" aria-orientation="vertical" aria-valuemin="35" aria-valuemax="80" aria-valuenow="${splitPct()}" tabindex="0" title="${tr('拖动调整左右宽度，双击恢复默认', 'Drag to resize; double-click to reset')}" aria-label="${tr('调整列表宽度', 'Resize the list')}"></div><main class="pl-editor" id="pl-editor">${editor()}</main></div>`;
+    return `<div class="pl">${bar}${S.view === 'products' ? ro : ''}${body}${S.colsOpen && S.view === 'products' ? colsPanel() : ''}</div>`;
   }
 
   /* ---------- saving ---------- */
@@ -467,6 +480,20 @@ ${cols().map(k => cellOf(k, i)).join('')}</tr>`; }).join('')}</tbody></table>`
   function loadHistory(sku) { ctx.api.get(`/products/library/${encodeURIComponent(sku)}/history`).then(r => { S.history[sku] = r.items || []; }).catch(() => { S.history[sku] = []; }).finally(rerender); }
   const setPath = (o, path, v) => { const ks = path.split('.'); let x = o; for (const k of ks.slice(0, -1)) x = x[k]; x[ks[ks.length - 1]] = v; };
   const numOrNull = v => { const s = String(v).trim().replace('%', ''); if (s === '') return null; const n = Number(s); return Number.isFinite(n) ? n : NaN; };
+
+  /* ---------- drag the split ---------- */
+  document.addEventListener('pointerdown', e => {
+    const h = e.target.closest?.('.pl-split'); if (!h || !ctx) return;
+    const box = h.parentElement, rect = box.getBoundingClientRect(); e.preventDefault(); h.setPointerCapture?.(e.pointerId); h.classList.add('on');
+    const move = ev => { const pct = (ev.clientX - rect.left) / rect.width * 100; S.split = Math.min(80, Math.max(35, pct)); box.style.setProperty('--pl-left', S.split + 'fr'); box.style.setProperty('--pl-right', (100 - S.split) + 'fr'); };
+    const up = () => { h.classList.remove('on'); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); saveSplit(S.split); };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+  });
+  document.addEventListener('dblclick', e => { if (e.target.closest?.('.pl-split') && ctx) { saveSplit(60); rerender(); } });
+  document.addEventListener('keydown', e => {
+    const h = e.target.closest?.('.pl-split'); if (h && ctx && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); saveSplit(splitPct() + (e.key === 'ArrowRight' ? 5 : -5)); rerender(); document.querySelector('.pl-split')?.focus(); }
+    if (e.key === 'Escape' && S.colsOpen && ctx) { S.colsOpen = false; rerender(); }
+  });
 
   /* ---------- events (only inside the library) ---------- */
   const inPl = el => !!(ctx && el?.closest?.('.pl'));
