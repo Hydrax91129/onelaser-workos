@@ -22,7 +22,11 @@
   const rerender = () => {
     const el = document.activeElement, id = el && el.closest?.('.pl') ? el.id || (el.dataset?.plF ? `[data-pl-f="${el.dataset.plF}"]` : '') : '';
     let pos = null; try { pos = el?.selectionStart ?? null; } catch { pos = null; }
+    // Re-rendering replaces the list, so keep the place the user scrolled to (picking row 150 must not jump to row 1).
+    const scrolls = [...document.querySelectorAll('.pl .pl-list, .pl .pl-editor')].map(n => n.scrollTop), winY = window.scrollY;
     ctx?.rerender?.();
+    document.querySelectorAll('.pl .pl-list, .pl .pl-editor').forEach((n, i) => { if (scrolls[i] != null) n.scrollTop = scrolls[i]; });
+    if (window.scrollY !== winY) window.scrollTo(window.scrollX, winY);
     if (!id) return;
     const n = id.startsWith('[') ? document.querySelector(id) : document.getElementById(id);
     if (n && n !== document.activeElement) { n.focus?.(); if (pos != null) try { n.setSelectionRange(pos, pos); } catch { /* not a text field */ } }
@@ -30,7 +34,7 @@
   const toast = m => ctx?.toast?.(m);
 
   const S = { data:null, loading:false, error:'', view:'products', cur:null, q:'', fam:'', series:'', status:'', gt:'', brand:'', pmin:'', pmax:'', sort:'sku', dir:1, onlyReq:false, creating:false, saving:{}, errs:{}, savedAt:null,
-    history:{}, histOpen:false, mode:'catalog', priceOpen:{}, preview:null, pvFilter:'all', skipErrors:false, imports:null, draft:null, busy:'' };
+    history:{}, histOpen:false, mode:'catalog', priceOpen:{}, preview:null, pvFilter:'all', skipErrors:false, imports:null, draft:null, busy:'', sel:new Set(), bulkKey:'', bulkVal:'', bulkNote:'' };
   const D = () => S.data || {};
   const spec = () => D().spec || { fields:[], slots:[], groups:[], families:[], statuses:[], visNames:{} };
   const viewer = () => D().viewer || { levels:['all'] };
@@ -53,6 +57,35 @@
       .catch(e => { S.error = e.message || tr('读取失败', 'Could not load'); }).finally(() => { S.loading = false; rerender(); });
   }
   const replaceItem = it => { const list = items(), i = list.findIndex(x => x.sku === it.sku); if (i >= 0) list[i] = { ...list[i], ...it }; else list.push(it); };
+
+  /* ---------- bulk edit (owner, 2026-11-13): tick SKUs in the list, pick one field, one value for all ---------- */
+  const NOT_BULK = new Set(['sku', 'refbSku', 'upc', 'nameZh', 'nameEn', 'mainImage']);
+  const bulkFields = () => spec().fields.filter(f => f.writable && f.type !== 'image' && !NOT_BULK.has(f.key));
+  function bulkBar() {
+    const fields = bulkFields(), f = fieldOf(S.bulkKey), n = S.sel.size;
+    const a = `id="pl-bulk-val" data-pl-bulkval`, v = S.bulkVal;
+    const ctl = !f ? '' : f.type === 'enum' ? `<select ${a}><option value="">${tr('（清空）', '(clear)')}</option>${f.opts.map(o => `<option value="${esc(o.key)}" ${v === o.key ? 'selected' : ''}>${esc(L(o))}</option>`).join('')}</select>`
+      : f.type === 'date' ? `<input type="date" ${a} value="${esc(v)}">`
+      : f.type === 'list' ? `<input type="text" ${a} list="pl-bulk-dl" value="${esc(v)}" placeholder="${tr('留空 = 清空', 'empty = clear')}"><datalist id="pl-bulk-dl">${f.opts.map(o => `<option value="${esc(o.key)}">`).join('')}</datalist>`
+      : `<input type="text" ${a} ${f.type === 'number' || f.type === 'price' ? 'inputmode="decimal"' : ''} value="${esc(v)}" placeholder="${tr('留空 = 清空', 'empty = clear')}">${f.unit || f.type === 'price' ? `<span class="pl-meta">${esc(f.unit || 'USD')}</span>` : ''}`;
+    const needNote = S.bulkKey === 'status' && ['clearance', 'eol'].includes(S.bulkVal);
+    return `<div class="pl-bulk" role="region" aria-label="${tr('批量修改', 'Bulk edit')}"><b>${tr(`已选 ${n} 个 SKU`, `${n} SKUs selected`)}</b>
+      <select id="pl-bulk-key" data-pl-bulkkey aria-label="${tr('要修改的字段', 'Field to change')}"><option value="">${tr('选择要修改的字段…', 'Choose a field…')}</option>${fields.map(x => `<option value="${esc(x.key)}" ${S.bulkKey === x.key ? 'selected' : ''}>${esc(L(x))}</option>`).join('')}</select>
+      ${ctl}${needNote ? `<input type="text" id="pl-bulk-note" data-pl-bulknote value="${esc(S.bulkNote)}" placeholder="${tr('原因（必填）', 'Reason (required)')}">` : ''}
+      <button class="pl-btn primary" data-pl="bulk-apply" ${f ? '' : 'disabled'}>${tr('批量修改', 'Apply to all')}</button><button class="pl-link" data-pl="bulk-clear">${tr('取消选择', 'Clear selection')}</button></div>`;
+  }
+  async function bulkApply(btn) {
+    const f = fieldOf(S.bulkKey); if (!f || !S.sel.size) return;
+    const skus = [...S.sel], val = S.bulkVal.trim(), shown = val === '' ? tr('（清空）', '(clear)') : f.type === 'enum' ? L(f.opts.find(o => o.key === val)) : val;
+    if (S.bulkKey === 'status' && ['clearance', 'eol'].includes(val) && !S.bulkNote.trim()) return toast(tr('转为停产清存或下架封存时，请填写原因', 'Give a reason for clearance or end of sale'));
+    if (!window.confirm(tr(`把 ${skus.length} 个 SKU 的“${L(f)}”都改为“${shown}”？`, `Set “${L(f)}” to “${shown}” on ${skus.length} SKUs?`))) return;
+    btn.disabled = true;
+    try {
+      const r = await ctx.api.post('/products/library/bulk-edit', { skus, values: { [f.key]: val === '' ? null : val }, ...(S.bulkNote.trim() ? { note: S.bulkNote.trim() } : {}) });
+      toast(tr(`已修改 ${r.changed} 个 SKU${r.changed < r.skus ? `（${r.skus - r.changed} 个本来就是这个值）` : ''}`, `${r.changed} SKUs changed${r.changed < r.skus ? ` (${r.skus - r.changed} already had this value)` : ''}`));
+      S.sel.clear(); S.bulkVal = ''; S.bulkNote = ''; load(true);
+    } catch (x) { window.alert?.(x.message); btn.disabled = false; }
+  }
 
   /* ---------- rail ---------- */
   /* Left half: the SKU list as a table with filters (family, series, status, new/returned, brand, MSRP range,
@@ -77,7 +110,8 @@
     const sel = (k, label, opts) => `<select data-pl-flt="${k}" aria-label="${esc(label)}"><option value="">${esc(label)}</option>${opts.map(([v, n]) => `<option value="${esc(v)}" ${S[k] === v ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
     const active = S.q || S.fam || S.series || S.status || S.gt || S.brand || S.pmin !== '' || S.pmax !== '' || S.onlyReq;
     const th = (k, label, cls = '') => `<th class="${cls} ${S.sort === k ? 'sorted' : ''}" data-pl-sort="${k}">${label}${S.sort === k ? (S.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
-    const cmOn = sees('sens');
+    const cmOn = sees('sens'), canBulk = bulkFields().length > 0;
+    for (const k of [...S.sel]) if (!itemOf(k)) S.sel.delete(k);
     return `<aside class="pl-rail"><div class="head">
       <input type="search" data-pl-q placeholder="${tr('搜索 SKU、中英文名、系列、品牌、UPC', 'Search SKU, names, series, brand, UPC')}" value="${esc(S.q)}" aria-label="${tr('搜索产品', 'Search products')}">
       <div class="pl-flt">
@@ -90,9 +124,9 @@
       </div>
       <div class="pl-flt-foot"><label class="pl-chk"><input type="checkbox" data-pl-onlyreq ${S.onlyReq ? 'checked' : ''}> ${tr('仅看必填未完成', 'Only incomplete')} ${inc ? `<span class="pl-chip req">${tr(`${inc} 个待补`, `${inc} to fill`)}</span>` : ''}</label>
         <span class="pl-sp"></span><span class="pl-meta">${tr(`显示 ${list.length} / ${all.length} 个 SKU`, `${list.length} of ${all.length} SKUs`)}</span>${active ? `<button class="pl-link" data-pl="clear-filters">${tr('清除筛选', 'Clear')}</button>` : ''}</div>
-    </div><div class="pl-list">${list.length ? `<table class="pl-skus"><thead><tr>${th('sku', 'SKU')}${th('name', tr('产品', 'Product'))}${th('fam', tr('产品族 / 系列', 'Family / series'))}${th('status', tr('状态', 'Status'))}${th('msrp', 'MSRP', 'num')}${cmOn ? th('cm', 'CM', 'num') : ''}${th('req', tr('必填', 'Req.'), 'num')}</tr></thead><tbody>
+    </div>${canBulk && S.sel.size ? bulkBar() : ''}<div class="pl-list">${list.length ? `<table class="pl-skus"><thead><tr>${canBulk ? `<th class="ck"><input type="checkbox" data-pl-selall ${list.every(i => S.sel.has(i.sku)) ? 'checked' : ''} aria-label="${tr('全选当前列表', 'Select all listed')}" title="${tr('全选当前筛选出的 SKU', 'Select every SKU in this list')}"></th>` : ''}${th('sku', 'SKU')}${th('name', tr('产品', 'Product'))}${th('fam', tr('产品族 / 系列', 'Family / series'))}${th('status', tr('状态', 'Status'))}${th('msrp', 'MSRP', 'num')}${cmOn ? th('cm', 'CM', 'num') : ''}${th('req', tr('必填', 'Req.'), 'num')}</tr></thead><tbody>
       ${list.map(i => { const v = i.values, m = i.pricing?.fixed?.[0], c = i.completeness || {}, other = lang() === 'en' ? v.nameZh : v.nameEn;
-        return `<tr data-pl-pick="${esc(i.sku)}" aria-current="${i.sku === S.cur}"><td class="sku">${c.done ? '' : `<span class="pl-dot" title="${tr('必填未完成', 'Required fields missing')}"></span>`}${esc(i.sku)}${v.goodsType === 'refb' ? ` <span class="pl-chip warn">${tr('退货', 'Ret.')}</span>` : ''}</td>
+        return `<tr data-pl-pick="${esc(i.sku)}" aria-current="${i.sku === S.cur}" ${S.sel.has(i.sku) ? 'data-sel="1"' : ''}>${canBulk ? `<td class="ck"><input type="checkbox" data-pl-sel="${esc(i.sku)}" ${S.sel.has(i.sku) ? 'checked' : ''} aria-label="${tr(`选择 ${esc(i.sku)}`, `Select ${esc(i.sku)}`)}"></td>` : ''}<td class="sku">${c.done ? '' : `<span class="pl-dot" title="${tr('必填未完成', 'Required fields missing')}"></span>`}${esc(i.sku)}${v.goodsType === 'refb' ? ` <span class="pl-chip warn">${tr('退货', 'Ret.')}</span>` : ''}</td>
           <td class="nm">${esc(nameOf(i) || tr('未命名', 'Unnamed'))}${other && other !== nameOf(i) ? `<small>${esc(other)}</small>` : ''}</td>
           <td>${esc(famName(v.family) || '—')}${v.series ? `<small>${esc(v.series)}</small>` : ''}</td><td>${esc(statusName(v.status) || '—')}</td>
           <td class="num">${msrpOf(i) != null ? usd(msrpOf(i)) : '—'}</td>${cmOn ? `<td class="num ${m ? tone(m.cmPct, D().settings?.dtcFloor) : ''}">${m && m.cmPct != null ? pct(m.cmPct) : '—'}</td>` : ''}
@@ -407,6 +441,7 @@
     const t = e.target.closest?.('[data-pl],[data-pl-pick],[data-pl-sort],[data-pl-rmfile],[data-pl-delprod],[data-pl-freight],[data-pl-pvf],[data-pl-undo],[data-pl-sadd],[data-pl-srm]');
     if (!t || !inPl(t)) return;
     if (t.dataset.plSort) { const k = t.dataset.plSort; if (S.sort === k) S.dir = -S.dir; else { S.sort = k; S.dir = ['msrp', 'cm'].includes(k) ? -1 : 1; } return rerender(); }
+    if (t.dataset.plPick && e.target.closest('td.ck')) return;
     if (t.dataset.plPick) { S.cur = t.dataset.plPick; S.creating = false; S.errs = {}; S.histOpen = false; return rerender(); }
     if (t.dataset.plFreight) { e.preventDefault(); return saveField('whFreight', t.dataset.plFreight); }
     if (t.dataset.plPvf) { S.pvFilter = t.dataset.plPvf; return rerender(); }
@@ -438,6 +473,8 @@
     if (a === 'report' && S.preview) return download(`/products/library/import/${encodeURIComponent(S.preview.id)}/report`, '导入预览报告.csv');
     if (a === 'preview-cancel') { S.preview = null; S.view = 'products'; return rerender(); }
     if (a === 'confirm') return confirmImport(t);
+    if (a === 'bulk-apply') return bulkApply(t);
+    if (a === 'bulk-clear') { S.sel.clear(); S.bulkVal = ''; S.bulkNote = ''; return rerender(); }
     if (a === 'settings-reset') { S.draft = null; return rerender(); }
     if (a === 'settings-save') { const body = JSON.parse(JSON.stringify(S.draft)); delete body.updatedAt; delete body.configured;
       if (JSON.stringify(body).includes('NaN') || [...body.dtcItems, ...body.whItems, ...body.retailTiers, ...body.whTiers].some(r => !String(r.name || '').trim())) return toast(tr('请把每一行的名称和数字填完整', 'Fill in every row’s name and number'));
@@ -451,6 +488,10 @@
     if (el.matches('[data-pl-import]')) { const f = el.files?.[0]; el.value = ''; return previewFile(f); }
     if (el.matches('[data-pl-flt]')) { S[el.dataset.plFlt] = el.value; if (el.dataset.plFlt === 'fam') S.series = ''; return rerender(); }
     if (el.matches('[data-pl-p]')) { const v = el.value.trim().replace(/[$,]/g, ''); S[el.dataset.plP] = v !== '' && Number.isFinite(Number(v)) ? v : ''; return rerender(); }
+    if (el.matches('[data-pl-sel]')) { el.checked ? S.sel.add(el.dataset.plSel) : S.sel.delete(el.dataset.plSel); return rerender(); }
+    if (el.matches('[data-pl-selall]')) { filteredItems().forEach(i => el.checked ? S.sel.add(i.sku) : S.sel.delete(i.sku)); return rerender(); }
+    if (el.matches('[data-pl-bulkkey]')) { S.bulkKey = el.value; S.bulkVal = ''; return rerender(); }
+    if (el.matches('[data-pl-bulkval]')) { S.bulkVal = el.value; return rerender(); }
     if (el.matches('[data-pl-onlyreq]')) { S.onlyReq = el.checked; return rerender(); }
     if (el.matches('[data-pl-skip]')) { S.skipErrors = el.checked; return rerender(); }
     if (el.matches('[data-pl-s]')) { const path = el.dataset.plS, d = S.draft; if (!d) return;
@@ -461,7 +502,10 @@
       return rerender(); }
   });
   document.addEventListener('input', e => {
-    const el = e.target; if (!inPl(el) || !el.matches('[data-pl-q]')) return;
+    const el = e.target; if (!inPl(el)) return;
+    if (el.matches('[data-pl-bulkval]')) { S.bulkVal = el.value; return; }
+    if (el.matches('[data-pl-bulknote]')) { S.bulkNote = el.value; return; }
+    if (!el.matches('[data-pl-q]')) return;
     S.q = el.value; const pos = el.selectionStart; rerender();
     requestAnimationFrame(() => { const n = document.querySelector('[data-pl-q]'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch { /* ignore */ } } });
   });

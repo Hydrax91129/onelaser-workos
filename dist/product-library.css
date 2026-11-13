@@ -1,10 +1,10 @@
 /* Product library (产品资料库) — 产品资料 tab. Layout: product rail on the left, record editor on the right; prices are a worksheet of inputs → computed ladders. */
 .pl{--pl-bg:#f3f5f8;--pl-panel:#fff;--pl-sunk:#eef1f5;--pl-line:#dde2ea;--pl-line2:#c9d0db;--pl-ink:#18202c;--pl-mute:#5f6b7c;--pl-faint:#8a95a5;
-  --pl-accent:#c2410c;--pl-accent-soft:#fdeee6;--pl-req:#b42318;--pl-req-bg:#fdecea;--pl-opt:#2f5bd3;--pl-opt-bg:#e9efff;--pl-ok:#157347;--pl-ok-bg:#e3f4ea;--pl-warn:#a15c00;--pl-warn-bg:#fff3d6;
+  --pl-accent:#c2410c;--pl-accent-soft:#fdeee6;--pl-pick-bg:#ffdcc6;--pl-req:#b42318;--pl-req-bg:#fdecea;--pl-opt:#2f5bd3;--pl-opt-bg:#e9efff;--pl-ok:#157347;--pl-ok-bg:#e3f4ea;--pl-warn:#a15c00;--pl-warn-bg:#fff3d6;
   --pl-v-all:#e4ebf6;--pl-v-ops:#e2f1e4;--pl-v-cost:#fde8cc;--pl-v-admin:#f8d5d1;--pl-v-all-ink:#2b4a7d;--pl-v-ops-ink:#25633a;--pl-v-cost-ink:#8a4b00;--pl-v-admin-ink:#9b2218;
   --pl-num:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--pl-ink);font-size:14px;line-height:1.55}
 html[data-theme=dark] .pl{--pl-bg:#10141b;--pl-panel:#171c25;--pl-sunk:#1d2330;--pl-line:#2a3242;--pl-line2:#3a4458;--pl-ink:#e6eaf1;--pl-mute:#a1abba;--pl-faint:#788396;
-  --pl-accent:#f07a3e;--pl-accent-soft:#3a2216;--pl-req:#ff8e85;--pl-req-bg:#3a1d1c;--pl-opt:#9db6ff;--pl-opt-bg:#1d2a4d;--pl-ok:#6fd39b;--pl-ok-bg:#16301f;--pl-warn:#f2c060;--pl-warn-bg:#352a12;
+  --pl-accent:#f07a3e;--pl-accent-soft:#3a2216;--pl-pick-bg:#5c2e12;--pl-req:#ff8e85;--pl-req-bg:#3a1d1c;--pl-opt:#9db6ff;--pl-opt-bg:#1d2a4d;--pl-ok:#6fd39b;--pl-ok-bg:#16301f;--pl-warn:#f2c060;--pl-warn-bg:#352a12;
   --pl-v-all:#1f2c44;--pl-v-ops:#1b3324;--pl-v-cost:#3b2a14;--pl-v-admin:#3d1d1b;--pl-v-all-ink:#a9c1ef;--pl-v-ops-ink:#9fdcb3;--pl-v-cost-ink:#f2c27f;--pl-v-admin-ink:#ffaba3}
 .pl *{box-sizing:border-box}
 .pl .num,.pl td.num,.pl input.n{font-family:var(--pl-num);font-variant-numeric:tabular-nums}
@@ -127,6 +127,13 @@ html:root .pl .pl-price input{width:100%;min-width:0;text-align:right;padding:4p
 .pl-skus td.sku{font-family:var(--pl-num);font-weight:600;font-size:12px}
 .pl-skus td.nm{white-space:normal;min-width:140px}.pl-skus td.miss{color:var(--pl-req)}
 .pl-skus tbody tr{cursor:pointer}.pl-skus tbody tr:hover td{background:var(--pl-sunk)}
-.pl-skus tbody tr[aria-current=true] td{background:var(--pl-accent-soft)}.pl-skus tbody tr[aria-current=true] td:first-child{box-shadow:inset 3px 0 0 var(--pl-accent)}
+.pl-skus tbody tr[aria-current=true] td,.pl-skus tbody tr[aria-current=true]:hover td{background:var(--pl-pick-bg);color:var(--pl-ink)}.pl-skus tbody tr[aria-current=true] td:first-child{box-shadow:inset 4px 0 0 var(--pl-accent)}.pl-skus tbody tr[aria-current=true] td.sku{color:var(--pl-accent);font-weight:700}
 @media (max-width:600px){.pl-flt{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .pl-del{margin-left:10px;color:#c62828;border-color:rgba(198,40,40,.35)}.pl-del:hover{background:rgba(198,40,40,.08)}
+
+/* Bulk edit (2026-11-13): a checkbox column and a bar that appears once SKUs are ticked. */
+.pl-skus th.ck,.pl-skus td.ck{width:30px;padding-left:8px;padding-right:0}.pl-skus .ck input{width:15px;height:15px;cursor:pointer;accent-color:var(--pl-accent)}
+.pl-skus tbody tr[data-sel]:not([aria-current=true]) td{background:var(--pl-sunk)}
+.pl-bulk{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 12px;margin:0 0 6px;border:1px solid var(--pl-accent);border-radius:8px;background:var(--pl-accent-soft);font-size:13px}
+.pl-bulk select,.pl-bulk input[type=text],.pl-bulk input[type=date]{height:30px;border:1px solid var(--pl-line2);border-radius:6px;background:var(--pl-panel);color:var(--pl-ink);padding:0 8px;font:inherit;min-width:0}
+.pl-bulk #pl-bulk-key{max-width:220px}.pl-bulk #pl-bulk-val{max-width:200px}.pl-bulk #pl-bulk-note{flex:1;min-width:140px}

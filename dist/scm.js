@@ -12,7 +12,34 @@
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   const icon = n => `<i class="ph ph-${n}" aria-hidden="true"></i>`;
   let ctx = null, data = null, loading = false, error = '', busy = false;
-  const ui = { tab:'dash', q:'', status:'', life:'', sort:'', dir:1 };
+  const ui = { tab:'dash', q:'', status:'', life:'', fam:'', series:'', brand:'', where:'', qmin:'', qmax:'', smin:'', smax:'', sort:'', dir:1 };
+  /* SKU filters shared by the reorder table and the dashboard's stock chart (owner, 2026-11-13): family, series, brand,
+     SKU status, where the stock is, a stock range (finished units) and a 30-day sales range. */
+  const FAMS = { main:['主机', 'Machine'], acc:['配件/备件', 'Accessory'], cons:['耗材', 'Consumable'], soft:['软件/服务', 'Software'], mat:['内部物料', 'Material'] };
+  const WHERE = () => [['us', tr('美国LA仓有货', 'In stock at US LA')], ['transit', tr('在途有货', 'In transit')], ['factory', tr('工厂仓有货', 'At a factory')], ['wip', tr('有在产', 'In production')], ['none', tr('成品为 0', 'No finished stock')]];
+  const numOr = v => v === '' || !Number.isFinite(Number(v)) ? null : Number(v);
+  function skuFilter(list) {
+    const q = ui.q.trim().toLowerCase(), qlo = numOr(ui.qmin), qhi = numOr(ui.qmax), slo = numOr(ui.smin), shi = numOr(ui.smax);
+    const at = x => ui.where === 'us' ? x.us > 0 : ui.where === 'transit' ? x.transit > 0 : ui.where === 'factory' ? (x.dg || 0) + (x.jn || 0) > 0 : ui.where === 'wip' ? (x.wip || 0) > 0 : ui.where === 'none' ? !x.finished : true;
+    return list.filter(x => (!ui.life || x.lifecycle === ui.life) && (!ui.fam || x.family === ui.fam) && (!ui.series || x.series === ui.series) && (!ui.brand || x.brand === ui.brand) && at(x)
+      && (qlo == null || (x.finished || 0) >= qlo) && (qhi == null || (x.finished || 0) <= qhi) && (slo == null || (x.sold30 || 0) >= slo) && (shi == null || (x.sold30 || 0) <= shi)
+      && (!q || [x.sku, x.nameZh, x.nameEn, x.series].some(v => String(v || '').toLowerCase().includes(q))));
+  }
+  const filtersOn = () => !!(ui.q || ui.life || ui.fam || ui.series || ui.brand || ui.where || ui.qmin || ui.qmax || ui.smin || ui.smax);
+  function skuFilterBar(withSearch) {
+    const it = data.items, uniq = k => [...new Set(it.filter(x => k !== 'series' || !ui.fam || x.family === ui.fam).map(x => x[k]).filter(Boolean))].sort();
+    const sel = (k, all, opts) => `<select class="scm-life-sel" data-scm-f="${k}" aria-label="${esc(all)}"><option value="">${esc(all)}</option>${opts.map(([v, t]) => `<option value="${esc(v)}" ${ui[k] === v ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+    const range = (a, b, label, tip) => `<label class="scm-range" title="${esc(tip)}">${label}<input data-scm-r="${a}" inputmode="numeric" value="${esc(ui[a])}" placeholder="${tr('最少', 'min')}" aria-label="${esc(label + ' ' + tr('最少', 'min'))}">–<input data-scm-r="${b}" inputmode="numeric" value="${esc(ui[b])}" placeholder="${tr('最多', 'max')}" aria-label="${esc(label + ' ' + tr('最多', 'max'))}"></label>`;
+    return `<div class="scm-filters">${withSearch ? `<label class="scm-search">${icon('magnifying-glass')}<input data-scm-q value="${esc(ui.q)}" placeholder="${tr('搜索 SKU、名称或系列', 'Search SKU, name or series')}"></label>` : ''}
+      ${sel('fam', tr('全部产品族', 'All families'), Object.entries(FAMS).filter(([k]) => it.some(x => x.family === k)).map(([k, v]) => [k, `${w(v)} (${it.filter(x => x.family === k).length})`]))}
+      ${sel('series', tr('全部系列', 'All series'), uniq('series').map(x => [x, x]))}
+      ${sel('brand', tr('全部品牌', 'All brands'), uniq('brand').map(x => [x, x]))}
+      ${sel('life', tr('全部 SKU 状态', 'All SKU statuses'), Object.entries(LIFE).filter(([k]) => it.some(x => x.lifecycle === k)).map(([k, v]) => [k, `${w(v)} (${it.filter(x => x.lifecycle === k).length})`]))}
+      ${sel('where', tr('全部库位', 'Anywhere'), WHERE())}
+      ${range('qmin', 'qmax', tr('成品库存', 'Finished'), tr('成品合计 = 美国LA仓 + 在途 + 东莞 + 济南（件）', 'Finished = US LA + in transit + Dongguan + Jinan (units)'))}
+      ${range('smin', 'smax', tr('近 30 天销量', 'Sold 30d'), tr('Shopify 近 30 天卖出的件数', 'Units sold on Shopify in the last 30 days'))}
+      ${filtersOn() ? `<button class="scm-link" data-scm="clear-filters">${icon('x-circle')} ${tr('清除筛选', 'Clear filters')}</button>` : ''}</div>`;
+  }
   const lang = () => ctx?.lang() === 'en' ? 'en' : 'zh';
   const tr = (zh, en) => lang() === 'en' ? en : zh;
   const fmt = n => n == null ? '—' : Number(n).toLocaleString('en-US');
@@ -23,6 +50,7 @@
   /* Quantities show as whole units (owner, 2026-11-13): sales as units sold, the forecast as units a month,
      the daily average (DS) only in the hover. A trend needs TREND_MIN units in 30 days (scm.ts TREND_MIN_UNITS). */
   const TREND_MIN = 3;
+  const ds2 = n => Number(n || 0).toFixed(2);
   const dsTip = (n, days) => tr(`日均 ${(n / days).toFixed(2)} 件`, `${(n / days).toFixed(2)} a day`);
   const daysText = d => d == null ? '—' : d > 365 ? tr('1 年以上', '1 yr+') : fmt(d) + tr(' 天', 'd');
   /* PIM 生命周期 (product_catalog.status, five since 2026-11-13); 停产清存 / 下架封存 are sold down, never produced again. */
@@ -141,20 +169,20 @@
     document.querySelectorAll('.scm-why-btn.pinned').forEach(x => { if (x !== b) x.classList.remove('pinned'); });
     if (b) { b.classList.toggle('pinned'); b.classList.contains('pinned') ? showWhy(b) : hideWhy(); } else if (!e.target.closest?.('#scm-why-pop')) hideWhy(); });
   function reorderView() {
-    const q = ui.q.trim().toLowerCase(), s = data.settings;
-    let list = data.items.filter(x => (!ui.status || x.status === ui.status) && (!ui.life || x.lifecycle === ui.life) && (!q || [x.sku, x.nameZh, x.nameEn].some(v => String(v || '').toLowerCase().includes(q))));
+    const s = data.settings, base = skuFilter(data.items);
+    let list = base.filter(x => !ui.status || x.status === ui.status);
     const key = x => ui.sort === 'sku' ? x.sku : ui.sort ? (x[ui.sort] ?? -1) : ORDER.indexOf(x.status) * 1e6 + (x.cover ?? 999999);
     list = list.slice().sort((a, b) => { const x = key(a), y = key(b); return (typeof x === 'number' ? x - y : String(x).localeCompare(String(y))) * (ui.sort ? ui.dir : 1); });
-    const chips = [['', tr('全部', 'All'), data.items.length], ...ORDER.map(k => [k, w(STATUS[k]), data.items.filter(x => x.status === k).length])];
+    const chips = [['', tr('全部', 'All'), base.length], ...ORDER.map(k => [k, w(STATUS[k]), base.filter(x => x.status === k).length])];
     const trend = x => x.signal === 'spike' ? ` <span class="up" title="${tr('短期爆发', 'burst')}">▲${x.trendPct != null ? x.trendPct + '%' : ''}</span>` : x.signal === 'dip' ? ` <span class="down" title="${tr('短期下滑', 'dip')}">▼${Math.abs(x.trendPct)}%</span>` : '';
-    return `<div class="scm-bar"><label class="scm-search">${icon('magnifying-glass')}<input data-scm-q value="${esc(ui.q)}" placeholder="${tr('搜索 SKU 或名称', 'Search SKU or name')}"></label>
+    return `${skuFilterBar(true)}<div class="scm-bar">
         <div class="scm-chips">${chips.map(([k, label, n]) => `<button class="${ui.status === k ? 'on' : ''}" data-scm="status" data-v="${k}">${esc(label)} <b>${n}</b></button>`).join('')}</div>
-        <select class="scm-life-sel" data-scm-life aria-label="${tr('SKU 状态', 'SKU status')}"><option value="">${tr('全部 SKU 状态', 'All SKU statuses')}</option>${Object.entries(LIFE).filter(([k]) => data.items.some(x => x.lifecycle === k)).map(([k, v]) => `<option value="${k}" ${ui.life === k ? 'selected' : ''}>${esc(w(v))} (${data.items.filter(x => x.lifecycle === k).length})</option>`).join('')}</select>
+        <span class="scm-meta">${tr(`显示 ${list.length} / ${data.items.length} 个 SKU`, `${list.length} of ${data.items.length} SKUs`)}</span>
         <span class="scm-sp"></span>${data.canManage ? `<button class="btn" data-scm="settings">${icon('sliders-horizontal')} ${tr('补货参数', 'Reorder settings')}</button><button class="btn primary" data-scm="sync" ${busy ? 'disabled' : ''}>${icon('arrows-clockwise')} ${busy ? tr('同步中…', 'Syncing…') : tr('同步 Shopify 销量', 'Sync Shopify sales')}</button>` : ''}${window.WorkOSErpAccess?.button?.('supply') || ''}</div>
       <div class="scm-table-wrap"><table class="scm-table"><thead><tr>${COLS().map(([k, label, tip, cls]) => headTh(k, label, tip, cls)).join('')}</tr></thead><tbody>
         ${list.map(x => { const st = STATUS[x.status] || STATUS.ok;
           return `<tr><td class="mono">${esc(x.sku)}</td><td class="scm-name" title="${esc(nameOf(x))}">${esc(nameOf(x))}</td><td>${LIFE[x.lifecycle] ? `<span class="scm-pill scm-life ${LIFE[x.lifecycle][2]}">${w(LIFE[x.lifecycle])}</span>` : '—'}</td><td class="num" title="${esc(dsTip(x.sold365 || 0, 365))}">${fmt(x.sold365 || 0)}</td><td class="num" title="${esc(dsTip(x.sold90 || 0, 90))}">${fmt(x.sold90 || 0)}</td><td class="num" title="${esc(dsTip(x.sold30 || 0, 30))}">${fmt(x.sold30 || 0)}${trend(x)}</td>
-            <td class="num" title="${tr(`预测日销 ${x.forecast} 件 · 季节系数 ${x.season}`, `forecast ${x.forecast} a day · season ${x.season}`)}"><b>${fmt(x.monthly || 0)}</b></td>
+            <td class="num" title="${tr(`预测日销 ${ds2(x.forecast)} 件 · 季节系数 ${x.season}`, `forecast ${ds2(x.forecast)} a day · season ${x.season}`)}"><b>${fmt(x.monthly || 0)}</b></td>
             <td class="num">${fmt(x.us)}</td><td class="num">${fmt(x.transit)}</td><td class="num">${fmt(x.dg)}</td><td class="num">${fmt(x.jn)}</td>
             <td class="num scm-tot"><b>${fmt(x.finished)}</b></td><td class="num">${x.wip ? fmt(x.wip) : '—'}</td><td class="num scm-tot"><b>${fmt(x.pipeline)}</b></td>
             <td class="num ${x.status === 'risk' ? 'red' : ''}" title="${tr('美国仓 + 在途能卖的天数；成品合计和成品 + 在产能卖的天数在下面', 'Days that US + in transit last; below: finished, and finished + in production')}">${daysText(x.cover)}${x.coverAll != null ? `<small class="scm-sub">${tr(`成品 ${daysText(x.coverFinished)} · 含在产 ${daysText(x.coverAll)}`, `fin. ${daysText(x.coverFinished)} · +WIP ${daysText(x.coverAll)}`)}</small>` : ''}</td>
@@ -208,7 +236,7 @@
       </div>
       <div class="scm-charts">
         <section class="scm-card wide"><h4>${tr('每周销量（近 52 周）', 'Units sold per week (52 weeks)')}</h4>${weeklyChart(sales.weekly)}</section>
-        <section class="scm-card wide"><h4>${tr('库存分布：每个 SKU 的货在哪里', 'Where each SKU’s stock is')}</h4>${legend()}${stockBars(it)}</section>
+        <section class="scm-card wide"><h4>${tr('库存分布：每个 SKU 的货在哪里', 'Where each SKU’s stock is')}</h4>${skuFilterBar(true)}${legend()}${stockBars(skuFilter(it))}</section>
         <section class="scm-card"><h4>${tr('可售天数 vs 预测到仓天数', 'Days of cover vs days to warehouse')}</h4><p class="scm-hint">${tr('条 = 美国仓 + 在途能卖的天数；竖线 = 现在补货要多少天到仓。条短于竖线就会断货。', 'Bar = days US + in transit last; line = days a reorder takes. A bar short of the line means a gap.')}</p>${coverBars(it)}</section>
         <section class="scm-card"><h4>${tr('补货状态', 'Reorder status')}</h4>${statusBars(it)}<h4 style="margin-top:14px">${tr('采购单交付表现', 'Purchase-order delivery')}</h4>${poBars(os)}</section>
         <section class="scm-card wide"><h4>${tr('库存周转：按 SKU', 'Inventory turnover by SKU')}</h4><p class="scm-hint">${tr('周转次数 = 近 365 天销量 ÷ 成品库存；库存天数 = 成品库存 ÷ 近 365 天日销。用当前成品库存代替平均库存（还没有每日库存快照）。从慢到快排，慢的在上面。', 'Turns = units sold in 365 days ÷ finished stock; days of inventory = finished stock ÷ daily sales (365d). Current stock stands in for average stock (no daily snapshots yet). Slowest first.')}</p>${turnTable(it)}</section>
@@ -266,7 +294,9 @@
   function stockBars(it) {
     const rows = it.map(x => ({ x, parts: STAGES().map(([k, label, slot]) => ({ k, label, slot, v: Number(x[k] || 0) })) })).map(r => ({ ...r, total: r.parts.reduce((n, p) => n + p.v, 0) })).sort((a, b) => b.total - a.total);
     const max = Math.max(1, ...rows.map(r => r.total));
-    return `<div class="scm-hbars">${rows.map(r => `<div class="row"><span class="lab mono" title="${svgEsc(nameOf(r.x))}">${svgEsc(r.x.sku)}</span><div class="track">${r.parts.filter(p => p.v > 0).map(p =>
+    if (!rows.length) return `<p class="scm-hint">${tr('没有符合筛选的 SKU。', 'No SKU matches the filters.')}</p>`;
+    // Label = SKU + the product name in the reader's language (owner, 2026-11-13).
+    return `<div class="scm-hbars stock">${rows.map(r => `<div class="row"><span class="lab" title="${svgEsc(`${r.x.sku} ${nameOf(r.x)}`)}"><b class="mono">${svgEsc(r.x.sku)}</b> ${svgEsc(nameOf(r.x))}</span><div class="track">${r.parts.filter(p => p.v > 0).map(p =>
       `<i class="seg s${p.slot}" style="width:${(p.v / max * 100).toFixed(2)}%" data-tip="${svgEsc(`${r.x.sku} · ${p.label}${tr('：', ': ')}${fmt(p.v)}`)}"></i>`).join('')}</div><span class="val">${fmt(r.total)}</span></div>`).join('')}</div>`;
   }
   function coverBars(it) {
@@ -468,15 +498,21 @@
   }
   function settingsDialog() {
     const s = data.settings;
+    const setField = (k, min, max, label, help) => `<label class="field"><span>${label}</span><input name="${k}" type="number" min="${min}" max="${max}" value="${esc(s[k])}" required aria-describedby="scm-h-${k}"><small class="scm-help" id="scm-h-${k}">${help}</small></label>`;
     ctx.modal(tr('补货参数', 'Reorder settings'), `<form id="scm-settings" class="scm-form"><div class="form-grid">
-      <label class="field"><span>${tr('目标：备多少天的货', 'Target: days of sales to hold')}</span><input name="targetDays" type="number" min="1" max="365" value="${s.targetDays}" required></label>
-      <label class="field"><span>${tr('安全库存天数', 'Safety days')}</span><input name="safetyDays" type="number" min="0" max="180" value="${s.safetyDays}" required></label>
-      <label class="field"><span>${tr('下单（天）', 'Placing the order (days)')}</span><input name="orderDays" type="number" min="0" max="60" value="${s.orderDays}" required></label>
-      <label class="field"><span>${tr('清关收货（天）', 'Customs & receiving (days)')}</span><input name="receiveDays" type="number" min="0" max="60" value="${s.receiveDays}" required></label>
-      <label class="field"><span>${tr('意外天数（物流变化）', 'Buffer for logistics changes (days)')}</span><input name="bufferDays" type="number" min="0" max="120" value="${s.bufferDays}" required></label>
-      <label class="field"><span>${tr('默认生产交期（天，产品资料没填时用）', 'Default production (days, when not in the product library)')}</span><input name="productionDays" type="number" min="0" max="365" value="${s.productionDays}" required></label>
-      <label class="field"><span>${tr('默认头程（天，产品资料没填时用）', 'Default first leg (days, when not in the product library)')}</span><input name="firstLegDays" type="number" min="0" max="180" value="${s.firstLegDays}" required></label></div>
-      <p class="scm-hint">${tr('到仓天数 = 下单 + 生产交期 + 头程 + 清关收货 + 意外天数；工厂有现货时不算生产交期。生产交期和头程优先用产品资料里每个 SKU 的值，没填的用这里的默认值。', 'Days to warehouse = order + production + first leg + receiving + buffer; production is skipped while the factory has stock. Production and first leg come from each SKU in the product library; these defaults fill the gaps.')}</p><p class="scm-error" role="alert"></p></form>`,
+      ${setField('targetDays', 1, 365, tr('目标：备多少天的货', 'Target: days of sales to hold'), tr('货到美国仓之后，还要再够卖多少天。补货目标（件）= 预测日销 × (到仓天数 + 目标天数 + 安全库存天数)。例：日销 2 件、到仓 60 天、目标 30、安全 14 → 2 × 104 = 208 件。', 'How many days of sales to hold once the goods reach the US warehouse. Target units = forecast per day × (days to warehouse + target days + safety days). E.g. 2 a day, 60 days to warehouse, target 30, safety 14 → 2 × 104 = 208 units.'))}
+      ${setField('safetyDays', 0, 180, tr('安全库存天数', 'Safety days'), tr('为销量波动多备的天数，也算进补货目标（见左边公式）。另外：成品够卖的天数超过 到仓天数 + 目标 + 安全 + 90 天，就标为“库存过多”。', 'Extra days held against swings in sales, also part of the target (see the formula on the left). Finished stock that lasts more than days to warehouse + target + safety + 90 days is marked overstock.'))}
+      ${setField('orderDays', 0, 60, tr('下单（天）', 'Placing the order (days)'), tr('从决定补货到工厂确认订单要几天。是到仓天数的第 1 段。', 'Days from deciding to reorder until the factory confirms. The first part of days to warehouse.'))}
+      ${setField('receiveDays', 0, 60, tr('清关收货（天）', 'Customs & receiving (days)'), tr('货到港后清关、送仓、上架要几天。是到仓天数的第 4 段。', 'Days for customs, delivery and putting away after arrival. The fourth part of days to warehouse.'))}
+      ${setField('bufferDays', 0, 120, tr('意外天数（物流变化）', 'Buffer for logistics changes (days)'), tr('为船期延误、查验等意外多留的天数。是到仓天数的最后一段。', 'Extra days for delays such as missed sailings or inspections. The last part of days to warehouse.'))}
+      ${setField('productionDays', 0, 365, tr('默认生产交期（天，产品资料没填时用）', 'Default production (days, when not in the product library)'), tr('工厂生产要几天。优先用产品资料里这个 SKU 的“生产交期”；没填才用这里的值（补货表里带 *）。工厂仓有成品时不算这一段。', 'Days the factory needs to make it. The SKU’s production lead time in the product library comes first; this fills the gap (marked * in the table). Skipped while the factory has finished stock.'))}
+      ${setField('firstLegDays', 0, 180, tr('默认头程（天，产品资料没填时用）', 'Default first leg (days, when not in the product library)'), tr('从工厂到美国港口要几天。优先用产品资料里这个 SKU 的“头程时间”；没填才用这里的值（补货表里带 *）。', 'Days from the factory to the US port. The SKU’s first-leg time in the product library comes first; this fills the gap (marked * in the table).'))}</div>
+      <div class="scm-formula"><b>${tr('怎么算', 'How it adds up')}</b>
+        <p>${tr('到仓天数 = 下单 + 生产交期 + 头程 + 清关收货 + 意外天数（工厂有成品时不算生产交期）', 'Days to warehouse = order + production + first leg + receiving + buffer (no production while the factory has finished stock)')}</p>
+        <p>${tr('补货目标（件）= 预测日销 × (到仓天数 + 目标天数 + 安全库存天数)', 'Target (units) = forecast per day × (days to warehouse + target + safety days)')}</p>
+        <p>${tr('建议发货 = 补货目标 − 美国LA仓 − 在途（最多发工厂现有成品）；建议生产 = 补货目标 − 成品合计 − 在产', 'Ship = target − US LA − in transit (up to factory stock); make = target − all finished − in production')}</p>
+        <p>${tr('缺货风险 = 美国仓 + 在途能卖的天数 < 到仓天数', 'Stockout risk = days that US + in transit last < days to warehouse')}</p></div>
+      <p class="scm-error" role="alert"></p></form>`,
       `<button class="btn" data-live-action="close">${tr('取消', 'Cancel')}</button><button class="btn primary" type="submit" form="scm-settings">${tr('保存', 'Save')}</button>`);
   }
 
@@ -487,6 +523,7 @@
     if (a === 'status') { ui.status = b.dataset.v; return ctx.rerender(); }
     if (a === 'sort') { if (ui.sort === b.dataset.v) ui.dir = -ui.dir; else { ui.sort = b.dataset.v; ui.dir = b.dataset.v === 'sku' ? 1 : -1; } return ctx.rerender(); }
     if (a === 'settings') return settingsDialog();
+    if (a === 'clear-filters') { Object.assign(ui, { q:'', life:'', fam:'', series:'', brand:'', where:'', qmin:'', qmax:'', smin:'', smax:'' }); const y = window.scrollY; ctx.rerender(); window.scrollTo(window.scrollX, y); return; }
     if (a === 'new-ship') return newShip();
     if (a === 'new-po') return orderForm();
     if (a === 'order-sku') return orderForm(null, { sku:b.dataset.sku, qty:b.dataset.qty });
@@ -521,13 +558,18 @@
   });
   document.addEventListener('input', e => {
     const t = e.target;
-    if (t.matches?.('[data-scm-q]')) { ui.q = t.value; const pos = t.selectionStart; ctx.rerender(); const n = document.querySelector('[data-scm-q]'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } return; }
+    if (t.matches?.('[data-scm-q]')) { ui.q = t.value; const pos = t.selectionStart, y = window.scrollY; ctx.rerender(); if (window.scrollY !== y) window.scrollTo(window.scrollX, y); const n = document.querySelector('[data-scm-q]'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } return; }
     if (t.matches?.('[data-scm-line-sku]')) { shipLines[Number(t.dataset.scmLineSku)].sku = t.value.trim(); return; }
     if (t.matches?.('[data-scm-line-qty]')) { shipLines[Number(t.dataset.scmLineQty)].qty = t.value; return; }
     if (t.matches?.('[data-scm-eta-src]')) syncEta();
   });
   // 头程 / 尾程 chosen: their default days fill in “days to arrive”
-  document.addEventListener('change', e => { const t = e.target; if (t.matches?.('[data-scm-life]')) { ui.life = t.value; ctx.rerender(); return; } if (!t.matches?.('[data-scm-legs]')) return;
+  // Filtering re-renders the page; keep the reader where they were (the stock chart sits halfway down the dashboard).
+  const keepScroll = () => { const y = window.scrollY; ctx.rerender(); if (window.scrollY !== y) window.scrollTo(window.scrollX, y); };
+  document.addEventListener('change', e => { const t = e.target; if (!ctx) return;
+    if (t.matches?.('[data-scm-f]')) { ui[t.dataset.scmF] = t.value; if (t.dataset.scmF === 'fam') ui.series = ''; return keepScroll(); }
+    if (t.matches?.('[data-scm-r]')) { const v = t.value.trim().replace(/[,\s]/g, ''); ui[t.dataset.scmR] = v !== '' && Number.isFinite(Number(v)) ? v : ''; return keepScroll(); }
+    if (t.matches?.('[data-scm-life]')) { ui.life = t.value; ctx.rerender(); return; } if (!t.matches?.('[data-scm-legs]')) return;
     const f = t.closest('form'), a = FIRST_LEG[f.querySelector('[name="firstLeg"]').value], b = LAST_LEG[f.querySelector('[name="lastLeg"]').value];
     if (a && b) { f.querySelector('[name="etaDays"]').value = a[2] + b[2]; syncEta(); } });
   document.addEventListener('change', e => { if (e.target.matches?.('[data-scm-line-sku]')) paintLines(); });
