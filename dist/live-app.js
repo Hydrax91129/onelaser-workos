@@ -269,7 +269,7 @@
   };
   function productStockPage(force) {
     return tabsPage('productTab', tr('SKU管理(PIM)','SKU management (PIM)'), [libraryAccess() && ['catalog', 'package', tr('产品资料','Catalog'), () => window.WorkOSProducts.render('catalog')],
-      productAccess() && ['pricing', 'currency-dollar', tr('定价','Pricing'), () => window.WorkOSProducts.render('cost')],
+      productAccess() && ['pricing', 'currency-dollar', tr('定价试算器','Pricing calculator'), () => window.WorkOSProducts.render('cost')],
       dealersAccess() && ['dealers', 'storefront', tr('经销商订单','Dealer orders'), () => window.WorkOSDealers.render()]], force);
   }
   function wmsPage(force) {

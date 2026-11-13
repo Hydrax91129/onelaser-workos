@@ -34,7 +34,7 @@
   const pname = it => (lang() === 'en' ? it.nameEn || it.nameZh : it.nameZh || it.nameEn) || it.name || '';
   const pother = it => { const o = lang() === 'en' ? it.nameZh : it.nameEn; return o && o !== pname(it) ? o : ''; };
   const thumb = it => it.imageId ? `<img class="wms-thumb" loading="lazy" decoding="async" src="${apiBase()}/products/library/files/${encodeURIComponent(it.imageId)}" alt="">` : `<span class="wms-thumb none" aria-hidden="true">${icon('image')}</span>`;
-  const skuCell = it => `<td class="wms-skucell">${thumb(it)}<span class="mono">${esc(it.sku)}</span></td>`;
+  const skuCell = it => `<td class="wms-skucell">${thumb(it)}<span class="mono">${esc(it.sku)}</span>${it.dropship ? `<span class="wms-tag" title="${esc(tr('代发：供应商直接发货，我们不备库存，还有库存才显示在这里', 'Dropship: the supplier ships directly; listed only while stock is still recorded'))}">${tr('代发', 'Dropship')}</span>` : ''}</td>`;
   const prodCell = it => `<td class="wms-prod">${esc(pname(it))}${pother(it) ? `<small>${esc(pother(it))}</small>` : ''}</td>`;
   const famCell = it => `<td>${it.family ? `<span class="wms-tag">${esc(famName(it.family))}</span>` : `<span class="wms-tag dim">${tr('未设置', 'Not set')}</span>`}${it.series ? `<small>${esc(it.series)}</small>` : ''}</td>`;
   const binsOf = (it, l) => (it.bins?.[l] || ['', '', '']).concat(['', '', '']).slice(0, 3);

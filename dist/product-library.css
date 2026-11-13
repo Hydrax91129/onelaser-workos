@@ -168,3 +168,9 @@ html:root .pl .pl-price input{width:100%;min-width:0;text-align:right;padding:4p
 .pl-skus th.pl-movable{cursor:grab}.pl-skus th.dragging{opacity:.45}
 .pl-skus th.drop-l{box-shadow:inset 3px 0 0 var(--pl-accent)}.pl-skus th.drop-r{box-shadow:inset -3px 0 0 var(--pl-accent)}
 .pl-skus td.miss small{color:var(--pl-req)}
+
+/* Range filter: a field picker plus two short number boxes (2026-11-13) */
+.pl-range{display:flex;align-items:center;gap:6px;min-width:0;grid-column:1/-1}
+.pl-range select{flex:1 1 auto;min-width:0}
+html:root .pl .pl-range input{flex:0 0 96px;width:96px;min-width:0;text-align:right;padding:4px 6px}
+.pl-range span{color:var(--pl-mute)}

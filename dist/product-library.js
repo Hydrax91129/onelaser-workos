@@ -33,7 +33,7 @@
   };
   const toast = m => ctx?.toast?.(m);
 
-  const S = { data:null, loading:false, error:'', view:'products', cur:null, q:'', fam:'', series:'', status:'', gt:'', brand:'', pmin:'', pmax:'', sort:'sku', dir:1, onlyReq:false, creating:false, saving:{}, errs:{}, savedAt:null,
+  const S = { data:null, loading:false, error:'', view:'products', cur:null, q:'', fam:'', series:'', status:'', gt:'', brand:'', pmin:'', pmax:'', rk:'msrp', sort:'sku', dir:1, onlyReq:false, creating:false, saving:{}, errs:{}, savedAt:null,
     history:{}, histOpen:false, mode:'catalog', priceOpen:{}, preview:null, pvFilter:'all', skipErrors:false, imports:null, draft:null, busy:'', sel:new Set(), bulkKey:'', bulkVal:'', bulkNote:'' };
   const D = () => S.data || {};
   const spec = () => D().spec || { fields:[], slots:[], groups:[], families:[], statuses:[], visNames:{} };
@@ -90,17 +90,18 @@
   /* ---------- list columns each person chooses (owner, 2026-11-13: everyone wants to see different things) ----------
      SKU always shows. The rest: a few built-in columns plus any product field this person may see, remembered per
      person in this browser. */
-  const BUILTIN = () => [['name', tr('产品', 'Product')], ['fam', tr('产品族 / 系列', 'Family / series')], ['status', tr('状态', 'Status')], ['msrp', 'MSRP'], ...(sees('sens') ? [['cm', 'CM']] : []), ['req', tr('必填完成', 'Required done')]];
+  const BUILTIN = () => [['name', tr('产品', 'Product')], ['fam', tr('产品族 / 系列', 'Family / series')], ['status', tr('状态', 'Status')], ['msrp', 'MSRP'], ...(sees('sens') ? [['npc', tr('零售 NPC $', 'Retail NPC $')], ['cm', tr('零售 NPCR %', 'Retail NPCR %')]] : []), ['req', tr('必填完成', 'Required done')]];
   const BUILTIN_TIP = () => ({ sku:tr('产品资料里的 SKU（唯一编号）。点击排序。', 'The SKU (unique code). Click to sort.'),
     name:tr('中文名，下面小字是英文名。', 'Product name; the other language below.'), fam:tr('产品族，下面小字是产品线 / 系列。', 'Family; series below.'),
     status:tr('生命周期状态：开发中 / 上新中 / 在售 / 停产清存 / 下架封存。', 'Lifecycle: in development / launching / selling / discontinued / delisted.'),
-    msrp:tr('零售价 MSRP（美元）。', 'Retail price, MSRP (USD).'), cm:tr('零售 NPCR：MSRP 下的贡献利润率 =（MSRP − 零售费用 − 到岸价 − 尾程运费）÷ MSRP。只有成本权限能看到。', 'Retail NPCR: margin at MSRP = (MSRP − selling cost − landed − last mile) ÷ MSRP. Cost access only.'),
+    msrp:tr('零售价 MSRP（美元）。', 'Retail price, MSRP (USD).'), cm:tr('零售 NPCR（净利润贡献率）= 零售 NPC ÷ MSRP。只有成本权限能看到。', 'Retail NPCR (net profit contribution ratio) = retail NPC ÷ MSRP. Cost access only.'),
+    npc:tr('零售 NPC（每台净利润贡献，美元）= MSRP − 零售费用（MSRP × 零售费用率）− 到岸价 − 尾程运费 + 零售运费收费。只有成本权限能看到。', 'Retail NPC (net profit contribution per unit, USD) = MSRP − selling cost (MSRP × retail rate) − landed − last mile + retail shipping charge. Cost access only.'),
     req:tr('必填字段已填 / 应填的数量；没填完的写出缺几项，鼠标放上去看缺哪些。', 'Required fields filled / needed; hover to see which are missing.') });
   const colTip = k => { const extra = k === 'sku' ? '' : tr(' 点击排序，拖动表头调整顺序。', ' Click to sort; drag to reorder.');
     if (BUILTIN_TIP()[k]) return BUILTIN_TIP()[k] + extra;
     const f = fieldOf(k), g = f && spec().groups.find(x => x.no === f.group);
     return f ? `${L(f)}${g ? ` · ${L(g)}` : ''}${f.unit ? ` · ${tr('单位', 'unit')} ${f.unit}` : ''}${f.ph ? ` · ${tr('例如', 'e.g.')} ${tr(f.ph, f.phEn || f.ph)}` : ''}.${extra}` : k; };
-  const DEFAULT_COLS = ['name', 'fam', 'status', 'msrp', 'cm', 'req'];
+  const DEFAULT_COLS = ['name', 'fam', 'status', 'msrp', 'npc', 'cm', 'req'];
   const NOT_COL = new Set(['sku', 'nameZh', 'nameEn', 'family', 'series', 'status', 'msrp', 'mainImage']);
   const colFields = () => spec().fields.filter(f => f.type !== 'image' && !NOT_COL.has(f.key) && !/^whOv/.test(f.key));
   const colKey = () => `workos.pl.cols.${ctx?.state?.()?.actor?.id || 'me'}`;
@@ -130,6 +131,7 @@
     if (k === 'status') return `<td>${esc(statusName(v.status) || '—')}</td>`;
     if (k === 'msrp') return `<td class="num">${msrpOf(i) != null ? usd(msrpOf(i)) : '—'}</td>`;
     if (k === 'cm') return `<td class="num ${m ? tone(m.cmPct, D().settings?.dtcFloor) : ''}">${m && m.cmPct != null ? pct(m.cmPct) : '—'}</td>`;
+    if (k === 'npc') return `<td class="num ${m ? tone(m.cmPct, D().settings?.dtcFloor) : ''}">${m && m.cm != null ? usd(m.cm) : '—'}</td>`;
     if (k === 'req') { const miss = (c.missing || []).map(x => L(fieldOf(x)) || x);
       return `<td class="num ${c.done ? '' : 'miss'}" ${miss.length ? `title="${esc(tr(`还缺：${miss.join('、')}`, `Missing: ${miss.join(', ')}`))}"` : ''}>${c.need ? `${c.got}/${c.need}${miss.length ? `<small>${tr(`缺 ${miss.length} 项`, `${miss.length} missing`)}</small>` : ''}` : '—'}</td>`; }
     const raw = v[k], f = fieldOf(k);
@@ -139,6 +141,17 @@
   // OneLaser's own brand and its series come first in brand / series lists (owner, 2026-11-13), then the rest A–Z.
   const ownFirst = (vals, k, rows, vOf = r => r) => { const own = new Set(rows.filter(r => /onelaser/i.test(String(vOf(r).brand || ''))).map(r => vOf(r)[k]));
     return [...vals].sort((a, b) => (own.has(b) - own.has(a)) || String(a).localeCompare(String(b))); };
+  /* ---------- range filter on a field each person picks (owner, 2026-11-13: MSRP by default, or retail margin, weights…) ---------- */
+  const rangeOpts = () => [['msrp', 'MSRP', '$'], ...(sees('sens') ? [['npc', tr('零售 NPC（每台）', 'Retail NPC / unit'), '$'], ['cm', tr('零售 NPCR', 'Retail NPCR'), '%']] : []),
+    ...colFields().filter(f => ['number', 'price'].includes(f.type) && f.key !== 'msrp' && !/Rate$/.test(f.key)).map(f => [f.key, L(f), f.type === 'price' ? '$' : (f.unit || '')])];
+  const rangeKey = () => rangeOpts().some(o => o[0] === S.rk) ? S.rk : 'msrp';
+  function rangeVal(i, k) {
+    if (k === 'msrp') return msrpOf(i);
+    if (k === 'cm') { const c = i.pricing?.fixed?.[0]?.cmPct; return c == null ? null : c * 100; }
+    if (k === 'npc') return i.pricing?.fixed?.[0]?.cm ?? null;
+    const v = i.values[k]; return v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v);
+  }
+
   /* ---------- rail ---------- */
   /* Left half: the SKU list as a table with filters (family, series, status, new/returned, brand, MSRP range,
      incomplete only) and sortable columns; the right half is the selected product. */
@@ -146,12 +159,12 @@
   const nameOf = i => (lang() === 'en' ? i.values.nameEn : i.values.nameZh) || i.values.nameZh || i.values.nameEn || '';
   function filteredItems() {
     const q = S.q.trim().toLowerCase(), lo = S.pmin === '' ? null : Number(S.pmin), hi = S.pmax === '' ? null : Number(S.pmax);
-    const list = items().filter(i => { const v = i.values, m = msrpOf(i);
+    const list = items().filter(i => { const v = i.values, m = rangeVal(i, rangeKey());
       return (!S.fam || (S.fam === '-' ? !v.family : v.family === S.fam)) && (!S.series || v.series === S.series) && (!S.status || v.status === S.status)
         && (!S.gt || (v.goodsType || 'bulk') === S.gt) && (!S.brand || v.brand === S.brand) && (lo == null || (m != null && m >= lo)) && (hi == null || (m != null && m <= hi))
         && (!S.onlyReq || !i.completeness?.done) && (!q || [i.sku, v.nameZh, v.nameEn, v.series, v.brand, v.upc, v.refbSku].some(x => String(x || '').toLowerCase().includes(q))); });
     const key = i => S.sort === 'name' ? nameOf(i) : S.sort === 'fam' ? famName(i.values.family) + (i.values.series || '') : S.sort === 'status' ? String(i.values.status || '')
-      : S.sort === 'msrp' ? msrpOf(i) ?? -1 : S.sort === 'cm' ? i.pricing?.fixed?.[0]?.cmPct ?? -999 : S.sort === 'req' ? (i.completeness?.need ? i.completeness.got / i.completeness.need : 1)
+      : S.sort === 'msrp' ? msrpOf(i) ?? -1 : S.sort === 'cm' ? i.pricing?.fixed?.[0]?.cmPct ?? -999 : S.sort === 'npc' ? i.pricing?.fixed?.[0]?.cm ?? -1e9 : S.sort === 'req' ? (i.completeness?.need ? i.completeness.got / i.completeness.need : 1)
       : S.sort !== 'sku' && fieldOf(S.sort) ? (isNumCol(S.sort) ? Number(i.values[S.sort] ?? -1) : String(i.values[S.sort] ?? '')) : i.sku;
     return list.sort((a, b) => { const x = key(a), y = key(b); return (typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'zh')) * S.dir; });
   }
@@ -178,13 +191,15 @@
         ${sel('status', tr('全部状态', 'All statuses'), spec().statuses.filter(x => all.some(i => i.values.status === x.key)).map(x => [x.key, L(x)]))}
         ${sel('gt', tr('大货 + 退货', 'New + returned'), gtOpts.map(o => [o.key, L(o)]))}
         ${sel('brand', tr('全部品牌', 'All brands'), uniq('brand').map(x => [x, x]))}
-        <label class="pl-price">MSRP $<input data-pl-p="pmin" inputmode="decimal" value="${esc(S.pmin)}" placeholder="${tr('最低', 'min')}" aria-label="${tr('最低 MSRP', 'Min MSRP')}">–<input data-pl-p="pmax" inputmode="decimal" value="${esc(S.pmax)}" placeholder="${tr('最高', 'max')}" aria-label="${tr('最高 MSRP', 'Max MSRP')}"></label>
+        ${(() => { const ro = rangeOpts(), k = rangeKey(), unit = (ro.find(o => o[0] === k) || [])[2] || '';
+          return `<div class="pl-range" title="${tr('选一个参数，按最低到最高筛选', 'Pick a field and filter by a range')}"><select data-pl-rk aria-label="${tr('按哪个参数筛选范围', 'Field to filter by range')}">${ro.map(([v, n]) => `<option value="${esc(v)}" ${k === v ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
+            <input data-pl-p="pmin" inputmode="decimal" value="${esc(S.pmin)}" placeholder="${esc(`${unit} ${tr('最低', 'min')}`.trim())}" aria-label="${tr('最低', 'Min')}"><span>–</span><input data-pl-p="pmax" inputmode="decimal" value="${esc(S.pmax)}" placeholder="${esc(`${unit} ${tr('最高', 'max')}`.trim())}" aria-label="${tr('最高', 'Max')}"></div>`; })()}
       </div>
       <div class="pl-flt-foot"><label class="pl-chk"><input type="checkbox" data-pl-onlyreq ${S.onlyReq ? 'checked' : ''}> ${tr('仅看必填未完成', 'Only incomplete')} ${inc ? `<span class="pl-chip req">${tr(`${inc} 个待补`, `${inc} to fill`)}</span>` : ''}</label>
         <span class="pl-sp"></span><span class="pl-meta">${tr(`显示 ${list.length} / ${all.length} 个 SKU`, `${list.length} of ${all.length} SKUs`)}</span>${active ? `<button class="pl-link" data-pl="clear-filters">${tr('清除筛选', 'Clear')}</button>` : ''}<button class="pl-link" data-pl="cols" aria-expanded="${!!S.colsOpen}" title="${tr('选择列表里显示哪些参数', 'Choose which fields the list shows')}">⚙ ${tr('显示列', 'Columns')}</button></div>
     </div>${canBulk && S.sel.size ? bulkBar() : ''}<div class="pl-list">${list.length ? `<table class="pl-skus"><thead><tr>${canBulk ? `<th class="ck"><input type="checkbox" data-pl-selall ${list.every(i => S.sel.has(i.sku)) ? 'checked' : ''} aria-label="${tr('全选当前列表', 'Select all listed')}" title="${tr('全选当前筛选出的 SKU', 'Select every SKU in this list')}"></th>` : ''}${th('sku', 'SKU')}${cols().map(k => th(k, esc(colLabel(k)), isNumCol(k) ? 'num' : '')).join('')}</tr></thead><tbody>
       ${list.map(i => { const v = i.values, m = i.pricing?.fixed?.[0], c = i.completeness || {}, other = lang() === 'en' ? v.nameZh : v.nameEn;
-        return `<tr data-pl-pick="${esc(i.sku)}" aria-current="${i.sku === S.cur}" ${S.sel.has(i.sku) ? 'data-sel="1"' : ''}>${canBulk ? `<td class="ck"><input type="checkbox" data-pl-sel="${esc(i.sku)}" ${S.sel.has(i.sku) ? 'checked' : ''} aria-label="${tr(`选择 ${esc(i.sku)}`, `Select ${esc(i.sku)}`)}"></td>` : ''}<td class="sku">${c.done ? '' : `<span class="pl-dot" title="${tr('必填未完成', 'Required fields missing')}"></span>`}${esc(i.sku)}${v.goodsType === 'refb' ? ` <span class="pl-chip warn">${tr('退货', 'Ret.')}</span>` : ''}</td>
+        return `<tr data-pl-pick="${esc(i.sku)}" aria-current="${i.sku === S.cur}" ${S.sel.has(i.sku) ? 'data-sel="1"' : ''}>${canBulk ? `<td class="ck"><input type="checkbox" data-pl-sel="${esc(i.sku)}" ${S.sel.has(i.sku) ? 'checked' : ''} aria-label="${tr(`选择 ${esc(i.sku)}`, `Select ${esc(i.sku)}`)}"></td>` : ''}<td class="sku">${c.done ? '' : `<span class="pl-dot" title="${tr('必填未完成', 'Required fields missing')}"></span>`}${esc(i.sku)}${v.goodsType === 'refb' ? ` <span class="pl-chip warn">${tr('退货', 'Ret.')}</span>` : ''}${v.supplyMode === 'dropship' ? ` <span class="pl-chip" title="${tr('代发：供应商直接发货，不备库存', 'Dropship: the supplier ships directly; no stock kept')}">${tr('代发', 'DS')}</span>` : ''}</td>
 ${cols().map(k => cellOf(k, i)).join('')}</tr>`; }).join('')}</tbody></table>`
       : `<div class="pl-empty">${S.onlyReq ? tr('没有必填未完成的产品', 'No incomplete products') : all.length ? tr('没有匹配的产品，试试清除筛选', 'No matching products; try clearing the filters') : tr('还没有产品。产品经理可以点“新建产品”录入第一个 SKU；有批量更新权限的同事可以下载标准模板，填好后点“批量更新”上传。', 'No products yet. Product managers can add the first SKU; people allowed to bulk-update can fill in the template and upload it with Bulk update.')}</div>`}</div></aside>`;
   }
@@ -243,9 +258,9 @@ ${cols().map(k => cellOf(k, i)).join('')}</tr>`; }).join('')}</tbody></table>`
     const fx = pr.fixed || [], lbl = { msrp:tr('MSRP 贡献利润', 'MSRP contribution'), map:tr('MAP 贡献利润', 'MAP contribution'), promoFloor:tr('促销底价贡献利润', 'Promotion floor contribution') };
     return `<details class="pl-grp" open>${grpHead(g.no, name, `<span class="cnt">${tr('官网 DTC · 销售费率', 'DTC · selling-cost rate')} ${pct(pr.dtcRate)}</span>`)}<div class="pl-pm">${unset}
       <div><h4>${tr('成本', 'Cost')} ${visChip('sens')}<small>${tr('送达成本 = 到岸价 + 尾程运费；成本和利润只有成本权限的同事能看到', 'Delivered = landed + last mile; costs and margins are visible to cost access only')}</small></h4>
-        <div class="pl-fields" style="padding:0">${pin('landed', it)}${pin('lastMile', it)}${ratePin('dtcRate', 'dtc', it)}</div>
+        <div class="pl-fields" style="padding:0">${pin('landed', it)}${pin('lastMile', it)}${pin('retailShip', it)}${ratePin('dtcRate', 'dtc', it)}</div>
         <div class="pl-calc" style="margin-top:10px"><div class="pl-out key"><div class="k">${tr('送达成本 Delivered', 'Delivered cost')}</div><div class="v">${usd(pr.delivered)}</div><div class="f">${tr('到岸价 + 尾程运费', 'Landed + last mile')}</div></div>
-          <div class="pl-out"><div class="k">${tr('MSRP 贡献利润', 'MSRP contribution')}</div><div class="v">${usd(fx[0]?.cm)} <span style="font-size:13px">${pct(fx[0]?.cmPct)}</span></div><div class="f">${tr('售价 × (1 − 零售销售费率) − 送达成本', 'Price × (1 − retail rate) − delivered')}</div></div></div></div>
+          <div class="pl-out"><div class="k">${tr('MSRP 贡献利润', 'MSRP contribution')}</div><div class="v">${usd(fx[0]?.cm)} <span style="font-size:13px">${pct(fx[0]?.cmPct)}</span></div><div class="f">${tr('售价 × (1 − 零售销售费率) − 送达成本 + 零售运费收费', 'Price × (1 − retail rate) − delivered + retail shipping charge')}</div></div></div></div>
       <div><h4>${tr('零售档位', 'Retail tiers')} <small>${tr('建议零售价 = 送达成本 ÷ (1 − 销售费率 − 目标贡献利润率)，标价取最接近的 x99', 'Suggested = delivered ÷ (1 − selling rate − target CM), list price at the nearest x99')}</small></h4>
         <div class="pl-tbl"><table><thead><tr><th>${tr('档位', 'Tier')}</th><th>${tr('目标 CM', 'Target CM')}</th><th>${tr('理论售价', 'Theoretical')}</th><th>${tr('建议标价', 'List price')}</th><th>${tr('相当于 MSRP 折扣', 'Off MSRP')}</th><th>${tr('贡献利润', 'Contribution')}</th><th>${tr('适用', 'Use')}</th></tr></thead>
         <tbody>${(pr.retail || []).map(r => `<tr><td>${esc(r.name)}</td><td class="num">${r.cmTarget}%</td><td class="num">${usd(r.theory)}</td><td class="num"><b>${usd(r.list)}</b></td><td class="num">${r.offMsrp != null && r.offMsrp > 0.0005 ? pct(r.offMsrp) : '—'}</td><td class="num ${tone(r.cmPct, s.dtcFloor)}">${usd(r.cm)}<span class="p">${pct(r.cmPct)}</span></td><td class="l">${esc(r.use)}</td></tr>`).join('') || `<tr><td colspan="7" class="l">${tr('还没有设置零售档位', 'No retail tiers yet')}</td></tr>`}</tbody></table></div></div>
@@ -283,10 +298,10 @@ ${cols().map(k => cellOf(k, i)).join('')}</tr>`; }).join('')}</tbody></table>`
     const pending = (it.pendingPrices || []).map(p => `<span class="pl-chip warn">${esc(fieldName(p.target === 'promo_floor' ? 'promoFloor' : /^wh\d+$/.test(p.target) ? 'whOv' + p.target.slice(2) : p.target))} ${usd(p.price)} ${tr('待审批', 'awaiting approval')}</span>`).join('');
     const status = spec().statuses.find(s => s.key === v.status);
     const sum = `<div class="pl-card pl-summary"><div style="min-width:0"><h2>${esc(it.sku)} <span style="font-weight:500;color:var(--pl-mute);font-size:15px">${esc(v.nameZh || v.nameEn || '')}</span></h2>
-      <div class="sub">${v.family ? `<span class="pl-chip">${esc(famName(v.family))}</span>` : `<span class="pl-chip warn">${tr('先选择产品族', 'Choose a family first')}</span>`}${status ? `<span class="pl-chip ${v.status === 'live' ? 'ok' : ''}">${esc(L(status))}</span>` : ''}${v.goodsType === 'refb' ? `<span class="pl-chip warn">${tr('退货', 'Returned')}</span>` : ''}
+      <div class="sub">${v.family ? `<span class="pl-chip">${esc(famName(v.family))}</span>` : `<span class="pl-chip warn">${tr('先选择产品族', 'Choose a family first')}</span>`}${status ? `<span class="pl-chip ${v.status === 'live' ? 'ok' : ''}">${esc(L(status))}</span>` : ''}${v.goodsType === 'refb' ? `<span class="pl-chip warn">${tr('退货', 'Returned')}</span>` : ''}${v.supplyMode === 'dropship' ? `<span class="pl-chip">${tr('代发 · 不备库存', 'Dropship · no stock')}</span>` : ''}
       ${v.family ? `<span>${tr(`必填 ${c.got} / ${c.need}`, `Required ${c.got} / ${c.need}`)}</span><span class="pl-meter" aria-hidden="true"><i style="width:${c.need ? Math.round(c.got / c.need * 100) : 0}%"></i></span>` : ''}
       ${it.duplicate ? `<span class="pl-chip req">${tr('SKU 与其他产品重复（只差大小写）', 'SKU duplicates another product (letter case only)')}</span>` : ''}${pending}</div></div>
-      <div>${!viewer().editCatalog && !viewer().editCost && !viewer().editPrices ? '' : `<span class="pl-status ${Object.keys(S.errs).length ? 'err' : 'ok'}">${Object.values(S.saving).some(Boolean) ? tr('保存中…', 'Saving…') : Object.keys(S.errs).length ? tr('有字段没有保存，请看红色提示', 'Some fields were not saved; see the red notes') : S.savedAt ? tr(`已自动保存 ${S.savedAt}`, `Saved automatically ${S.savedAt}`) : tr('修改会自动保存', 'Changes save automatically')}</span>`}${viewer().editCatalog && S.view !== 'pricing' ? `<button type="button" class="pl-btn small pl-del" data-pl-delprod="${esc(it.sku)}" title="${tr('删除这个产品（已有库存、订单或退货记录的产品不能删除，请改为“下架封存”）', 'Delete this product (a product with stock, orders or returns cannot be deleted; set it to Delisted)')}">${tr('删除产品', 'Delete product')}</button>` : ''}</div></div>`;
+      <div>${!viewer().editCatalog && !viewer().editCost && !viewer().editPrices ? '' : `<span class="pl-status ${Object.keys(S.errs).length ? 'err' : 'ok'}">${Object.values(S.saving).some(Boolean) ? tr('保存中…', 'Saving…') : Object.keys(S.errs).length ? tr('有字段没有保存，请看红色提示', 'Some fields were not saved; see the red notes') : S.savedAt ? tr(`已自动保存 ${S.savedAt}`, `Saved automatically ${S.savedAt}`) : tr('修改会自动保存', 'Changes save automatically')}</span>`}${viewer().editCatalog && S.view !== 'pricing' ? `<button type="button" class="pl-btn small pl-del" data-pl-delprod="${esc(it.sku)}" title="${tr('删除这个产品（还有库存、未完成的采购单 / 货柜 / 经销商订单时不能删；有历史记录的只有主管理员能删，历史记录保留）', 'Delete this product (not while stock, unfinished orders or containers remain; with history, main admins only, and the history is kept)')}">${tr('删除产品', 'Delete product')}</button>` : ''}</div></div>`;
     // 定价 page: the product's basic facts, then cost (landed + last mile) and the NPCR price calculation; edits save to
     // the same product record, so a new MSRP here is the MSRP in 产品资料 too.
     if (S.mode === 'pricing') {
@@ -300,11 +315,14 @@ ${cols().map(k => cellOf(k, i)).join('')}</tr>`; }).join('')}</tbody></table>`
       const g = { ...g0, show: g0.disp || g0.no };
       if (g.no === '5') return '';
       if (g.no === '4') {
-        const list = ['landed', 'lastMile', 'msrp'].map(k => fieldOf(k)).filter(Boolean);
+        const list = ['landed', 'lastMile', 'msrp', 'retailShip'].map(k => fieldOf(k)).filter(Boolean);
         // Retail NPCR next to MSRP (owner, 2026-11-13): the contribution margin at MSRP, read-only, for people who may see cost.
-        const fx0 = it.pricing?.fixed?.[0], npcr = sees('sens') ? `<div class="pl-fld pl-npcr"><label><b>${tr('零售 NPCR（MSRP 利润率）', 'Retail NPCR (margin at MSRP)')}</b>${visChip('sens')}</label>
-          <div class="pl-npcr-v ${fx0 ? tone(fx0.cmPct, D().settings?.dtcFloor) : ''}" title="${esc(tr('（MSRP − 零售费用 − 到岸价 − 尾程运费）÷ MSRP，零售费用 = MSRP × 零售费用率；改了到岸价、运费、MSRP 或费用率会自动重算', '(MSRP − retail selling cost − landed − last mile) ÷ MSRP, where selling cost = MSRP × the retail cost rate; recalculated when any of them changes'))}">${fx0 && fx0.cmPct != null ? `<b>${pct(fx0.cmPct)}</b><span>${usd(fx0.cm)} / ${tr('台', 'unit')}</span>` : `<span>${tr('填好到岸价、尾程运费和 MSRP 后自动算出', 'Fill in landed cost, last mile and MSRP')}</span>`}</div></div>` : '';
-        return list.length ? `<details class="pl-grp" open>${grpHead(g.show, L(g), `<span class="cnt">${groupCount(list, it)} ${tr('· 定价计算在“定价”页', '· pricing is worked out on the Pricing page')}</span>`)}<div class="pl-fields">${list.map(f => fieldHTML(f, it)).join('')}${npcr}</div></details>` : '';
+        const fx0 = it.pricing?.fixed?.[0], has = fx0 && fx0.cmPct != null, tn = fx0 ? tone(fx0.cmPct, D().settings?.dtcFloor) : '';
+        const how = tr('（MSRP − 零售费用 − 到岸价 − 尾程运费 + 零售运费收费），零售费用 = MSRP × 零售费用率；改了其中任何一项都会自动重算', '(MSRP − retail selling cost − landed − last mile + retail shipping charge), where selling cost = MSRP × the retail cost rate; recalculated when any of them changes');
+        const tile = (label, big) => `<div class="pl-fld pl-npcr"><label><b>${label}</b>${visChip('sens')}</label><div class="pl-npcr-v ${tn}" title="${esc(how)}">${has ? `<b>${big}</b>` : `<span>${tr('填好到岸价、尾程运费和 MSRP 后自动算出', 'Fill in landed cost, last mile and MSRP')}</span>`}</div></div>`;
+        // Retail NPC (dollars per unit) and NPCR (ratio to MSRP), owner 2026-11-13: both, read-only, cost access only.
+        const npcr = sees('sens') ? tile(tr('零售 NPC（每台净利润贡献）', 'Retail NPC (net profit contribution / unit)'), has ? usd(fx0.cm) : '') + tile(tr('零售 NPCR（净利润贡献率）', 'Retail NPCR (net profit contribution ratio)'), has ? pct(fx0.cmPct) : '') : '';
+        return list.length ? `<details class="pl-grp" open>${grpHead(g.show, L(g), `<span class="cnt">${groupCount(list, it)} ${tr('· 详细计算在“定价试算器”', '· details in the Pricing calculator')}</span>`)}<div class="pl-fields">${list.map(f => fieldHTML(f, it)).join('')}${npcr}</div></details>` : '';
       }
       const list = fs.filter(f => f.group === g.no && !(g.no === '4' || f.key.startsWith('whOv') || f.key === 'whFreight'));
       const body = `<div class="pl-fields">${list.map(f => fieldHTML(f, it)).join('')}</div>`;
@@ -437,6 +455,12 @@ ${cols().map(k => cellOf(k, i)).join('')}</tr>`; }).join('')}</tbody></table>`
     const value = raw === '' ? null : raw;
     if (JSON.stringify(it.values[key] ?? null) === JSON.stringify(value) || String(it.values[key] ?? '') === String(raw)) return;
     let note;
+    // Prices and rates ask first (owner, 2026-11-14: a typo should not go live on blur).
+    const pf = fieldOf(key), money = pf?.type === 'price' || /Rate$/.test(key) || /^whOv\d/.test(key);
+    if (money && typeof window.confirm === 'function') {
+      const show = x => x == null || x === '' ? tr('空', 'blank') : pf?.type === 'price' && Number.isFinite(Number(x)) ? usd(Number(x)) : String(x) + (/Rate$/.test(key) ? '%' : '');
+      if (!window.confirm(tr(`确认修改价格？\n${it.sku} · ${pf ? L(pf) : key}\n${show(it.values[key])} → ${show(value)}`, `Change this price?\n${it.sku} · ${pf ? L(pf) : key}\n${show(it.values[key])} → ${show(value)}`))) { rerender(); return; }
+    }
     if (key === 'status' && STATUS_NOTE.has(value)) { note = (window.prompt?.(tr('转为停产清存或下架封存时，请写一句原因：', 'Give a reason for clearance or end of sale:')) || '').trim(); if (!note) { rerender(); return; } }
     S.saving[key] = true; delete S.errs[key]; rerender();
     try {
@@ -531,13 +555,18 @@ ${cols().map(k => cellOf(k, i)).join('')}</tr>`; }).join('')}</tbody></table>`
     if (t.dataset.plSadd) { const k = t.dataset.plSadd, row = { dtcItems:{ name:'', pct:0 }, whItems:{ name:'', pct:0 }, retailTiers:{ name:'', cm:0, use:'' }, whTiers:{ name:'', discount:0, floor:false } }[k]; S.draft[k].push(row); return rerender(); }
     if (t.dataset.plSrm) { const [k, i] = t.dataset.plSrm.split('.'); S.draft[k].splice(Number(i), 1); return rerender(); }
     if (t.dataset.plDelprod) {
-      // Delete a product (owner, 2026-11-13): the server refuses a SKU that stock, orders or returns use and says where.
-      const sku = t.dataset.plDelprod;
-      if (!window.confirm?.(tr(`删除产品 ${sku}？\n产品资料、价格、文件会一起删除，不能恢复。\n已有库存、出入库、订单或退货记录的产品不能删除，请改为“下架封存”。`, `Delete product ${sku}?\nIts details, prices and files go too; this cannot be undone.\nA product with stock, movements, orders or returns cannot be deleted; set it to Delisted.`))) return;
+      // Delete a product (owner, 2026-11-14): stock, unfinished orders or containers on the way block it; history alone
+      // (past movements, finished orders, returns) does not, but only a main admin may delete such a SKU, after confirming.
+      const sku = t.dataset.plDelprod, enc = encodeURIComponent(sku), list = xs => xs.map(x => `· ${tr(x.zh, x.en)}${x.zh.includes(' ') ? '' : ` ${x.n}`}`).join('\n');
       t.disabled = true;
-      ctx.api.request(`/products/library/${encodeURIComponent(sku)}`, { method:'DELETE' })
-        .then(() => { toast(tr(`已删除 ${sku}`, `${sku} deleted`)); S.cur = null; load(true); })
-        .catch(x => { t.disabled = false; window.alert?.(x.message || tr('删除失败', 'Could not delete')); });
+      ctx.api.get(`/products/library/${enc}/usage`).then(u => {
+        if (u.blockers.length) { window.alert?.(tr(`${sku} 现在还不能删除：\n${list(u.blockers)}`, `${sku} cannot be deleted yet:\n${list(u.blockers)}`)); t.disabled = false; return; }
+        if (u.needsAdmin) { window.alert?.(tr(`${sku} 有历史记录，只有主管理员可以删除：\n${list(u.history)}`, `${sku} has history; only a main admin can delete it:\n${list(u.history)}`)); t.disabled = false; return; }
+        const hist = u.history.length ? tr(`\n\n这些历史记录会保留（仍显示这个 SKU 编号）：\n${list(u.history)}`, `\n\nThis history is kept (still showing the SKU):\n${list(u.history)}`) : '';
+        if (!window.confirm?.(tr(`删除产品 ${sku}？\n产品资料、价格、文件会一起删除，不能恢复。${hist}`, `Delete product ${sku}?\nIts details, prices and files go too; this cannot be undone.${hist}`))) { t.disabled = false; return; }
+        return ctx.api.request(`/products/library/${enc}${u.history.length ? '?withHistory=1' : ''}`, { method:'DELETE' })
+          .then(() => { toast(tr(`已删除 ${sku}`, `${sku} deleted`)); S.cur = null; load(true); });
+      }).catch(x => { t.disabled = false; window.alert?.(x.message || tr('删除失败', 'Could not delete')); });
       return;
     }
     if (t.dataset.plRmfile) { if (!window.confirm?.(tr('删除这个文件？', 'Delete this file?'))) return; ctx.api.request(`/products/library/files/${encodeURIComponent(t.dataset.plRmfile)}`, { method:'DELETE' }).then(() => load(true)).catch(x => toast(x.message)); return; }
@@ -578,6 +607,7 @@ ${cols().map(k => cellOf(k, i)).join('')}</tr>`; }).join('')}</tbody></table>`
     if (el.matches('[data-pl-selall]')) { filteredItems().forEach(i => el.checked ? S.sel.add(i.sku) : S.sel.delete(i.sku)); return rerender(); }
     if (el.matches('[data-pl-bulkkey]')) { S.bulkKey = el.value; S.bulkVal = ''; return rerender(); }
     if (el.matches('[data-pl-bulkval]')) { S.bulkVal = el.value; return rerender(); }
+    if (el.matches('[data-pl-rk]')) { S.rk = el.value; S.pmin = ''; S.pmax = ''; return rerender(); }
     if (el.matches('[data-pl-onlyreq]')) { S.onlyReq = el.checked; return rerender(); }
     if (el.matches('[data-pl-skip]')) { S.skipErrors = el.checked; return rerender(); }
     if (el.matches('[data-pl-s]')) { const path = el.dataset.plS, d = S.draft; if (!d) return;
