@@ -20,7 +20,7 @@ a.pl-btn{text-decoration:none;color:inherit;display:inline-flex;align-items:cent
 .pl-status{font-size:12.5px;color:var(--pl-mute)}.pl-status.ok{color:var(--pl-ok)}.pl-status.err{color:var(--pl-req)}
 .pl-note{font-size:12px;color:var(--pl-mute);margin:6px 0 0}
 .pl-notice{background:var(--pl-warn-bg);color:var(--pl-warn);border-radius:7px;padding:6px 10px;font-size:12.5px;margin-bottom:8px}
-.pl-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+.pl-layout{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px;align-items:start}
 .pl-rail{background:var(--pl-panel);border:1px solid var(--pl-line);border-radius:10px;position:sticky;top:8px;max-height:calc(100vh - 96px);display:flex;flex-direction:column;min-width:0}
 .pl-rail .head{padding:8px;border-bottom:1px solid var(--pl-line);display:flex;flex-direction:column;gap:6px}
 .pl-list{overflow:auto;padding:4px}
@@ -102,10 +102,10 @@ details.pl-grp>summary .no{font-family:var(--pl-num);font-size:12px;color:var(--
 /* Screen sizes: wide screens get a wider list; laptops a narrower one; tablets put the list above the editor; phones one column. */
 @media (min-width:1600px){.pl-fields{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}}
 @media (max-width:1280px){.pl-fields{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}}
-@media (max-width:1100px){.pl-layout{grid-template-columns:minmax(0,1fr)}.pl-rail{position:static;max-height:420px}}
+@media (max-width:1100px){.pl-layout{grid-template-columns:minmax(0,1fr)}.pl-rail{position:static;max-height:75vh}}
 @media (max-width:960px){.pl-slots{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}}
 @media (max-width:600px){.pl-bar .pl-sp{display:none}.pl-bar .pl-btn{flex:1 1 auto;justify-content:center}.pl-fields,.pl-slots{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-  .pl-fld.wide,.pl-slots .pl-fld{grid-column:1/-1}.pl-summary{grid-template-columns:minmax(0,1fr)}.pl-calc,.pl-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.pl-rail{max-height:220px}}
+  .pl-fld.wide,.pl-slots .pl-fld{grid-column:1/-1}.pl-summary{grid-template-columns:minmax(0,1fr)}.pl-calc,.pl-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.pl-rail{max-height:70vh}}
 @media (max-width:400px){.pl-fields{grid-template-columns:minmax(0,1fr)}}
 /* The app's global inputs are 36px tall; inside the library they are compact. */
 html:root .pl :is(input[type=text],input[type=search],input[type=date],input:not([type]),select){min-height:30px;padding:4px 8px;font-size:13px;line-height:1.4}
@@ -137,3 +137,12 @@ html:root .pl .pl-price input{width:100%;min-width:0;text-align:right;padding:4p
 .pl-bulk{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 12px;margin:0 0 6px;border:1px solid var(--pl-accent);border-radius:8px;background:var(--pl-accent-soft);font-size:13px}
 .pl-bulk select,.pl-bulk input[type=text],.pl-bulk input[type=date]{height:30px;border:1px solid var(--pl-line2);border-radius:6px;background:var(--pl-panel);color:var(--pl-ink);padding:0 8px;font:inherit;min-width:0}
 .pl-bulk #pl-bulk-key{max-width:220px}.pl-bulk #pl-bulk-val{max-width:200px}.pl-bulk #pl-bulk-note{flex:1;min-width:140px}
+
+/* Column chooser (2026-11-13): each person picks the fields their list shows. */
+.pl-cols{margin:0 8px 8px;border:1px solid var(--pl-line);border-radius:8px;background:var(--pl-sunk);padding:10px 12px;display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto}
+.pl-cols-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pl-cols-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px 16px}
+.pl-cols fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;min-width:0}
+.pl-cols legend{font-size:12px;font-weight:600;color:var(--pl-mute);margin-bottom:2px}
+.pl-colck{display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer}.pl-colck input{accent-color:var(--pl-accent)}
+.pl-skus td{max-width:260px;overflow-wrap:anywhere}
