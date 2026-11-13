@@ -56,4 +56,11 @@ jobs:
           else
             gh pr edit "${pr}" --repo "${REPO}" --title "${title}" --body "${body}"
           fi
-          gh pr merge "${BRANCH}" --repo "${REPO}" --auto --squash || echo "::warning::Could not turn on auto-merge; enable 'Allow auto-merge' in the API repo settings."
+          # GitHub refuses auto-merge on a PR that looks mergeable before its checks have started ("clean status"), so
+          # try again for up to two minutes while the API repo's CI registers. Never merge directly: CI must pass first.
+          ok=""
+          for i in 1 2 3 4 5 6; do
+            if gh pr merge "${BRANCH}" --repo "${REPO}" --auto --squash; then ok=1; break; fi
+            sleep 20
+          done
+          [ -n "${ok}" ] || echo "::warning::Could not turn on auto-merge; merge the pin PR by hand once its CI passes (or enable 'Allow auto-merge' in the API repo settings)."

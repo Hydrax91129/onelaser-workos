@@ -22,6 +22,9 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.70', date:'2026-11-14T00:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      zh:['补货表只看最近 60 天和 30 天：去掉 365 天、90 天两列，换成 60 天销量；预测月销 = 60% 近 30 天日均 + 40% 近 60 天日均（不再用全年和季节系数），鼠标放在预测月销上看算式；涨跌改为近 30 天比再往前 30 天'],
+      en:['The reorder table looks at the last 60 and 30 days only: 365- and 90-day columns replaced by 60 days; forecast = 60% of the 30-day daily average + 40% of the 60-day one (no yearly or seasonal part), hover it for the sum; trend compares the last 30 days with the 30 before'] },
     { version:'1.69', date:'2026-11-13T22:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       zh:['库存权限加“审批”一档（无 / 查看 / 管理 / 审批）：只有审批人能确认或驳回盘点调整，审批人自己提交的盘点也进“待确认”，由自己点确认生效；公司还没有审批人时由主管理员确认；只有主管理员能设置或取消审批'],
       en:['Stock access gets an Approve level (none / view / manage / approve): only approvers confirm or reject count adjustments, including their own (still a click); a main admin confirms while nobody has it; only main admins grant or remove it'] },
