@@ -117,13 +117,16 @@
       : ui.sort === 'bin' ? binsOf(it, ui.loc)[0] || '\uffff' : ui.sort === 'total' ? total(it) : n(it, ui.sort);
     return list.slice().sort((a, b) => { const x = key(a), y = key(b); return (typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'zh')) * ui.dir; });
   }
+  // OneLaser's own brand and its series come first in brand / series lists (owner, 2026-11-13), then the rest A–Z.
+  const ownFirst = (vals, k, rows, vOf = r => r) => { const own = new Set(rows.filter(r => /onelaser/i.test(String(vOf(r).brand || ''))).map(r => vOf(r)[k]));
+    return [...vals].sort((a, b) => (own.has(b) - own.has(a)) || String(a).localeCompare(String(b))); };
   function filterBar() {
     // Product filters stay visible even when a list is short (owner, 2026-11-12): family (主机 / 配件 / 耗材 …), series, status, brand, MSRP range.
     const fams = data.families || [], noFam = data.items.filter(it => !it.family).length;
-    const series = [...new Set(data.items.filter(it => !ui.fam || it.family === ui.fam).map(it => it.series).filter(Boolean))].sort();
+    const famRows = data.items.filter(it => !ui.fam || it.family === ui.fam), series = ownFirst(new Set(famRows.map(it => it.series).filter(Boolean)), 'series', famRows);
     const base = baseFiltered(), count = k => base.filter(it => stockIs(it, k)).length;
     const active = ui.q || ui.loc || ui.fam || ui.series || ui.status || ui.brand || ui.pmin !== '' || ui.pmax !== '' || ui.qmin !== '' || ui.qmax !== '' || ui.stock;
-    const statuses = data.statuses || [], brands = [...new Set(data.items.map(it => it.brand).filter(Boolean))].sort();
+    const statuses = data.statuses || [], brands = ownFirst(new Set(data.items.map(it => it.brand).filter(Boolean)), 'brand', data.items);
     return `<div class="wms-filters">
       <label class="wms-select">${icon('warehouse')}<select data-wms-loc aria-label="${tr('仓库', 'Warehouse')}"><option value="">${tr('全部仓库（各仓数量）', 'All warehouses (quantities)')}</option>${data.locations.map(l => `<option value="${esc(l.id)}" ${ui.loc === l.id ? 'selected' : ''}>${esc(word(l))} · ${tr('库位', 'bins')}</option>`).join('')}</select></label>
       <label class="wms-select">${icon('funnel')}<select data-wms-fam aria-label="${tr('产品族', 'Family')}"><option value="">${tr('全部产品族', 'All families')}</option>${fams.map(f => `<option value="${esc(f.key)}" ${ui.fam === f.key ? 'selected' : ''}>${esc(word(f))}${cnt(data.items.filter(it => it.family === f.key).length)}</option>`).join('')}${noFam ? `<option value="-" ${ui.fam === '-' ? 'selected' : ''}>${tr('未设置产品族', 'No family')}${cnt(noFam)}</option>` : ''}</select></label>
@@ -211,7 +214,7 @@
   function opForm(type) {
     const locOpts = (sel, name) => `<select name="${name}" required>${data.locations.map(l => `<option value="${esc(l.id)}" ${l.id === sel ? 'selected' : ''}>${esc(word(l))}</option>`).join('')}</select>`;
     // Every goods-in / out / transfer / count can narrow the SKUs by family, series, status and brand (owner, 2026-11-12).
-    const fams = data.families || [], uniq = k => [...new Set(data.items.map(it => it[k]).filter(Boolean))].sort();
+    const fams = data.families || [], uniq = k => ownFirst(new Set(data.items.map(it => it[k]).filter(Boolean)), k, data.items);
     const sel = (attr, label, all, opts) => `<label class="wms-select"><select data-wms-${attr} aria-label="${label}"><option value="">${all}</option>${opts.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('')}</select></label>`;
     return `<form id="wms-op" data-type="${type}" class="wms-form">
       <div class="wms-op-head">

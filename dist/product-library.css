@@ -20,7 +20,7 @@ a.pl-btn{text-decoration:none;color:inherit;display:inline-flex;align-items:cent
 .pl-status{font-size:12.5px;color:var(--pl-mute)}.pl-status.ok{color:var(--pl-ok)}.pl-status.err{color:var(--pl-req)}
 .pl-note{font-size:12px;color:var(--pl-mute);margin:6px 0 0}
 .pl-notice{background:var(--pl-warn-bg);color:var(--pl-warn);border-radius:7px;padding:6px 10px;font-size:12.5px;margin-bottom:8px}
-.pl-layout{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px;align-items:start}
+.pl-layout{display:grid;grid-template-columns:minmax(0,var(--pl-left,3fr)) 10px minmax(0,var(--pl-right,2fr));gap:2px;align-items:stretch}
 .pl-rail{background:var(--pl-panel);border:1px solid var(--pl-line);border-radius:10px;position:sticky;top:8px;max-height:calc(100vh - 96px);display:flex;flex-direction:column;min-width:0}
 .pl-rail .head{padding:8px;border-bottom:1px solid var(--pl-line);display:flex;flex-direction:column;gap:6px}
 .pl-list{overflow:auto;padding:4px}
@@ -139,10 +139,32 @@ html:root .pl .pl-price input{width:100%;min-width:0;text-align:right;padding:4p
 .pl-bulk #pl-bulk-key{max-width:220px}.pl-bulk #pl-bulk-val{max-width:200px}.pl-bulk #pl-bulk-note{flex:1;min-width:140px}
 
 /* Column chooser (2026-11-13): each person picks the fields their list shows. */
-.pl-cols{margin:0 8px 8px;border:1px solid var(--pl-line);border-radius:8px;background:var(--pl-sunk);padding:10px 12px;display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto}
+.pl-cols-scrim{position:fixed;inset:0;background:rgba(10,14,30,.4);z-index:60}
+.pl-cols{position:fixed;z-index:61;top:50%;left:50%;transform:translate(-50%,-50%);width:min(1000px,calc(100vw - 32px));max-height:min(80vh,760px);border:1px solid var(--pl-line);border-radius:12px;background:var(--pl-panel);box-shadow:0 20px 50px rgba(0,0,0,.35);padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.pl-cols-body{overflow:auto;min-height:0}
 .pl-cols-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .pl-cols-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px 16px}
 .pl-cols fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;min-width:0}
 .pl-cols legend{font-size:12px;font-weight:600;color:var(--pl-mute);margin-bottom:2px}
 .pl-colck{display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer}.pl-colck input{accent-color:var(--pl-accent)}
 .pl-skus td{max-width:260px;overflow-wrap:anywhere}
+
+/* Draggable split between the list and the editor (2026-11-13) */
+.pl-split{cursor:col-resize;border-radius:4px;position:relative;touch-action:none;align-self:stretch;min-height:120px}
+.pl-split::after{content:"";position:absolute;top:8px;bottom:8px;left:4px;width:2px;border-radius:2px;background:var(--pl-line)}
+.pl-split:hover::after,.pl-split.on::after,.pl-split:focus-visible::after{background:var(--pl-accent);width:3px;left:3px}
+.pl-split:focus-visible{outline:none}
+.pl-layout>.pl-rail,.pl-layout>.pl-editor{align-self:start}
+@media (max-width:1100px){.pl-layout{grid-template-columns:minmax(0,1fr)!important}.pl-split{display:none}}
+
+/* Retail NPCR tile beside MSRP (2026-11-13) */
+.pl-npcr-v{display:flex;align-items:baseline;gap:8px;min-height:34px;padding:4px 10px;border-radius:6px;background:var(--pl-sunk);font-variant-numeric:tabular-nums}
+.pl-npcr-v b{font-size:18px}.pl-npcr-v span{font-size:12px;color:var(--pl-mute)}
+.pl-npcr-v.good b{color:var(--pl-ok)}.pl-npcr-v.low b{color:var(--pl-warn)}.pl-npcr-v.bad b{color:var(--pl-req)}
+
+/* Table headers: sort hint, drag to reorder (2026-11-13) */
+.pl-th{display:inline-flex;align-items:center;gap:4px}.pl-skus th.num .pl-th{justify-content:flex-end}
+.pl-sorti{font-style:normal;font-size:10px;opacity:.35}.pl-skus th:hover .pl-sorti{opacity:.8}.pl-skus th.sorted .pl-sorti{opacity:1;color:var(--pl-accent)}
+.pl-skus th.pl-movable{cursor:grab}.pl-skus th.dragging{opacity:.45}
+.pl-skus th.drop-l{box-shadow:inset 3px 0 0 var(--pl-accent)}.pl-skus th.drop-r{box-shadow:inset -3px 0 0 var(--pl-accent)}
+.pl-skus td.miss small{color:var(--pl-req)}

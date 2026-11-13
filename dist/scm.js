@@ -26,8 +26,11 @@
       && (!q || [x.sku, x.nameZh, x.nameEn, x.series].some(v => String(v || '').toLowerCase().includes(q))));
   }
   const filtersOn = () => !!(ui.q || ui.life || ui.fam || ui.series || ui.brand || ui.where || ui.qmin || ui.qmax || ui.smin || ui.smax);
+  // OneLaser's own brand and its series come first in brand / series lists (owner, 2026-11-13), then the rest A–Z.
+  const ownFirst = (vals, k, rows, vOf = r => r) => { const own = new Set(rows.filter(r => /onelaser/i.test(String(vOf(r).brand || ''))).map(r => vOf(r)[k]));
+    return [...vals].sort((a, b) => (own.has(b) - own.has(a)) || String(a).localeCompare(String(b))); };
   function skuFilterBar(withSearch) {
-    const it = data.items, uniq = k => [...new Set(it.filter(x => k !== 'series' || !ui.fam || x.family === ui.fam).map(x => x[k]).filter(Boolean))].sort();
+    const it = data.items, uniq = k => { const rows = it.filter(x => k !== 'series' || !ui.fam || x.family === ui.fam); return ownFirst(new Set(rows.map(x => x[k]).filter(Boolean)), k, rows); };
     const sel = (k, all, opts) => `<select class="scm-life-sel" data-scm-f="${k}" aria-label="${esc(all)}"><option value="">${esc(all)}</option>${opts.map(([v, t]) => `<option value="${esc(v)}" ${ui[k] === v ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
     const range = (a, b, label, tip) => `<label class="scm-range" title="${esc(tip)}">${label}<input data-scm-r="${a}" inputmode="numeric" value="${esc(ui[a])}" placeholder="${tr('最少', 'min')}" aria-label="${esc(label + ' ' + tr('最少', 'min'))}">–<input data-scm-r="${b}" inputmode="numeric" value="${esc(ui[b])}" placeholder="${tr('最多', 'max')}" aria-label="${esc(label + ' ' + tr('最多', 'max'))}"></label>`;
     return `<div class="scm-filters">${withSearch ? `<label class="scm-search">${icon('magnifying-glass')}<input data-scm-q value="${esc(ui.q)}" placeholder="${tr('搜索 SKU、名称或系列', 'Search SKU, name or series')}"></label>` : ''}
@@ -386,7 +389,7 @@
   function orderForm(o, prefill) {
     Object.assign(po, { id:o?.id || null, lines:o ? o.lines.map(l => ({ sku:l.sku, qty:String(l.qty), done:l.done })) : prefill ? [{ sku:prefill.sku, qty:String(prefill.qty), done:0 }] : [], q:'', fam:'', series:'', status:'', brand:'',
       supplier:o?.supplier || (prefill && data.items.find(x => x.sku === prefill.sku)?.suppliers?.[0]) || '' });
-    const sups = suppliersAll(), uniq = k => [...new Set(data.items.map(x => x[k]).filter(Boolean))].sort();
+    const sups = suppliersAll(), uniq = k => ownFirst(new Set(data.items.map(x => x[k]).filter(Boolean)), k, data.items);
     const sel = (attr, all, opts, cur = '') => `<label class="wms-select"><select data-po-${attr}><option value="">${all}</option>${opts.map(([v, t]) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>`;
     const FAM = { main:['主机', 'Machine'], acc:['配件/备件', 'Accessory'], cons:['耗材', 'Consumable'], soft:['软件/服务', 'Software'], mat:['内部物料', 'Material'] };
     ctx.modal(o ? tr(`修改采购单 · ${o.number}`, `Edit purchase order · ${o.number}`) : tr('新建采购单', 'New purchase order'), `<form id="scm-po" class="scm-form"><div class="form-grid">
