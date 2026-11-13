@@ -22,6 +22,9 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.67', date:'2026-11-13T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      zh:['供应链补货表的数量一律是整数：DS 三列改成近 365 / 90 / 30 天销量（件），预测日销改成预测月销（件），日均放在鼠标悬停里；近 30 天卖不到 3 件不再显示涨跌箭头；可售天数超过一年显示“1 年以上”', '产品资料可以删除产品（管理信息权限）：已有库存、订单或退货记录的产品不能删，会提示改为“停售”', '产品线 / 系列改为选填', '产品状态改成五个：开发中、上新中、在售、停产清存、下架封存（原来的清库存、计划停售合并为停产清存，停售改为下架封存，已有产品自动转换）'],
+      en:['Supply chain quantities are whole numbers: units sold in 365 / 90 / 30 days, forecast per month, daily averages in the hover; no trend arrow under 3 units in 30 days; days of cover over a year read “1 yr+”', 'Products can be deleted (manage access); a product with stock, orders or returns cannot, set it to Discontinued', 'Product line / series is optional', 'Five product statuses: in development, launching, selling, discontinued (selling off), delisted; existing products move over'] },
     { version:'1.66', date:'2026-11-13T10:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       zh:['退货维修成色改成五档：A 全新（不打折）、B 开箱品（5% off）、C 开箱有使用痕迹（10% off）、D 一般二手（15% off）、E 有损伤但功能正常（20% off）；以前按 B 10% / C 20% 结案的单子保留原折扣，字母改成对应的 C / E', '退货照片可以删除：库存管理的人可删任何照片，维修人员可删自己上传的；处理记录会留一条'],
       en:['Return grades are now A–E: completely new, open box 5% off, open box with signs of use 10% off, regular used 15% off, damaged but functional 20% off; earlier cases keep their discount', 'Return photos can be deleted (managers any, technicians their own); the history keeps a line'] },

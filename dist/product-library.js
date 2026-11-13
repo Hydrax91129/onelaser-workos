@@ -197,7 +197,7 @@
       <div class="sub">${v.family ? `<span class="pl-chip">${esc(famName(v.family))}</span>` : `<span class="pl-chip warn">${tr('先选择产品族', 'Choose a family first')}</span>`}${status ? `<span class="pl-chip ${v.status === 'live' ? 'ok' : ''}">${esc(L(status))}</span>` : ''}${v.goodsType === 'refb' ? `<span class="pl-chip warn">${tr('退货', 'Returned')}</span>` : ''}
       ${v.family ? `<span>${tr(`必填 ${c.got} / ${c.need}`, `Required ${c.got} / ${c.need}`)}</span><span class="pl-meter" aria-hidden="true"><i style="width:${c.need ? Math.round(c.got / c.need * 100) : 0}%"></i></span>` : ''}
       ${it.duplicate ? `<span class="pl-chip req">${tr('SKU 与其他产品重复（只差大小写）', 'SKU duplicates another product (letter case only)')}</span>` : ''}${pending}</div></div>
-      <div>${!viewer().editCatalog && !viewer().editCost && !viewer().editPrices ? '' : `<span class="pl-status ${Object.keys(S.errs).length ? 'err' : 'ok'}">${Object.values(S.saving).some(Boolean) ? tr('保存中…', 'Saving…') : Object.keys(S.errs).length ? tr('有字段没有保存，请看红色提示', 'Some fields were not saved; see the red notes') : S.savedAt ? tr(`已自动保存 ${S.savedAt}`, `Saved automatically ${S.savedAt}`) : tr('修改会自动保存', 'Changes save automatically')}</span>`}</div></div>`;
+      <div>${!viewer().editCatalog && !viewer().editCost && !viewer().editPrices ? '' : `<span class="pl-status ${Object.keys(S.errs).length ? 'err' : 'ok'}">${Object.values(S.saving).some(Boolean) ? tr('保存中…', 'Saving…') : Object.keys(S.errs).length ? tr('有字段没有保存，请看红色提示', 'Some fields were not saved; see the red notes') : S.savedAt ? tr(`已自动保存 ${S.savedAt}`, `Saved automatically ${S.savedAt}`) : tr('修改会自动保存', 'Changes save automatically')}</span>`}${viewer().editCatalog && S.view !== 'pricing' ? `<button type="button" class="pl-btn small pl-del" data-pl-delprod="${esc(it.sku)}" title="${tr('删除这个产品（已有库存、订单或退货记录的产品不能删除，请改为“下架封存”）', 'Delete this product (a product with stock, orders or returns cannot be deleted; set it to Delisted)')}">${tr('删除产品', 'Delete product')}</button>` : ''}</div></div>`;
     // 定价 page: the product's basic facts, then cost (landed + last mile) and the NPCR price calculation; edits save to
     // the same product record, so a new MSRP here is the MSRP in 产品资料 too.
     if (S.mode === 'pricing') {
@@ -339,13 +339,13 @@
   }
 
   /* ---------- saving ---------- */
-  const STATUS_NOTE = new Set(['clearance', 'eolPlanned', 'eol']);
+  const STATUS_NOTE = new Set(['clearance', 'eol']);
   async function saveField(key, raw) {
     const it = itemOf(S.cur); if (!it) return;
     const value = raw === '' ? null : raw;
     if (JSON.stringify(it.values[key] ?? null) === JSON.stringify(value) || String(it.values[key] ?? '') === String(raw)) return;
     let note;
-    if (key === 'status' && STATUS_NOTE.has(value)) { note = (window.prompt?.(tr('转为清库存、计划停售或停售时，请写一句原因：', 'Give a reason for clearance or end of sale:')) || '').trim(); if (!note) { rerender(); return; } }
+    if (key === 'status' && STATUS_NOTE.has(value)) { note = (window.prompt?.(tr('转为停产清存或下架封存时，请写一句原因：', 'Give a reason for clearance or end of sale:')) || '').trim(); if (!note) { rerender(); return; } }
     S.saving[key] = true; delete S.errs[key]; rerender();
     try {
       const r = await ctx.api.request(`/products/library/${encodeURIComponent(it.sku)}`, { method:'PATCH', body:{ values:{ [key]:value }, ...(note ? { note } : {}) } });
@@ -404,7 +404,7 @@
   /* ---------- events (only inside the library) ---------- */
   const inPl = el => !!(ctx && el?.closest?.('.pl'));
   document.addEventListener('click', e => {
-    const t = e.target.closest?.('[data-pl],[data-pl-pick],[data-pl-sort],[data-pl-rmfile],[data-pl-freight],[data-pl-pvf],[data-pl-undo],[data-pl-sadd],[data-pl-srm]');
+    const t = e.target.closest?.('[data-pl],[data-pl-pick],[data-pl-sort],[data-pl-rmfile],[data-pl-delprod],[data-pl-freight],[data-pl-pvf],[data-pl-undo],[data-pl-sadd],[data-pl-srm]');
     if (!t || !inPl(t)) return;
     if (t.dataset.plSort) { const k = t.dataset.plSort; if (S.sort === k) S.dir = -S.dir; else { S.sort = k; S.dir = ['msrp', 'cm'].includes(k) ? -1 : 1; } return rerender(); }
     if (t.dataset.plPick) { S.cur = t.dataset.plPick; S.creating = false; S.errs = {}; S.histOpen = false; return rerender(); }
@@ -412,6 +412,16 @@
     if (t.dataset.plPvf) { S.pvFilter = t.dataset.plPvf; return rerender(); }
     if (t.dataset.plSadd) { const k = t.dataset.plSadd, row = { dtcItems:{ name:'', pct:0 }, whItems:{ name:'', pct:0 }, retailTiers:{ name:'', cm:0, use:'' }, whTiers:{ name:'', discount:0, floor:false } }[k]; S.draft[k].push(row); return rerender(); }
     if (t.dataset.plSrm) { const [k, i] = t.dataset.plSrm.split('.'); S.draft[k].splice(Number(i), 1); return rerender(); }
+    if (t.dataset.plDelprod) {
+      // Delete a product (owner, 2026-11-13): the server refuses a SKU that stock, orders or returns use and says where.
+      const sku = t.dataset.plDelprod;
+      if (!window.confirm?.(tr(`删除产品 ${sku}？\n产品资料、价格、文件会一起删除，不能恢复。\n已有库存、出入库、订单或退货记录的产品不能删除，请改为“下架封存”。`, `Delete product ${sku}?\nIts details, prices and files go too; this cannot be undone.\nA product with stock, movements, orders or returns cannot be deleted; set it to Delisted.`))) return;
+      t.disabled = true;
+      ctx.api.request(`/products/library/${encodeURIComponent(sku)}`, { method:'DELETE' })
+        .then(() => { toast(tr(`已删除 ${sku}`, `${sku} deleted`)); S.cur = null; load(true); })
+        .catch(x => { t.disabled = false; window.alert?.(x.message || tr('删除失败', 'Could not delete')); });
+      return;
+    }
     if (t.dataset.plRmfile) { if (!window.confirm?.(tr('删除这个文件？', 'Delete this file?'))) return; ctx.api.request(`/products/library/files/${encodeURIComponent(t.dataset.plRmfile)}`, { method:'DELETE' }).then(() => load(true)).catch(x => toast(x.message)); return; }
     if (t.dataset.plUndo) { if (!window.confirm?.(tr('撤销这次导入？导入之前的值会恢复；之后又被别人修改过的字段会保留并列出。', 'Undo this import? The earlier values come back; fields changed since are kept and listed.'))) return;
       t.disabled = true; ctx.api.post(`/products/library/imports/${encodeURIComponent(t.dataset.plUndo)}/undo`, {}).then(r => { toast(tr(`已撤销：恢复 ${r.restored} 处，移除新增产品 ${r.removed} 个${r.kept.length ? `，保留 ${r.kept.length} 项` : ''}`, `Undone: ${r.restored} values restored, ${r.removed} new products removed${r.kept.length ? `, ${r.kept.length} kept` : ''}`)); loadImports(); load(true); }).catch(x => { toast(x.message); t.disabled = false; }); return; }

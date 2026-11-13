@@ -129,3 +129,4 @@ html:root .pl .pl-price input{width:100%;min-width:0;text-align:right;padding:4p
 .pl-skus tbody tr{cursor:pointer}.pl-skus tbody tr:hover td{background:var(--pl-sunk)}
 .pl-skus tbody tr[aria-current=true] td{background:var(--pl-accent-soft)}.pl-skus tbody tr[aria-current=true] td:first-child{box-shadow:inset 3px 0 0 var(--pl-accent)}
 @media (max-width:600px){.pl-flt{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.pl-del{margin-left:10px;color:#c62828;border-color:rgba(198,40,40,.35)}.pl-del:hover{background:rgba(198,40,40,.08)}
