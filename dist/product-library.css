@@ -161,3 +161,10 @@ html:root .pl .pl-price input{width:100%;min-width:0;text-align:right;padding:4p
 .pl-npcr-v{display:flex;align-items:baseline;gap:8px;min-height:34px;padding:4px 10px;border-radius:6px;background:var(--pl-sunk);font-variant-numeric:tabular-nums}
 .pl-npcr-v b{font-size:18px}.pl-npcr-v span{font-size:12px;color:var(--pl-mute)}
 .pl-npcr-v.good b{color:var(--pl-ok)}.pl-npcr-v.low b{color:var(--pl-warn)}.pl-npcr-v.bad b{color:var(--pl-req)}
+
+/* Table headers: sort hint, drag to reorder (2026-11-13) */
+.pl-th{display:inline-flex;align-items:center;gap:4px}.pl-skus th.num .pl-th{justify-content:flex-end}
+.pl-sorti{font-style:normal;font-size:10px;opacity:.35}.pl-skus th:hover .pl-sorti{opacity:.8}.pl-skus th.sorted .pl-sorti{opacity:1;color:var(--pl-accent)}
+.pl-skus th.pl-movable{cursor:grab}.pl-skus th.dragging{opacity:.45}
+.pl-skus th.drop-l{box-shadow:inset 3px 0 0 var(--pl-accent)}.pl-skus th.drop-r{box-shadow:inset -3px 0 0 var(--pl-accent)}
+.pl-skus td.miss small{color:var(--pl-req)}

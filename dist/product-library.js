@@ -90,7 +90,16 @@
   /* ---------- list columns each person chooses (owner, 2026-11-13: everyone wants to see different things) ----------
      SKU always shows. The rest: a few built-in columns plus any product field this person may see, remembered per
      person in this browser. */
-  const BUILTIN = () => [['name', tr('产品', 'Product')], ['fam', tr('产品族 / 系列', 'Family / series')], ['status', tr('状态', 'Status')], ['msrp', 'MSRP'], ...(sees('sens') ? [['cm', 'CM']] : []), ['req', tr('必填', 'Req.')]];
+  const BUILTIN = () => [['name', tr('产品', 'Product')], ['fam', tr('产品族 / 系列', 'Family / series')], ['status', tr('状态', 'Status')], ['msrp', 'MSRP'], ...(sees('sens') ? [['cm', 'CM']] : []), ['req', tr('必填完成', 'Required done')]];
+  const BUILTIN_TIP = () => ({ sku:tr('产品资料里的 SKU（唯一编号）。点击排序。', 'The SKU (unique code). Click to sort.'),
+    name:tr('中文名，下面小字是英文名。', 'Product name; the other language below.'), fam:tr('产品族，下面小字是产品线 / 系列。', 'Family; series below.'),
+    status:tr('生命周期状态：开发中 / 上新中 / 在售 / 停产清存 / 下架封存。', 'Lifecycle: in development / launching / selling / discontinued / delisted.'),
+    msrp:tr('零售价 MSRP（美元）。', 'Retail price, MSRP (USD).'), cm:tr('零售 NPCR：MSRP 下的贡献利润率 =（MSRP − 零售费用 − 到岸价 − 尾程运费）÷ MSRP。只有成本权限能看到。', 'Retail NPCR: margin at MSRP = (MSRP − selling cost − landed − last mile) ÷ MSRP. Cost access only.'),
+    req:tr('必填字段已填 / 应填的数量；没填完的写出缺几项，鼠标放上去看缺哪些。', 'Required fields filled / needed; hover to see which are missing.') });
+  const colTip = k => { const extra = k === 'sku' ? '' : tr(' 点击排序，拖动表头调整顺序。', ' Click to sort; drag to reorder.');
+    if (BUILTIN_TIP()[k]) return BUILTIN_TIP()[k] + extra;
+    const f = fieldOf(k), g = f && spec().groups.find(x => x.no === f.group);
+    return f ? `${L(f)}${g ? ` · ${L(g)}` : ''}${f.unit ? ` · ${tr('单位', 'unit')} ${f.unit}` : ''}${f.ph ? ` · ${tr('例如', 'e.g.')} ${tr(f.ph, f.phEn || f.ph)}` : ''}.${extra}` : k; };
   const DEFAULT_COLS = ['name', 'fam', 'status', 'msrp', 'cm', 'req'];
   const NOT_COL = new Set(['sku', 'nameZh', 'nameEn', 'family', 'series', 'status', 'msrp', 'mainImage']);
   const colFields = () => spec().fields.filter(f => f.type !== 'image' && !NOT_COL.has(f.key) && !/^whOv/.test(f.key));
@@ -121,7 +130,8 @@
     if (k === 'status') return `<td>${esc(statusName(v.status) || '—')}</td>`;
     if (k === 'msrp') return `<td class="num">${msrpOf(i) != null ? usd(msrpOf(i)) : '—'}</td>`;
     if (k === 'cm') return `<td class="num ${m ? tone(m.cmPct, D().settings?.dtcFloor) : ''}">${m && m.cmPct != null ? pct(m.cmPct) : '—'}</td>`;
-    if (k === 'req') return `<td class="num ${c.done ? '' : 'miss'}">${c.need ? `${c.got}/${c.need}` : '—'}</td>`;
+    if (k === 'req') { const miss = (c.missing || []).map(x => L(fieldOf(x)) || x);
+      return `<td class="num ${c.done ? '' : 'miss'}" ${miss.length ? `title="${esc(tr(`还缺：${miss.join('、')}`, `Missing: ${miss.join(', ')}`))}"` : ''}>${c.need ? `${c.got}/${c.need}${miss.length ? `<small>${tr(`缺 ${miss.length} 项`, `${miss.length} missing`)}</small>` : ''}` : '—'}</td>`; }
     const raw = v[k], f = fieldOf(k);
     return `<td class="${isNumCol(k) ? 'num' : ''}">${raw == null || raw === '' ? '—' : esc(f?.type === 'enum' ? optLabel(f, raw) : f?.type === 'price' ? usd(Number(raw)) : String(raw))}</td>`;
   }
@@ -155,7 +165,9 @@
     const gtOpts = fieldOf('goodsType')?.opts || [];
     const sel = (k, label, opts) => `<select data-pl-flt="${k}" aria-label="${esc(label)}"><option value="">${esc(label)}</option>${opts.map(([v, n]) => `<option value="${esc(v)}" ${S[k] === v ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
     const active = S.q || S.fam || S.series || S.status || S.gt || S.brand || S.pmin !== '' || S.pmax !== '' || S.onlyReq;
-    const th = (k, label, cls = '') => `<th class="${cls} ${S.sort === k ? 'sorted' : ''}" data-pl-sort="${k}">${label}${S.sort === k ? (S.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
+    // Every header explains itself on hover, shows it can sort (▲▼ when sorted, a faint ↕ otherwise) and, except SKU, can be dragged
+    // to another place; the order is saved with the person's columns (owner, 2026-11-13).
+    const th = (k, label, cls = '') => `<th class="${cls} ${S.sort === k ? 'sorted' : ''} ${k !== 'sku' ? 'pl-movable' : ''}" data-pl-sort="${k}" ${k !== 'sku' ? `draggable="true" data-pl-colh="${esc(k)}"` : ''} title="${esc(colTip(k))}"><span class="pl-th">${label}<i class="pl-sorti" aria-hidden="true">${S.sort === k ? (S.dir > 0 ? '▲' : '▼') : '↕'}</i></span></th>`;
     const canBulk = bulkFields().length > 0;
     for (const k of [...S.sel]) if (!itemOf(k)) S.sel.delete(k);
     return `<aside class="pl-rail"><div class="head">
@@ -480,6 +492,17 @@ ${cols().map(k => cellOf(k, i)).join('')}</tr>`; }).join('')}</tbody></table>`
   function loadHistory(sku) { ctx.api.get(`/products/library/${encodeURIComponent(sku)}/history`).then(r => { S.history[sku] = r.items || []; }).catch(() => { S.history[sku] = []; }).finally(rerender); }
   const setPath = (o, path, v) => { const ks = path.split('.'); let x = o; for (const k of ks.slice(0, -1)) x = x[k]; x[ks[ks.length - 1]] = v; };
   const numOrNull = v => { const s = String(v).trim().replace('%', ''); if (s === '') return null; const n = Number(s); return Number.isFinite(n) ? n : NaN; };
+
+  /* ---------- drag a header to reorder the columns ---------- */
+  let dragCol = null;
+  document.addEventListener('dragstart', e => { const h = e.target.closest?.('[data-pl-colh]'); if (!h || !ctx) return; dragCol = h.dataset.plColh; h.classList.add('dragging'); try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragCol); } catch { /* old browser */ } });
+  document.addEventListener('dragover', e => { const h = e.target.closest?.('[data-pl-colh]'); if (!h || !dragCol) return; e.preventDefault();
+    document.querySelectorAll('.pl-skus th.drop-l, .pl-skus th.drop-r').forEach(x => x.classList.remove('drop-l', 'drop-r'));
+    const r = h.getBoundingClientRect(); h.classList.add(e.clientX < r.left + r.width / 2 ? 'drop-l' : 'drop-r'); });
+  document.addEventListener('drop', e => { const h = e.target.closest?.('[data-pl-colh]'); if (!h || !dragCol) return; e.preventDefault();
+    const to = h.dataset.plColh, before = h.classList.contains('drop-l'), cur = cols().filter(k => k !== dragCol); let i = cur.indexOf(to); if (i < 0) return;
+    if (!before) i += 1; cur.splice(i, 0, dragCol); saveCols(cur); dragCol = null; rerender(); });
+  document.addEventListener('dragend', () => { dragCol = null; document.querySelectorAll('.pl-skus th.dragging, .pl-skus th.drop-l, .pl-skus th.drop-r').forEach(x => x.classList.remove('dragging', 'drop-l', 'drop-r')); });
 
   /* ---------- drag the split ---------- */
   document.addEventListener('pointerdown', e => {
