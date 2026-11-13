@@ -22,6 +22,9 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.71', date:'2026-11-14T01:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      zh:['产品资料：左边的产品列表加宽（约占 60%）；列表右上“显示列”可以自己选显示哪些参数（产品资料里你有权限看的字段都能选），每个人分开记在自己的浏览器里，可恢复默认，任何一列都能点表头排序'],
+      en:['Product library: the product list is wider (about 60%); “Columns” lets each person choose which fields the list shows (any field you may see), remembered per person in this browser, with Reset; every column sorts from its header'] },
     { version:'1.70', date:'2026-11-14T00:30:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       zh:['补货表只看最近 60 天和 30 天：去掉 365 天、90 天两列，换成 60 天销量；预测月销 = 60% 近 30 天日均 + 40% 近 60 天日均（不再用全年和季节系数），鼠标放在预测月销上看算式；涨跌改为近 30 天比再往前 30 天'],
       en:['The reorder table looks at the last 60 and 30 days only: 365- and 90-day columns replaced by 60 days; forecast = 60% of the 30-day daily average + 40% of the 60-day one (no yearly or seasonal part), hover it for the sum; trend compares the last 30 days with the 30 before'] },

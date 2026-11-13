@@ -87,6 +87,41 @@
     } catch (x) { window.alert?.(x.message); btn.disabled = false; }
   }
 
+  /* ---------- list columns each person chooses (owner, 2026-11-13: everyone wants to see different things) ----------
+     SKU always shows. The rest: a few built-in columns plus any product field this person may see, remembered per
+     person in this browser. */
+  const BUILTIN = () => [['name', tr('产品', 'Product')], ['fam', tr('产品族 / 系列', 'Family / series')], ['status', tr('状态', 'Status')], ['msrp', 'MSRP'], ...(sees('sens') ? [['cm', 'CM']] : []), ['req', tr('必填', 'Req.')]];
+  const DEFAULT_COLS = ['name', 'fam', 'status', 'msrp', 'cm', 'req'];
+  const NOT_COL = new Set(['sku', 'nameZh', 'nameEn', 'family', 'series', 'status', 'msrp', 'mainImage']);
+  const colFields = () => spec().fields.filter(f => f.type !== 'image' && !NOT_COL.has(f.key) && !/^whOv/.test(f.key));
+  const colKey = () => `workos.pl.cols.${ctx?.state?.()?.actor?.id || 'me'}`;
+  function cols() {
+    if (!S.cols) { try { S.cols = JSON.parse(localStorage.getItem(colKey()) || 'null'); } catch { S.cols = null; } if (!Array.isArray(S.cols)) S.cols = [...DEFAULT_COLS]; }
+    const ok = new Set([...BUILTIN().map(b => b[0]), ...colFields().map(f => f.key)]);
+    return S.cols.filter(k => ok.has(k));
+  }
+  function saveCols(next) { S.cols = next; try { localStorage.setItem(colKey(), JSON.stringify(next)); } catch { /* private window */ } }
+  const colLabel = k => BUILTIN().find(b => b[0] === k)?.[1] || L(fieldOf(k)) || k;
+  const isNumCol = k => ['msrp', 'cm', 'req'].includes(k) || ['number', 'price'].includes(fieldOf(k)?.type);
+  function colsPanel() {
+    const cur = new Set(cols()), box = (k, label) => `<label class="pl-colck"><input type="checkbox" data-pl-col="${esc(k)}" ${cur.has(k) ? 'checked' : ''}> ${esc(label)}</label>`;
+    const groups = [...spec().groups].sort((a, b) => Number(a.disp || a.no) - Number(b.disp || b.no)).map(g => [L(g), colFields().filter(f => f.group === g.no)]).filter(([, fs]) => fs.length);
+    return `<div class="pl-cols" role="dialog" aria-label="${tr('选择显示的列', 'Choose columns')}"><div class="pl-cols-head"><b>${tr('列表显示哪些参数', 'Columns to show')}</b><span class="pl-meta">${tr('只影响你自己的列表，记在这个浏览器里', 'Only your own list, remembered in this browser')}</span><span class="pl-sp"></span><button class="pl-link" data-pl="cols-reset">${tr('恢复默认', 'Reset')}</button><button class="pl-btn primary" data-pl="cols">${tr('完成', 'Done')}</button></div>
+      <div class="pl-cols-grid"><fieldset><legend>${tr('常用', 'Common')}</legend>${BUILTIN().map(([k, l]) => box(k, l)).join('')}</fieldset>${groups.map(([g, fs]) => `<fieldset><legend>${esc(g)}</legend>${fs.map(f => box(f.key, L(f))).join('')}</fieldset>`).join('')}</div></div>`;
+  }
+  function cellOf(k, i) {
+    const v = i.values, m = i.pricing?.fixed?.[0], c = i.completeness || {}, other = lang() === 'en' ? v.nameZh : v.nameEn;
+    const statusName = x => L(spec().statuses.find(s => s.key === x)) || '';
+    if (k === 'name') return `<td class="nm">${esc(nameOf(i) || tr('未命名', 'Unnamed'))}${other && other !== nameOf(i) ? `<small>${esc(other)}</small>` : ''}</td>`;
+    if (k === 'fam') return `<td>${esc(famName(v.family) || '—')}${v.series ? `<small>${esc(v.series)}</small>` : ''}</td>`;
+    if (k === 'status') return `<td>${esc(statusName(v.status) || '—')}</td>`;
+    if (k === 'msrp') return `<td class="num">${msrpOf(i) != null ? usd(msrpOf(i)) : '—'}</td>`;
+    if (k === 'cm') return `<td class="num ${m ? tone(m.cmPct, D().settings?.dtcFloor) : ''}">${m && m.cmPct != null ? pct(m.cmPct) : '—'}</td>`;
+    if (k === 'req') return `<td class="num ${c.done ? '' : 'miss'}">${c.need ? `${c.got}/${c.need}` : '—'}</td>`;
+    const raw = v[k], f = fieldOf(k);
+    return `<td class="${isNumCol(k) ? 'num' : ''}">${raw == null || raw === '' ? '—' : esc(f?.type === 'enum' ? optLabel(f, raw) : f?.type === 'price' ? usd(Number(raw)) : String(raw))}</td>`;
+  }
+
   /* ---------- rail ---------- */
   /* Left half: the SKU list as a table with filters (family, series, status, new/returned, brand, MSRP range,
      incomplete only) and sortable columns; the right half is the selected product. */
@@ -99,7 +134,8 @@
         && (!S.gt || (v.goodsType || 'bulk') === S.gt) && (!S.brand || v.brand === S.brand) && (lo == null || (m != null && m >= lo)) && (hi == null || (m != null && m <= hi))
         && (!S.onlyReq || !i.completeness?.done) && (!q || [i.sku, v.nameZh, v.nameEn, v.series, v.brand, v.upc, v.refbSku].some(x => String(x || '').toLowerCase().includes(q))); });
     const key = i => S.sort === 'name' ? nameOf(i) : S.sort === 'fam' ? famName(i.values.family) + (i.values.series || '') : S.sort === 'status' ? String(i.values.status || '')
-      : S.sort === 'msrp' ? msrpOf(i) ?? -1 : S.sort === 'cm' ? i.pricing?.fixed?.[0]?.cmPct ?? -999 : S.sort === 'req' ? (i.completeness?.need ? i.completeness.got / i.completeness.need : 1) : i.sku;
+      : S.sort === 'msrp' ? msrpOf(i) ?? -1 : S.sort === 'cm' ? i.pricing?.fixed?.[0]?.cmPct ?? -999 : S.sort === 'req' ? (i.completeness?.need ? i.completeness.got / i.completeness.need : 1)
+      : S.sort !== 'sku' && fieldOf(S.sort) ? (isNumCol(S.sort) ? Number(i.values[S.sort] ?? -1) : String(i.values[S.sort] ?? '')) : i.sku;
     return list.sort((a, b) => { const x = key(a), y = key(b); return (typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'zh')) * S.dir; });
   }
   function rail() {
@@ -110,7 +146,7 @@
     const sel = (k, label, opts) => `<select data-pl-flt="${k}" aria-label="${esc(label)}"><option value="">${esc(label)}</option>${opts.map(([v, n]) => `<option value="${esc(v)}" ${S[k] === v ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
     const active = S.q || S.fam || S.series || S.status || S.gt || S.brand || S.pmin !== '' || S.pmax !== '' || S.onlyReq;
     const th = (k, label, cls = '') => `<th class="${cls} ${S.sort === k ? 'sorted' : ''}" data-pl-sort="${k}">${label}${S.sort === k ? (S.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
-    const cmOn = sees('sens'), canBulk = bulkFields().length > 0;
+    const canBulk = bulkFields().length > 0;
     for (const k of [...S.sel]) if (!itemOf(k)) S.sel.delete(k);
     return `<aside class="pl-rail"><div class="head">
       <input type="search" data-pl-q placeholder="${tr('搜索 SKU、中英文名、系列、品牌、UPC', 'Search SKU, names, series, brand, UPC')}" value="${esc(S.q)}" aria-label="${tr('搜索产品', 'Search products')}">
@@ -123,14 +159,11 @@
         <label class="pl-price">MSRP $<input data-pl-p="pmin" inputmode="decimal" value="${esc(S.pmin)}" placeholder="${tr('最低', 'min')}" aria-label="${tr('最低 MSRP', 'Min MSRP')}">–<input data-pl-p="pmax" inputmode="decimal" value="${esc(S.pmax)}" placeholder="${tr('最高', 'max')}" aria-label="${tr('最高 MSRP', 'Max MSRP')}"></label>
       </div>
       <div class="pl-flt-foot"><label class="pl-chk"><input type="checkbox" data-pl-onlyreq ${S.onlyReq ? 'checked' : ''}> ${tr('仅看必填未完成', 'Only incomplete')} ${inc ? `<span class="pl-chip req">${tr(`${inc} 个待补`, `${inc} to fill`)}</span>` : ''}</label>
-        <span class="pl-sp"></span><span class="pl-meta">${tr(`显示 ${list.length} / ${all.length} 个 SKU`, `${list.length} of ${all.length} SKUs`)}</span>${active ? `<button class="pl-link" data-pl="clear-filters">${tr('清除筛选', 'Clear')}</button>` : ''}</div>
-    </div>${canBulk && S.sel.size ? bulkBar() : ''}<div class="pl-list">${list.length ? `<table class="pl-skus"><thead><tr>${canBulk ? `<th class="ck"><input type="checkbox" data-pl-selall ${list.every(i => S.sel.has(i.sku)) ? 'checked' : ''} aria-label="${tr('全选当前列表', 'Select all listed')}" title="${tr('全选当前筛选出的 SKU', 'Select every SKU in this list')}"></th>` : ''}${th('sku', 'SKU')}${th('name', tr('产品', 'Product'))}${th('fam', tr('产品族 / 系列', 'Family / series'))}${th('status', tr('状态', 'Status'))}${th('msrp', 'MSRP', 'num')}${cmOn ? th('cm', 'CM', 'num') : ''}${th('req', tr('必填', 'Req.'), 'num')}</tr></thead><tbody>
+        <span class="pl-sp"></span><span class="pl-meta">${tr(`显示 ${list.length} / ${all.length} 个 SKU`, `${list.length} of ${all.length} SKUs`)}</span>${active ? `<button class="pl-link" data-pl="clear-filters">${tr('清除筛选', 'Clear')}</button>` : ''}<button class="pl-link" data-pl="cols" aria-expanded="${!!S.colsOpen}" title="${tr('选择列表里显示哪些参数', 'Choose which fields the list shows')}">⚙ ${tr('显示列', 'Columns')}</button></div>
+    </div>${S.colsOpen ? colsPanel() : ''}${canBulk && S.sel.size ? bulkBar() : ''}<div class="pl-list">${list.length ? `<table class="pl-skus"><thead><tr>${canBulk ? `<th class="ck"><input type="checkbox" data-pl-selall ${list.every(i => S.sel.has(i.sku)) ? 'checked' : ''} aria-label="${tr('全选当前列表', 'Select all listed')}" title="${tr('全选当前筛选出的 SKU', 'Select every SKU in this list')}"></th>` : ''}${th('sku', 'SKU')}${cols().map(k => th(k, esc(colLabel(k)), isNumCol(k) ? 'num' : '')).join('')}</tr></thead><tbody>
       ${list.map(i => { const v = i.values, m = i.pricing?.fixed?.[0], c = i.completeness || {}, other = lang() === 'en' ? v.nameZh : v.nameEn;
         return `<tr data-pl-pick="${esc(i.sku)}" aria-current="${i.sku === S.cur}" ${S.sel.has(i.sku) ? 'data-sel="1"' : ''}>${canBulk ? `<td class="ck"><input type="checkbox" data-pl-sel="${esc(i.sku)}" ${S.sel.has(i.sku) ? 'checked' : ''} aria-label="${tr(`选择 ${esc(i.sku)}`, `Select ${esc(i.sku)}`)}"></td>` : ''}<td class="sku">${c.done ? '' : `<span class="pl-dot" title="${tr('必填未完成', 'Required fields missing')}"></span>`}${esc(i.sku)}${v.goodsType === 'refb' ? ` <span class="pl-chip warn">${tr('退货', 'Ret.')}</span>` : ''}</td>
-          <td class="nm">${esc(nameOf(i) || tr('未命名', 'Unnamed'))}${other && other !== nameOf(i) ? `<small>${esc(other)}</small>` : ''}</td>
-          <td>${esc(famName(v.family) || '—')}${v.series ? `<small>${esc(v.series)}</small>` : ''}</td><td>${esc(statusName(v.status) || '—')}</td>
-          <td class="num">${msrpOf(i) != null ? usd(msrpOf(i)) : '—'}</td>${cmOn ? `<td class="num ${m ? tone(m.cmPct, D().settings?.dtcFloor) : ''}">${m && m.cmPct != null ? pct(m.cmPct) : '—'}</td>` : ''}
-          <td class="num ${c.done ? '' : 'miss'}">${c.need ? `${c.got}/${c.need}` : '—'}</td></tr>`; }).join('')}</tbody></table>`
+${cols().map(k => cellOf(k, i)).join('')}</tr>`; }).join('')}</tbody></table>`
       : `<div class="pl-empty">${S.onlyReq ? tr('没有必填未完成的产品', 'No incomplete products') : all.length ? tr('没有匹配的产品，试试清除筛选', 'No matching products; try clearing the filters') : tr('还没有产品。产品经理可以点“新建产品”录入第一个 SKU；有批量更新权限的同事可以下载标准模板，填好后点“批量更新”上传。', 'No products yet. Product managers can add the first SKU; people allowed to bulk-update can fill in the template and upload it with Bulk update.')}</div>`}</div></aside>`;
   }
 
@@ -474,6 +507,8 @@
     if (a === 'preview-cancel') { S.preview = null; S.view = 'products'; return rerender(); }
     if (a === 'confirm') return confirmImport(t);
     if (a === 'bulk-apply') return bulkApply(t);
+    if (a === 'cols') { S.colsOpen = !S.colsOpen; return rerender(); }
+    if (a === 'cols-reset') { saveCols([...DEFAULT_COLS]); return rerender(); }
     if (a === 'bulk-clear') { S.sel.clear(); S.bulkVal = ''; S.bulkNote = ''; return rerender(); }
     if (a === 'settings-reset') { S.draft = null; return rerender(); }
     if (a === 'settings-save') { const body = JSON.parse(JSON.stringify(S.draft)); delete body.updatedAt; delete body.configured;
@@ -488,6 +523,7 @@
     if (el.matches('[data-pl-import]')) { const f = el.files?.[0]; el.value = ''; return previewFile(f); }
     if (el.matches('[data-pl-flt]')) { S[el.dataset.plFlt] = el.value; if (el.dataset.plFlt === 'fam') S.series = ''; return rerender(); }
     if (el.matches('[data-pl-p]')) { const v = el.value.trim().replace(/[$,]/g, ''); S[el.dataset.plP] = v !== '' && Number.isFinite(Number(v)) ? v : ''; return rerender(); }
+    if (el.matches('[data-pl-col]')) { const k = el.dataset.plCol, cur = cols(); saveCols(el.checked ? [...cur.filter(x => x !== k), k] : cur.filter(x => x !== k)); return rerender(); }
     if (el.matches('[data-pl-sel]')) { el.checked ? S.sel.add(el.dataset.plSel) : S.sel.delete(el.dataset.plSel); return rerender(); }
     if (el.matches('[data-pl-selall]')) { filteredItems().forEach(i => el.checked ? S.sel.add(i.sku) : S.sel.delete(i.sku)); return rerender(); }
     if (el.matches('[data-pl-bulkkey]')) { S.bulkKey = el.value; S.bulkVal = ''; return rerender(); }
