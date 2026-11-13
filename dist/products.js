@@ -24,8 +24,8 @@
   const nameText = p => typeof p.name === 'object' ? `${p.name.zh} ${p.name.en}` : String(p.name || '');
 
   /* ---------- statuses (supply-chain status used in the SKU master sheet) ---------- */
-  const STATUS = { dev:['开发中','In development','#a25ddc'], launch:['上新中','Launching','#579bfc'], live:['在售','Selling','#00c875'], clearance:['清库存','Clearance','#fdab3d'], eolPlanned:['计划停售','Phasing out','#e2445c'], eol:['停售','Discontinued','#9699a6'], none:['未标注','Unlabeled','#c4c4c4'] };
-  const STATUS_FROM_ZH = { '开发中':'dev', '上新中':'launch', '在售':'live', '清库存':'clearance', '计划停售':'eolPlanned', '停售':'eol' };
+  const STATUS = { dev:['开发中','In development','#a25ddc'], launch:['上新中','Launching','#579bfc'], live:['在售','Selling','#00c875'], clearance:['停产清存','Discontinued, selling off','#fdab3d'], eolPlanned:['停产清存','Discontinued, selling off','#fdab3d'], eol:['下架封存','Delisted','#9699a6'], none:['未标注','Unlabeled','#c4c4c4'] };
+  const STATUS_FROM_ZH = { '开发中':'dev', '上新中':'launch', '在售':'live', '停产清存':'clearance', '下架封存':'eol', '清库存':'clearance', '计划停售':'clearance', '停售':'eol' };
   const iconFor = t => /整机/.test(t) ? 'cube' : /材料/.test(t) ? 'stack' : /课程/.test(t) ? 'graduation-cap' : 'wrench';
 
   /* ---------- data: real data is injected at runtime (never committed); otherwise fictional samples ---------- */
@@ -34,7 +34,7 @@
     { sku:'DEMO-COB-40', name:{ zh:'示例 · 40W 桌面激光机', en:'Sample · 40W desktop laser' }, type:'示例整机', status:'上新中', gross:60, dims:[95, 65, 40], factoryRmb:7200, ddpRate:16.8, lastMileRmb:2800, msrp:2999, low:2499, shipFee:299, lead:'30天左右' },
     { sku:'DEMO-FBR-30', name:{ zh:'示例 · 30W 光纤打标机', en:'Sample · 30W fiber marker' }, type:'示例整机', status:'开发中', gross:27, dims:[77, 46, 46], factoryRmb:7500, ddpRate:14, lastMileRmb:480, msrp:2499, low:1999, shipFee:199, lead:'30天左右' },
     { sku:'DEMO-ACC-ROT', name:{ zh:'示例 · 旋转轴', en:'Sample · rotary axis' }, type:'配件', status:'在售', gross:5, dims:[40, 20, 18], factoryRmb:520, ddpRate:14.6, msrp:299, shipFee:29, lead:'8-15个工作日' },
-    { sku:'DEMO-ACC-AF', name:{ zh:'示例 · 烟雾净化器', en:'Sample · fume extractor' }, type:'配件', status:'清库存', gross:28, dims:[50, 45, 75], factoryRmb:2100, ddpRate:14.6, lastMileRmb:170, msrp:899, shipFee:79, lead:'22天左右' },
+    { sku:'DEMO-ACC-AF', name:{ zh:'示例 · 烟雾净化器', en:'Sample · fume extractor' }, type:'配件', status:'停产清存', gross:28, dims:[50, 45, 75], factoryRmb:2100, ddpRate:14.6, lastMileRmb:170, msrp:899, shipFee:79, lead:'22天左右' },
   ];
   const injected = window.WORKOS_PRODUCT_DATA;
   let source = injected?.source || tr('示例数据', 'Sample data');
@@ -488,9 +488,9 @@
         </div>
         <aside class="pd-side">
           <section class="pd-card"><h3>${tr('产品生命周期', 'Product lifecycle')}</h3>
-            <ol class="pd-life">${['dev', 'launch', 'live', 'clearance', 'eolPlanned', 'eol'].map((k, i, arr) => `<li class="${k === p.status ? 'on' : arr.indexOf(p.status) > i ? 'past' : ''}"><i style="--c:${STATUS[k][2]}"></i>${esc(tr(STATUS[k][0], STATUS[k][1]))}</li>`).join('')}</ol>
+            <ol class="pd-life">${['dev', 'launch', 'live', 'clearance', 'eol'].map((k, i, arr) => `<li class="${k === p.status ? 'on' : arr.indexOf(p.status) > i ? 'past' : ''}"><i style="--c:${STATUS[k][2]}"></i>${esc(tr(STATUS[k][0], STATUS[k][1]))}</li>`).join('')}</ol>
             ${!isNew && ed ? (options.length ? `<div class="pd-status-form"><select class="pd-select" data-pd-status>${options.map(k => `<option value="${k}">${esc(tr(STATUS[k][0], STATUS[k][1]))}</option>`).join('')}</select>
-              <label class="pd-field"><span>${tr('原因（转清库存、计划停售、停售时必填）', 'Reason (required for clearance or leaving sale)')}</span><input data-pd-status-note></label>
+              <label class="pd-field"><span>${tr('原因（转停产清存、下架封存时必填）', 'Reason (required when discontinuing or delisting)')}</span><input data-pd-status-note></label>
               <button class="pd-btn" data-pd="status-save">${icon('arrow-right')} ${tr('更改状态', 'Change status')}</button></div>` : `<p class="pd-hint">${tr('已停售。需要重新上架请联系管理员。', 'Discontinued. Ask an admin to bring it back.')}</p>`) : ''}</section>
           ${isNew ? '' : historyCard(p.sku, ['msrp'])}
         </aside>
@@ -679,7 +679,7 @@
         ['lead', '交期', ['交期', 'leadtime', 'lead']], ['msrp', '零售价MSRP', ['零售价msrp', '零售价', 'msrp']], ['low', '最低价LowPrice', ['最低价lowprice', '最低价', 'lowprice', 'low']], ['shipFee', '结账运费', ['结账运费', '运费', 'shippingfee', 'shipfee']],
         ['best', '最优发货方式', ['最优发货方式', 'bestshipping', 'best']], ['note', '备注', ['备注', 'note', 'notes']]],
       example:'EXAMPLE-SKU-01,示例 60W 激光雕刻机,Sample 60W laser,示例整机,在售,120,120,90,70,30天左右,4999,4299,399,海运+尾程,示例备注',
-      hint:['把产品总表在 Excel 里“另存为 CSV（UTF-8）”后上传。只有 SKU 必填；空白格表示“不修改”，所以可以只放要更新的几列。供应链状态写：开发中 / 上新中 / 在售 / 清库存 / 计划停售 / 停售。', 'In Excel, save the product sheet as “CSV UTF-8” and upload it. Only SKU is required; blank cells mean “leave unchanged”, so you can include just the columns to update. Status: 开发中 / 上新中 / 在售 / 清库存 / 计划停售 / 停售.'] },
+      hint:['把产品总表在 Excel 里“另存为 CSV（UTF-8）”后上传。只有 SKU 必填；空白格表示“不修改”，所以可以只放要更新的几列。供应链状态写：开发中 / 上新中 / 在售 / 停产清存 / 下架封存。', 'In Excel, save the product sheet as “CSV UTF-8” and upload it. Only SKU is required; blank cells mean “leave unchanged”, so you can include just the columns to update. Status: 开发中 / 上新中 / 在售 / 停产清存 / 下架封存.'] },
     pricing:{ title:['导入成本数据', 'Import cost data'], file:'products-cost-template.csv', url:'/products/pricing/import',
       cols:[['sku', 'SKU', ['sku']], ['factoryRmb', '工厂价(RMB)', ['工厂价rmb', '工厂价', 'factoryrmb']], ['factoryUsd', '工厂价(USD)', ['工厂价usd', 'factoryusd']], ['extraRmb', '额外成本(RMB)', ['额外成本rmb', '额外成本', 'extrarmb']],
         ['ddpRate', 'DDP单价(RMB/kg)', ['ddp单价rmbkg', 'ddp单价', 'ddprate', 'ddp']], ['lastMileRmb', '尾程(RMB)', ['尾程rmb', '尾程', 'lastmilermb', 'lastmile']]],

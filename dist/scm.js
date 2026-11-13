@@ -25,8 +25,8 @@
   const TREND_MIN = 3;
   const dsTip = (n, days) => tr(`日均 ${(n / days).toFixed(2)} 件`, `${(n / days).toFixed(2)} a day`);
   const daysText = d => d == null ? '—' : d > 365 ? tr('1 年以上', '1 yr+') : fmt(d) + tr(' 天', 'd');
-  /* PIM 生命周期 (product_catalog.status); 清库存 / 计划停售 / 停售 are sold down, never produced again. */
-  const LIFE = { dev:['开发中', 'In development', 'grey'], launch:['上新中', 'Launching', 'blue'], live:['在售', 'Selling', 'green'], clearance:['清库存', 'Clearance', 'amber'], eolPlanned:['计划停售', 'Phasing out', 'amber'], eol:['停售', 'Discontinued', 'grey'] };
+  /* PIM 生命周期 (product_catalog.status, five since 2026-11-13); 停产清存 / 下架封存 are sold down, never produced again. */
+  const LIFE = { dev:['开发中', 'In development', 'grey'], launch:['上新中', 'Launching', 'blue'], live:['在售', 'Selling', 'green'], clearance:['停产清存', 'Discontinued, selling off', 'amber'], eol:['下架封存', 'Delisted', 'grey'] };
   // 头程 / 尾程 and their default days (owner, 2026-11-12)
   const FIRST_LEG = { air:['空运', 'Air', 7], oa:['OA 普船', 'OA standard ship', 30], fast:['快船', 'Fast ship', 20], matson:['美森特快', 'Matson express', 15] };
   const LAST_LEG = { express:['快递', 'Parcel', 3], port:['港到仓', 'Port to warehouse', 4], truck:['卡派', 'Truck delivery', 7] };
@@ -73,7 +73,7 @@
   const COLS = () => { const s = data.settings; return [
     ['sku', 'SKU', tr('产品资料里的 SKU。', 'The SKU in the product library.')],
     ['', tr('产品', 'Product'), tr('产品资料里的名称。', 'Name from the product library.')],
-    ['lifecycle', tr('SKU 状态', 'SKU status'), tr('产品资料“生命周期”里的状态：开发中 / 上新中 / 在售 / 清库存 / 计划停售 / 停售。清库存、计划停售、停售的 SKU 只卖完现有货：不建议生产，也不报缺货风险。', 'Lifecycle from the product library. Clearance, phasing out and discontinued SKUs are sold down: no production suggested and no stockout risk.')],
+    ['lifecycle', tr('SKU 状态', 'SKU status'), tr('产品资料“生命周期”里的状态：开发中 / 上新中 / 在售 / 停产清存 / 下架封存。停产清存、下架封存的 SKU 只卖完现有货：不建议生产，也不报缺货风险。', 'Lifecycle from the product library. Discontinued and delisted SKUs are sold down: no production suggested and no stockout risk.')],
     ['sold365', tr('365 天销量', 'Sold · 365d'), tr('过去 365 天卖出的件数（Shopify 订单，取消和测试单不算）。鼠标放在数字上看日均（DS）。', 'Units sold in the last 365 days (Shopify; cancelled and test orders excluded). Hover a number for the daily average (DS).'), 'num'],
     ['sold90', tr('90 天销量', 'Sold · 90d'), tr('过去 90 天卖出的件数。鼠标放在数字上看日均。', 'Units sold in the last 90 days. Hover for the daily average.'), 'num'],
     ['sold30', tr('30 天销量', 'Sold · 30d'), tr(`过去 30 天卖出的件数。▲▼ 是近 30 天日均和近 90 天日均比的涨跌（30% 以上算短期爆发或下滑）；近 30 天卖不到 ${TREND_MIN} 件时样本太少，不显示。`, `Units sold in the last 30 days. ▲▼ compares the 30-day daily average with the 90-day one (30%+ is a burst or dip), shown only with ${TREND_MIN}+ units in 30 days.`), 'num'],
