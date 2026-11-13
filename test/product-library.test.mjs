@@ -47,6 +47,7 @@ function load(data, { confirm = true, prompt = '' } = {}) {
   window.confirm = () => confirm; window.prompt = () => prompt;
   window.fetch = async url => { fetches.push(url); return { ok:true, headers:{ get:() => "attachment; filename*=UTF-8''x.xlsx" }, blob:async () => ({}) }; };
   const context = { window, document, requestAnimationFrame:fn => fn(), Intl, Date, console, URL:{ createObjectURL:() => 'blob:x', revokeObjectURL() {} }, setTimeout, FileReader, fetch:window.fetch };
+  vm.runInNewContext(read('multi-select.js'), context);
   vm.runInNewContext(read('product-library.js'), context);
   // The permissions button comes from erp-access.js; this stub shows it as the main admin would see it.
   window.WorkOSErpAccess = { button:(area, cls) => `<a class="${cls}" href="#erp-access/${area}">${area === 'pricing' ? '价格权限' : '产品资料权限'}</a>` };

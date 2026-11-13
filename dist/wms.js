@@ -17,7 +17,7 @@
   const icon = n => `<i class="ph ph-${n}" aria-hidden="true"></i>`;
   let ctx = null, data = null, loading = false, error = '';
   const PAGE = 300; // rows drawn at once; thousands of SKUs made every keystroke redraw the whole table
-  const ui = { q:'', loc:'', type:'', fam:'', series:'', status:'', brand:'', pmin:'', pmax:'', qmin:'', qmax:'', stock:'', sort:'', dir:1, tab:'stock', sku:null, limit:PAGE };
+  const ui = { q:'', loc:'', type:'', fam:[], series:[], status:[], brand:[], pmin:'', pmax:'', qmin:'', qmax:'', stock:'', sort:'', dir:1, tab:'stock', sku:null, limit:PAGE };
   const history = { sku:null, list:null, loading:false };
   const lang = () => ctx?.lang() === 'en' ? 'en' : 'zh';
   const tr = (zh, en) => lang() === 'en' ? en : zh;
@@ -106,7 +106,7 @@
     // Stock range (owner, 2026-11-13): the chosen warehouse's quantity, or the total across warehouses when none is chosen.
     const qlo = ui.qmin === '' ? null : Number(ui.qmin), qhi = ui.qmax === '' ? null : Number(ui.qmax), qty = it => ui.loc ? n(it, ui.loc) : total(it);
     return data.items.filter(it => (!q || [it.sku, it.name, it.nameZh, it.nameEn, it.series, ...Object.values(it.bins || {}).flat()].some(x => String(x || '').toLowerCase().includes(q)))
-      && (!ui.fam || (ui.fam === '-' ? !it.family : it.family === ui.fam)) && (!ui.series || it.series === ui.series) && (!ui.status || it.status === ui.status) && (!ui.brand || it.brand === ui.brand)
+      && prodOk(ui, it)
       && (lo == null || (it.msrp != null && it.msrp >= lo)) && (hi == null || (it.msrp != null && it.msrp <= hi))
       && (qlo == null || qty(it) >= qlo) && (qhi == null || qty(it) <= qhi));
   }
@@ -117,22 +117,29 @@
       : ui.sort === 'bin' ? binsOf(it, ui.loc)[0] || '\uffff' : ui.sort === 'total' ? total(it) : n(it, ui.sort);
     return list.slice().sort((a, b) => { const x = key(a), y = key(b); return (typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'zh')) * ui.dir; });
   }
+  // Product filters are multi-select (owner, 2026-11-14): an empty list means everything; '-' in the family list means "no family".
+  const pass = (sel, v) => !sel.length || sel.includes(v);
+  const famOk = (sel, fam) => !sel.length || sel.some(f => f === '-' ? !fam : fam === f);
+  const prodOk = (f, it) => famOk(f.fam, it.family) && pass(f.series, it.series) && pass(f.status, it.status) && pass(f.brand, it.brand);
+  const multi = (scope, key, all, opts, sel) => `<div class="wms-mf">${window.WorkOSMulti.html({ scope, key, all, opts, sel, lang:lang() })}</div>`;
+  window.WorkOSMulti?.on('wms', (k, vals) => { ui[k] = vals; if (k === 'fam') ui.series = []; ui.limit = PAGE; ctx.rerender(); });
+  window.WorkOSMulti?.on('wmsop', (k, vals) => { op[k] = vals; const box = document.querySelector('[data-wms-fsels]'); if (box) box.innerHTML = opFilters(); paintFinder(); paintLines(); });
   // OneLaser's own brand and its series come first in brand / series lists (owner, 2026-11-13), then the rest A–Z.
   const ownFirst = (vals, k, rows, vOf = r => r) => { const own = new Set(rows.filter(r => /onelaser/i.test(String(vOf(r).brand || ''))).map(r => vOf(r)[k]));
     return [...vals].sort((a, b) => (own.has(b) - own.has(a)) || String(a).localeCompare(String(b))); };
   function filterBar() {
     // Product filters stay visible even when a list is short (owner, 2026-11-12): family (主机 / 配件 / 耗材 …), series, status, brand, MSRP range.
     const fams = data.families || [], noFam = data.items.filter(it => !it.family).length;
-    const famRows = data.items.filter(it => !ui.fam || it.family === ui.fam), series = ownFirst(new Set(famRows.map(it => it.series).filter(Boolean)), 'series', famRows);
+    const famRows = data.items.filter(it => famOk(ui.fam, it.family)), series = ownFirst(new Set(famRows.map(it => it.series).filter(Boolean)), 'series', famRows);
     const base = baseFiltered(), count = k => base.filter(it => stockIs(it, k)).length;
-    const active = ui.q || ui.loc || ui.fam || ui.series || ui.status || ui.brand || ui.pmin !== '' || ui.pmax !== '' || ui.qmin !== '' || ui.qmax !== '' || ui.stock;
+    const active = ui.q || ui.loc || ui.fam.length || ui.series.length || ui.status.length || ui.brand.length || ui.pmin !== '' || ui.pmax !== '' || ui.qmin !== '' || ui.qmax !== '' || ui.stock;
     const statuses = data.statuses || [], brands = ownFirst(new Set(data.items.map(it => it.brand).filter(Boolean)), 'brand', data.items);
     return `<div class="wms-filters">
       <label class="wms-select">${icon('warehouse')}<select data-wms-loc aria-label="${tr('仓库', 'Warehouse')}"><option value="">${tr('全部仓库（各仓数量）', 'All warehouses (quantities)')}</option>${data.locations.map(l => `<option value="${esc(l.id)}" ${ui.loc === l.id ? 'selected' : ''}>${esc(word(l))} · ${tr('库位', 'bins')}</option>`).join('')}</select></label>
-      <label class="wms-select">${icon('funnel')}<select data-wms-fam aria-label="${tr('产品族', 'Family')}"><option value="">${tr('全部产品族', 'All families')}</option>${fams.map(f => `<option value="${esc(f.key)}" ${ui.fam === f.key ? 'selected' : ''}>${esc(word(f))}${cnt(data.items.filter(it => it.family === f.key).length)}</option>`).join('')}${noFam ? `<option value="-" ${ui.fam === '-' ? 'selected' : ''}>${tr('未设置产品族', 'No family')}${cnt(noFam)}</option>` : ''}</select></label>
-      <label class="wms-select"><select data-wms-series aria-label="${tr('产品线 / 系列', 'Series')}"><option value="">${tr('全部系列', 'All series')}</option>${series.map(x => `<option value="${esc(x)}" ${ui.series === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>
-      <label class="wms-select"><select data-wms-flt="status" aria-label="${tr('状态', 'Status')}"><option value="">${tr('全部状态', 'All statuses')}</option>${statuses.map(x => `<option value="${esc(x.key)}" ${ui.status === x.key ? 'selected' : ''}>${esc(word(x))}${cnt(data.items.filter(it => it.status === x.key).length)}</option>`).join('')}</select></label>
-      <label class="wms-select"><select data-wms-flt="brand" aria-label="${tr('品牌', 'Brand')}"><option value="">${tr('全部品牌', 'All brands')}</option>${brands.map(x => `<option value="${esc(x)}" ${ui.brand === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>
+      ${multi('wms', 'fam', tr('全部产品族', 'All families'), [...fams.map(f => [f.key, `${word(f)} (${data.items.filter(it => it.family === f.key).length})`]), ...(noFam ? [['-', `${tr('未设置产品族', 'No family')} (${noFam})`]] : [])], ui.fam)}
+      ${multi('wms', 'series', tr('全部系列', 'All series'), series.map(x => [x, x]), ui.series)}
+      ${multi('wms', 'status', tr('全部状态', 'All statuses'), statuses.map(x => [x.key, `${word(x)} (${data.items.filter(it => it.status === x.key).length})`]), ui.status)}
+      ${multi('wms', 'brand', tr('全部品牌', 'All brands'), brands.map(x => [x, x]), ui.brand)}
       <label class="wms-select wms-price" title="${tr('按 MSRP 筛选', 'Filter by MSRP')}">$<input data-wms-pmin inputmode="decimal" value="${esc(ui.pmin)}" placeholder="${tr('最低', 'min')}" aria-label="${tr('最低 MSRP', 'Min MSRP')}">–<input data-wms-pmax inputmode="decimal" value="${esc(ui.pmax)}" placeholder="${tr('最高', 'max')}" aria-label="${tr('最高 MSRP', 'Max MSRP')}"></label>
       <label class="wms-select wms-price" title="${ui.loc ? tr(`按${word(loc(ui.loc))}的库存数量筛选`, `Filter by stock in ${word(loc(ui.loc))}`) : tr('按合计库存数量筛选（选了仓库就按那个仓）', 'Filter by total stock (or the chosen warehouse)')}">${tr('库存', 'Qty')}<input data-wms-qmin inputmode="numeric" value="${esc(ui.qmin)}" placeholder="${tr('最少', 'min')}" aria-label="${tr('最少库存', 'Min stock')}">–<input data-wms-qmax inputmode="numeric" value="${esc(ui.qmax)}" placeholder="${tr('最多', 'max')}" aria-label="${tr('最多库存', 'Max stock')}"></label>
       <div class="wms-seg">${STOCK.map(([k, zh, en]) => `<button class="${ui.stock === k ? 'on' : ''}" data-wms="stock" data-v="${k}">${tr(zh, en)}${k ? ` <b>${count(k)}</b>` : ''}</button>`).join('')}</div>
@@ -192,7 +199,7 @@
      several products). A finder with filters adds SKUs; each line has its own quantity (or counted quantity for a count). */
   // Count adjustments ticked for a batch decision (owner, 2026-11-13).
   const picked = new Set(), pickedOf = list => list.filter(m => picked.has(m.id)).map(m => m.id);
-  const op = { type:'in', lines:[], q:'', fam:'', series:'', status:'', brand:'', inStock:false, qmin:'', qmax:'', pmin:'', pmax:'' };
+  const op = { type:'in', lines:[], q:'', fam:[], series:[], status:[], brand:[], inStock:false, qmin:'', qmax:'', pmin:'', pmax:'' };
   /* Reasons are stored as typed. Chip reasons and the notes the system writes (bin moves, containers, finished goods, arrivals,
      opening stock, dealer orders) show in the reader's language, old records included. */
   const REASON_PAIRS = [['采购到货','Purchase received'],['退货入库（未拆封，按新品上架）','Customer return (unopened, as new)'],['调拨到货','Transfer received'],['维修完成回库','Back from repair'],['盘盈','Count surplus'],['其他','Other'],['销售发货','Sales shipment'],['经销商发货','Dealer shipment'],['样机 / 展会','Demo / trade show'],['赠送 / 样品','Gift / sample'],['售后换货','Warranty replacement'],['破损报废','Damaged / scrapped'],['其他','Other'],['工厂发美国（海运）','Factory to US (sea)'],['工厂发美国（空运）','Factory to US (air)'],['到港入仓','Arrived at warehouse'],['月底盘点','Month-end count'],['抽盘','Spot count'],['破损报废','Damaged / scrapped']];
@@ -211,11 +218,18 @@
   }
   const REASONS = () => ({ in:[tr('采购到货', 'Purchase received'), tr('退货入库（未拆封，按新品上架）', 'Customer return (unopened, as new)'), tr('调拨到货', 'Transfer received'), tr('维修完成回库', 'Back from repair'), tr('盘盈', 'Count surplus'), tr('其他', 'Other')],
     out:[tr('销售发货', 'Sales shipment'), tr('经销商发货', 'Dealer shipment'), tr('样机 / 展会', 'Demo / trade show'), tr('赠送 / 样品', 'Gift / sample'), tr('售后换货', 'Warranty replacement'), tr('破损报废', 'Damaged / scrapped'), tr('其他', 'Other')], transfer:[tr('工厂发美国（海运）', 'Factory to US (sea)'), tr('工厂发美国（空运）', 'Factory to US (air)'), tr('到港入仓', 'Arrived at warehouse')], adjust:[tr('月底盘点', 'Month-end count'), tr('抽盘', 'Spot count'), tr('破损报废', 'Damaged / scrapped')] });
+  // The SKU finder's product filters in the goods-in / out / transfer / count dialog (multi-select, scope 'wmsop').
+  function opFilters() {
+    const fams = data.families || [], famRows = data.items.filter(it => famOk(op.fam, it.family)), uniq = (k, rows) => ownFirst(new Set(rows.map(it => it[k]).filter(Boolean)), k, rows);
+    if (op.series.length) { const ok = uniq('series', famRows); op.series = op.series.filter(x => ok.includes(x)); }
+    return multi('wmsop', 'fam', tr('全部产品族', 'All families'), fams.map(f => [f.key, word(f)]), op.fam)
+      + multi('wmsop', 'series', tr('全部系列', 'All series'), uniq('series', famRows).map(x => [x, x]), op.series)
+      + multi('wmsop', 'status', tr('全部状态', 'All statuses'), (data.statuses || []).map(x => [x.key, word(x)]), op.status)
+      + multi('wmsop', 'brand', tr('全部品牌', 'All brands'), uniq('brand', data.items).map(x => [x, x]), op.brand);
+  }
   function opForm(type) {
     const locOpts = (sel, name) => `<select name="${name}" required>${data.locations.map(l => `<option value="${esc(l.id)}" ${l.id === sel ? 'selected' : ''}>${esc(word(l))}</option>`).join('')}</select>`;
     // Every goods-in / out / transfer / count can narrow the SKUs by family, series, status and brand (owner, 2026-11-12).
-    const fams = data.families || [], uniq = k => ownFirst(new Set(data.items.map(it => it[k]).filter(Boolean)), k, data.items);
-    const sel = (attr, label, all, opts) => `<label class="wms-select"><select data-wms-${attr} aria-label="${label}"><option value="">${all}</option>${opts.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('')}</select></label>`;
     return `<form id="wms-op" data-type="${type}" class="wms-form">
       <div class="wms-op-head">
         <label class="field"><span>${tr('操作日期', 'Date')}</span><input name="opDate" type="date" required min="2000-01-01" max="${today()}" value="${today()}"></label>
@@ -224,10 +238,7 @@
       </div>
       <div class="wms-finder">
         <div class="wms-finder-bar"><label class="wms-search">${icon('magnifying-glass')}<input data-wms-fq placeholder="${tr('找 SKU：输入 SKU、中英文名或库位', 'Find a SKU: SKU, name or bin')}" autocomplete="off"></label>
-          ${sel('ffam', tr('产品族', 'Family'), tr('全部产品族', 'All families'), fams.map(f => [f.key, word(f)]))}
-          ${sel('fseries', tr('系列', 'Series'), tr('全部系列', 'All series'), uniq('series').map(x => [x, x]))}
-          ${sel('fstatus', tr('状态', 'Status'), tr('全部状态', 'All statuses'), (data.statuses || []).map(x => [x.key, word(x)]))}
-          ${sel('fbrand', tr('品牌', 'Brand'), tr('全部品牌', 'All brands'), uniq('brand').map(x => [x, x]))}
+          <span class="wms-fsels" data-wms-fsels>${opFilters()}</span>
           <label class="wms-select wms-price" title="${tr('按所选仓库的现有数量筛选', 'Filter by stock in the chosen warehouse')}">${tr('库存', 'Qty')}<input data-wms-frange="qmin" inputmode="numeric" placeholder="${tr('最少', 'min')}" aria-label="${tr('最少库存', 'Min stock')}">–<input data-wms-frange="qmax" inputmode="numeric" placeholder="${tr('最多', 'max')}" aria-label="${tr('最多库存', 'Max stock')}"></label>
           <label class="wms-select wms-price" title="${tr('按 MSRP 筛选', 'Filter by MSRP')}">$<input data-wms-frange="pmin" inputmode="decimal" placeholder="${tr('最低', 'min')}" aria-label="${tr('最低 MSRP', 'Min MSRP')}">–<input data-wms-frange="pmax" inputmode="decimal" placeholder="${tr('最高', 'max')}" aria-label="${tr('最高 MSRP', 'Max MSRP')}"></label>
           <label class="wms-check"><input type="checkbox" data-wms-fstock ${type === 'in' ? '' : 'checked'}> ${tr('只看这个仓库有货的', 'In stock here only')}</label></div>
@@ -245,7 +256,7 @@
     </form>`;
   }
   function openOp(type, sku) {
-    Object.assign(op, { type, lines:[], q:'', fam:'', series:'', status:'', brand:'', inStock:type !== 'in', qmin:'', qmax:'', pmin:'', pmax:'' });
+    Object.assign(op, { type, lines:[], q:'', fam:[], series:[], status:[], brand:[], inStock:type !== 'in', qmin:'', qmax:'', pmin:'', pmax:'' });
     const it = sku && data.items.find(x => x.sku === sku); if (it) op.lines.push({ sku:it.sku, qty:'' });
     ctx.modal(tr(...TYPES[type].slice(0, 2)), opForm(type), `<button class="btn" data-live-action="close">${tr('取消', 'Cancel')}</button><button class="btn primary" type="submit" form="wms-op">${type === 'adjust' ? tr('提交确认', 'Submit for confirmation') : tr('保存', 'Save')}</button>`);
     document.querySelector('#overlay-root .modal')?.classList.add('modal-wide');
@@ -257,8 +268,7 @@
     const box = document.querySelector('[data-wms-finder]'); if (!box) return;
     const q = op.q.trim().toLowerCase(), l = opLoc(), taken = new Set(op.lines.map(x => x.sku));
     const num = v => v === '' || !Number.isFinite(Number(v)) ? null : Number(v), qlo = num(op.qmin), qhi = num(op.qmax), plo = num(op.pmin), phi = num(op.pmax);
-    const list = data.items.filter(it => (!op.fam || it.family === op.fam) && (!op.series || it.series === op.series) && (!op.status || it.status === op.status)
-      && (!op.brand || it.brand === op.brand) && (!op.inStock || n(it, l) > 0)
+    const list = data.items.filter(it => prodOk(op, it) && (!op.inStock || n(it, l) > 0)
       && (qlo == null || n(it, l) >= qlo) && (qhi == null || n(it, l) <= qhi)
       && (plo == null || (it.msrp != null && it.msrp >= plo)) && (phi == null || (it.msrp != null && it.msrp <= phi))
       && (!q || [it.sku, it.nameZh, it.nameEn, it.name, it.series, ...binsOf(it, l)].some(x => String(x || '').toLowerCase().includes(q))));
@@ -527,7 +537,7 @@
     if (a === 'loc') { ui.loc = ui.loc === b.dataset.v ? '' : b.dataset.v; ui.tab = 'stock'; ui.limit = PAGE; return ctx.rerender(); }
     if (a === 'stock') { ui.stock = b.dataset.v; ui.tab = 'stock'; ui.limit = PAGE; return ctx.rerender(); }
     if (a === 'type') { ui.type = b.dataset.v; return ctx.rerender(); }
-    if (a === 'clear') { Object.assign(ui, { q:'', loc:'', fam:'', series:'', status:'', brand:'', pmin:'', pmax:'', qmin:'', qmax:'', stock:'', limit:PAGE }); return ctx.rerender(); }
+    if (a === 'clear') { Object.assign(ui, { q:'', loc:'', fam:[], series:[], status:[], brand:[], pmin:'', pmax:'', qmin:'', qmax:'', stock:'', limit:PAGE }); return ctx.rerender(); }
     if (a === 'more') { ui.limit += PAGE; return ctx.rerender(); }
     if (a === 'all') { ui.limit = Infinity; return ctx.rerender(); }
     if (a === 'export') return exportCsv();
@@ -564,11 +574,7 @@
     if (t.matches?.('[data-wms-loc]')) { ui.loc = t.value; ui.limit = PAGE; return ctx.rerender(); }
     if (t.matches?.('[data-wms-pend]')) { t.checked ? picked.add(t.dataset.wmsPend) : picked.delete(t.dataset.wmsPend); return ctx.rerender(); }
     if (t.matches?.('[data-wms-pend-all]')) { const ids = data.movements.filter(m => m.status === 'pending' && m.canDecide).map(m => m.id); ids.forEach(id => t.checked ? picked.add(id) : picked.delete(id)); return ctx.rerender(); }
-    if (t.closest?.('#wms-op') && (t.name === 'location' || t.matches('[data-wms-fstock],[data-wms-ffam],[data-wms-fseries],[data-wms-fstatus],[data-wms-fbrand]'))) { const of = t.closest('#wms-op'); op.inStock = !!of.querySelector('[data-wms-fstock]')?.checked;
-      for (const k of ['fam', 'series', 'status', 'brand']) op[k] = of.querySelector(`[data-wms-f${k}]`)?.value || ''; paintFinder(); paintLines(); }
-    if (t.matches?.('[data-wms-fam]')) { ui.fam = t.value; ui.series = ''; ui.limit = PAGE; return ctx.rerender(); }
-    if (t.matches?.('[data-wms-flt]')) { ui[t.dataset.wmsFlt] = t.value; ui.limit = PAGE; return ctx.rerender(); }
-    if (t.matches?.('[data-wms-series]')) { ui.series = t.value; ui.limit = PAGE; return ctx.rerender(); }
+    if (t.closest?.('#wms-op') && (t.name === 'location' || t.matches('[data-wms-fstock]'))) { const of = t.closest('#wms-op'); op.inStock = !!of.querySelector('[data-wms-fstock]')?.checked; paintFinder(); paintLines(); }
     if (t.matches?.('[data-wms-pmin],[data-wms-pmax]')) { const v = t.value.trim().replace(/[$,]/g, ''); if (v !== '' && !Number.isFinite(Number(v))) { t.value = ''; return; } ui[t.matches('[data-wms-pmin]') ? 'pmin' : 'pmax'] = v; ui.limit = PAGE; return ctx.rerender(); }
     if (t.matches?.('[data-wms-qmin],[data-wms-qmax]')) { const v = t.value.trim().replace(/[,\s]/g, ''); if (v !== '' && !/^-?\d+$/.test(v)) { t.value = ''; return; } ui[t.matches('[data-wms-qmin]') ? 'qmin' : 'qmax'] = v; ui.limit = PAGE; return ctx.rerender(); }
     if (t.matches?.('[data-wms-line-slot]')) { op.lines[Number(t.dataset.wmsLineSlot)].slot = t.value ? Number(t.value) : undefined; return; }

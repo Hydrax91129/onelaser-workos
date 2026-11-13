@@ -9,7 +9,7 @@ const LOCATIONS = [{ id:'us', zh:'美国仓', en:'US warehouse' }, { id:'dg', zh
 
 function load(summary, history = []) {
   const { window, document } = parseHTML('<!doctype html><html><body><div id="app"></div></body></html>');
-  vm.runInNewContext(read('wms.js'), { window, document, Intl, Date, console, URL, setTimeout, clearTimeout, Event:window.Event });
+  { const c = { window, document, Intl, Date, console, URL, setTimeout, clearTimeout, Event:window.Event }; vm.runInNewContext(read('multi-select.js'), c); vm.runInNewContext(read('wms.js'), c); }
   const calls = [];
   const api = { get:async p => { calls.push(p); return p.startsWith('/wms/summary') ? summary : { movements:history }; }, post:async () => ({}) };
   window.WorkOSWms.configure({ api, lang:() => 'zh', rerender:() => {}, toast:() => {}, closeOverlay:() => {}, modal:() => {} });
@@ -73,8 +73,15 @@ test('stock: PIM facts and image, family / series / MSRP filters, one warehouse 
   const change = (sel, v) => { const el = w.document.querySelector(sel);
     if (el.tagName === 'SELECT') el.querySelectorAll('option').forEach(o => { if (o.getAttribute('value') === v) o.setAttribute('selected', ''); else o.removeAttribute('selected'); }); else el.value = v;
     el.dispatchEvent(new w.window.Event('change', { bubbles:true })); };
-  change('[data-wms-fam]', 'acc'); app = w.render(); assert.deepEqual([...app.querySelectorAll('.wms-table tbody .mono')].map(x => x.textContent), ['P-1']);
-  change('[data-wms-fam]', ''); change('[data-wms-pmin]', '100'); app = w.render(); assert.deepEqual([...app.querySelectorAll('.wms-table tbody .mono')].map(x => x.textContent), ['M-1'], 'MSRP from $100');
+  // Product filters are multi-select (owner, 2026-11-14): click a name for that one only, tick boxes to add more, "All" clears.
+  const pick = (key, sel) => w.document.querySelector(`.mf[data-mf-key="${key}"] ${sel}`).dispatchEvent(new w.window.Event('click', { bubbles:true }));
+  const skus = () => [...w.render().querySelectorAll('.wms-table tbody .mono')].map(x => x.textContent);
+  pick('fam', '[data-mf-one="acc"]'); assert.deepEqual(skus(), ['P-1']);
+  pick('fam', '[data-mf-tog="main"]'); assert.deepEqual(skus(), ['M-1', 'P-1'], 'a second family is added, not swapped');
+  assert.match(w.document.querySelector('.mf[data-mf-key="fam"] .mf-btn').textContent, /\+1/, 'the button shows that two are picked');
+  pick('fam', '[data-mf-tog="acc"]'); assert.deepEqual(skus(), ['M-1'], 'unticking removes one');
+  pick('fam', '[data-mf-all]'); assert.equal(skus().length, 3, 'All clears the filter');
+  change('[data-wms-pmin]', '100'); app = w.render(); assert.deepEqual([...app.querySelectorAll('.wms-table tbody .mono')].map(x => x.textContent), ['M-1'], 'MSRP from $100');
   change('[data-wms-pmin]', ''); change('[data-wms-loc]', 'us'); app = w.render();
   assert.match(app.querySelector('thead').textContent, /首选库位/); assert.match(app.querySelector('thead').textContent, /未分库位/);
   assert.equal(app.querySelector('[data-wms-bin]'), null, 'bins are not edited in the table');
@@ -85,7 +92,7 @@ test('stock: PIM facts and image, family / series / MSRP filters, one warehouse 
 
 test('goods out: one order with several SKUs from the finder, each with its own quantity, dated (today by default, editable)', async () => {
   const { window, document } = parseHTML('<!doctype html><html><body><div id="app"></div><div id="overlay-root"></div></body></html>');
-  vm.runInNewContext(read('wms.js'), { window, document, Intl, Date, console, URL, setTimeout, clearTimeout, Event:window.Event });
+  { const c = { window, document, Intl, Date, console, URL, setTimeout, clearTimeout, Event:window.Event }; vm.runInNewContext(read('multi-select.js'), c); vm.runInNewContext(read('wms.js'), c); }
   const posts = [];
   const items = [{ sku:'M-1', nameZh:'示例主机', family:'main', qty:{ us:3 }, bins:{ us:['A-01'] } }, { sku:'P-1', nameZh:'示例配件', family:'acc', qty:{ us:9 } }, { sku:'Z-0', nameZh:'没货', family:'acc', qty:{} }];
   const api = { get:async () => ({ locations:LOCATIONS, families:[{ key:'main', zh:'主机', en:'M' }, { key:'acc', zh:'配件', en:'A' }], items, movements:[], canOperate:true }), post:async (p, b) => { posts.push([p, b]); return { lines:b.lines.length, units:5 }; } };
@@ -99,8 +106,12 @@ test('goods out: one order with several SKUs from the finder, each with its own 
   assert.match(f.innerHTML, /双击一行或点“选择添加该 SKU”/, 'how to add, in one line');
   ev(f.querySelector('[data-wms-reason="样机 / 展会"]'), 'click'); assert.equal(f.querySelector('[name="reason"]').value, '样机 / 展会', 'a reason chip fills the reason');
   ev(f.querySelector('[data-wms-reason="销售发货"]'), 'click');
-  for (const k of ['ffam', 'fseries', 'fstatus', 'fbrand']) assert.ok(f.querySelector(`[data-wms-${k}]`), k + ' filter');
-  assert.equal(f.querySelectorAll('[data-wms-ffam] option').length, 3, 'every family is listed (all + 2), not only the ones in stock');
+  for (const k of ['fam', 'series', 'status', 'brand']) assert.ok(f.querySelector(`.mf[data-mf-scope="wmsop"][data-mf-key="${k}"]`), k + ' filter');
+  assert.equal(f.querySelectorAll('.mf[data-mf-key="fam"] [data-mf-one]').length, 2, 'every family is listed, not only the ones in stock');
+  // Multi-select in the dialog too: two families tick together, then back to all.
+  ev(f.querySelector('.mf[data-mf-key="fam"] [data-mf-one="acc"]'), 'click'); assert.equal(document.querySelectorAll('[data-wms-add]').length, 1, 'accessories only');
+  ev(document.querySelector('#wms-op .mf[data-mf-key="fam"] [data-mf-tog="main"]'), 'click'); assert.equal(document.querySelectorAll('[data-wms-add]').length, 2, 'machines added');
+  ev(document.querySelector('#wms-op .mf[data-mf-key="fam"] [data-mf-all]'), 'click');
   ev(document.querySelector('[data-wms-pick="M-1"] .nm'), 'dblclick'); ev(document.querySelector('[data-wms-add="P-1"]'), 'click');
   assert.match(document.querySelector('[data-wms-add="M-1"]').textContent, /已选择/, 'double-click selects the row');
   const qty = (i, v) => { const el = document.querySelector(`[data-wms-line="${i}"]`); el.value = v; ev(el, 'input'); };
