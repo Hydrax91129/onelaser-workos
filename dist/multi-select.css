@@ -1,0 +1,32 @@
+/* Multi-select filter dropdown (multi-select.js), used by PIM / WMS / SCM filters. */
+.mf{position:relative;min-width:0;display:block}
+.mf-btn{width:100%;display:flex;align-items:center;gap:6px;min-height:36px;padding:6px 10px;border:1px solid var(--line,#d9dbe3);border-radius:8px;background:var(--surface,#fff);color:inherit;font:inherit;font-size:13.5px;text-align:left;cursor:pointer}
+.mf-btn:hover{border-color:#9aa3b8}
+.mf-btn:focus-visible{outline:2px solid #2f6fed;outline-offset:1px}
+.mf.active .mf-btn{border-color:#2f6fed;background:rgba(47,111,237,.06)}
+.mf-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mf-n{flex:none;font-size:11.5px;font-weight:600;line-height:1;padding:3px 6px;border-radius:999px;background:#2f6fed;color:#fff}
+.mf-caret{flex:none;font-size:11px;opacity:.6}
+.mf-pop{position:absolute;z-index:60;top:calc(100% + 4px);left:0;min-width:100%;width:max-content;max-width:min(320px,90vw);background:var(--surface,#fff);border:1px solid var(--line,#d9dbe3);border-radius:10px;box-shadow:0 10px 28px rgba(16,24,40,.18);padding:6px;display:grid;gap:2px}
+.mf-pop[hidden]{display:none}
+.mf-list{max-height:300px;overflow:auto;display:grid;gap:1px}
+.mf-all{border:0;background:transparent;color:inherit;font:inherit;font-size:13.5px;text-align:left;padding:7px 10px;border-radius:6px;cursor:pointer;font-weight:600}
+.mf-all:hover,.mf-one:hover{background:rgba(47,111,237,.08)}
+.mf-all.on{color:#2f6fed}
+.mf-row{display:flex;align-items:center;gap:4px;border-radius:6px;padding-left:6px}
+.mf-row.on{background:rgba(47,111,237,.07)}
+.mf-row input{flex:none;width:16px;height:16px;margin:0;cursor:pointer;accent-color:#2f6fed}
+.mf-one{flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;font-size:13.5px;text-align:left;padding:7px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mf-hint{font-size:11.5px;color:#7a8196;padding:6px 8px 2px;border-top:1px solid var(--line,#e6e8ef);margin-top:4px;white-space:normal}
+.mf-empty{font-size:12.5px;color:#7a8196;padding:8px 10px}
+html[data-theme=dark] .mf-btn,html[data-theme=dark] .mf-pop{background:#1f222b;border-color:#343846;color:#e7e9ef}
+html[data-theme=dark] .mf.active .mf-btn{border-color:#6b9bff;background:rgba(107,155,255,.12)}
+html[data-theme=dark] .mf-all.on{color:#8fb2ff}
+html[data-theme=dark] .mf-hint{border-color:#343846;color:#9aa1b4}
+/* In the WMS and SCM filter rows (flex), each dropdown keeps a compact width; in PIM it fills its grid cell. */
+.wms-mf,.scm-mf{flex:0 1 180px;min-width:130px;max-width:220px}
+.wms-mf .mf-btn,.scm-mf .mf-btn{min-height:32px;padding:4px 9px;font-size:13px}
+.wms-fsels{display:contents}
+.pl-flt .mf-btn{min-height:34px}
+/* PIM: the list stays inside its filter cell so the editor beside it never covers it. */
+.pl-flt .mf-pop{width:100%;max-width:none}

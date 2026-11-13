@@ -12,26 +12,31 @@
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   const icon = n => `<i class="ph ph-${n}" aria-hidden="true"></i>`;
   let ctx = null, data = null, loading = false, error = '', busy = false;
-  const ui = { tab:'dash', q:'', status:'', life:'', fam:'', series:'', brand:'', where:'', qmin:'', qmax:'', smin:'', smax:'', sort:'', dir:1 };
+  const ui = { tab:'dash', q:'', status:'', life:[], fam:[], series:[], brand:[], where:[], qmin:'', qmax:'', smin:'', smax:'', sort:'', dir:1 };
   /* SKU filters shared by the reorder table and the dashboard's stock chart (owner, 2026-11-13): family, series, brand,
      SKU status, where the stock is, a stock range (finished units) and a 30-day sales range. */
   const FAMS = { main:['主机', 'Machine'], acc:['配件/备件', 'Accessory'], cons:['耗材', 'Consumable'], soft:['软件/服务', 'Software'], mat:['内部物料', 'Material'] };
   const WHERE = () => [['us', tr('美国LA仓有货', 'In stock at US LA')], ['transit', tr('在途有货', 'In transit')], ['factory', tr('工厂仓有货', 'At a factory')], ['wip', tr('有在产', 'In production')], ['none', tr('成品为 0', 'No finished stock')]];
   const numOr = v => v === '' || !Number.isFinite(Number(v)) ? null : Number(v);
+  const pass = (sel, v) => !sel.length || sel.includes(v);
+  window.WorkOSMulti?.on('scm', (k, vals) => { ui[k] = vals; if (k === 'fam') ui.series = []; const y = window.scrollY; ctx.rerender(); window.scrollTo(window.scrollX, y); });
   function skuFilter(list) {
     const q = ui.q.trim().toLowerCase(), qlo = numOr(ui.qmin), qhi = numOr(ui.qmax), slo = numOr(ui.smin), shi = numOr(ui.smax);
-    const at = x => ui.where === 'us' ? x.us > 0 : ui.where === 'transit' ? x.transit > 0 : ui.where === 'factory' ? (x.dg || 0) + (x.jn || 0) > 0 : ui.where === 'wip' ? (x.wip || 0) > 0 : ui.where === 'none' ? !x.finished : true;
-    return list.filter(x => (!ui.life || x.lifecycle === ui.life) && (!ui.fam || x.family === ui.fam) && (!ui.series || x.series === ui.series) && (!ui.brand || x.brand === ui.brand) && at(x)
+    // Several places at once mean "stock in any of them" (filters are multi-select since 2026-11-14).
+    const at1 = (x, w) => w === 'us' ? x.us > 0 : w === 'transit' ? x.transit > 0 : w === 'factory' ? (x.dg || 0) + (x.jn || 0) > 0 : w === 'wip' ? (x.wip || 0) > 0 : w === 'none' ? !x.finished : true;
+    const at = x => !ui.where.length || ui.where.some(w => at1(x, w));
+    return list.filter(x => pass(ui.life, x.lifecycle) && pass(ui.fam, x.family) && pass(ui.series, x.series) && pass(ui.brand, x.brand) && at(x)
       && (qlo == null || (x.finished || 0) >= qlo) && (qhi == null || (x.finished || 0) <= qhi) && (slo == null || (x.sold30 || 0) >= slo) && (shi == null || (x.sold30 || 0) <= shi)
       && (!q || [x.sku, x.nameZh, x.nameEn, x.series].some(v => String(v || '').toLowerCase().includes(q))));
   }
-  const filtersOn = () => !!(ui.q || ui.life || ui.fam || ui.series || ui.brand || ui.where || ui.qmin || ui.qmax || ui.smin || ui.smax);
+  const filtersOn = () => !!(ui.q || ui.life.length || ui.fam.length || ui.series.length || ui.brand.length || ui.where.length || ui.qmin || ui.qmax || ui.smin || ui.smax);
   // OneLaser's own brand and its series come first in brand / series lists (owner, 2026-11-13), then the rest A–Z.
   const ownFirst = (vals, k, rows, vOf = r => r) => { const own = new Set(rows.filter(r => /onelaser/i.test(String(vOf(r).brand || ''))).map(r => vOf(r)[k]));
     return [...vals].sort((a, b) => (own.has(b) - own.has(a)) || String(a).localeCompare(String(b))); };
   function skuFilterBar(withSearch) {
-    const it = data.items, uniq = k => { const rows = it.filter(x => k !== 'series' || !ui.fam || x.family === ui.fam); return ownFirst(new Set(rows.map(x => x[k]).filter(Boolean)), k, rows); };
-    const sel = (k, all, opts) => `<select class="scm-life-sel" data-scm-f="${k}" aria-label="${esc(all)}"><option value="">${esc(all)}</option>${opts.map(([v, t]) => `<option value="${esc(v)}" ${ui[k] === v ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+    const it = data.items, uniq = k => { const rows = it.filter(x => k !== 'series' || pass(ui.fam, x.family)); return ownFirst(new Set(rows.map(x => x[k]).filter(Boolean)), k, rows); };
+    const sel = (k, all, opts) => { if (k === 'series' && ui.series.length) ui.series = ui.series.filter(x => opts.some(o => o[0] === x));
+      return `<div class="scm-mf">${window.WorkOSMulti.html({ scope:'scm', key:k, all, opts, sel:ui[k], lang:lang() })}</div>`; };
     const range = (a, b, label, tip) => `<label class="scm-range" title="${esc(tip)}">${label}<input data-scm-r="${a}" inputmode="numeric" value="${esc(ui[a])}" placeholder="${tr('最少', 'min')}" aria-label="${esc(label + ' ' + tr('最少', 'min'))}">–<input data-scm-r="${b}" inputmode="numeric" value="${esc(ui[b])}" placeholder="${tr('最多', 'max')}" aria-label="${esc(label + ' ' + tr('最多', 'max'))}"></label>`;
     return `<div class="scm-filters">${withSearch ? `<label class="scm-search">${icon('magnifying-glass')}<input data-scm-q value="${esc(ui.q)}" placeholder="${tr('搜索 SKU、名称或系列', 'Search SKU, name or series')}"></label>` : ''}
       ${sel('fam', tr('全部产品族', 'All families'), Object.entries(FAMS).filter(([k]) => it.some(x => x.family === k)).map(([k, v]) => [k, `${w(v)} (${it.filter(x => x.family === k).length})`]))}
@@ -525,7 +530,7 @@
     if (a === 'status') { ui.status = b.dataset.v; return ctx.rerender(); }
     if (a === 'sort') { if (ui.sort === b.dataset.v) ui.dir = -ui.dir; else { ui.sort = b.dataset.v; ui.dir = b.dataset.v === 'sku' ? 1 : -1; } return ctx.rerender(); }
     if (a === 'settings') return settingsDialog();
-    if (a === 'clear-filters') { Object.assign(ui, { q:'', life:'', fam:'', series:'', brand:'', where:'', qmin:'', qmax:'', smin:'', smax:'' }); const y = window.scrollY; ctx.rerender(); window.scrollTo(window.scrollX, y); return; }
+    if (a === 'clear-filters') { Object.assign(ui, { q:'', life:[], fam:[], series:[], brand:[], where:[], qmin:'', qmax:'', smin:'', smax:'' }); const y = window.scrollY; ctx.rerender(); window.scrollTo(window.scrollX, y); return; }
     if (a === 'new-ship') return newShip();
     if (a === 'new-po') return orderForm();
     if (a === 'order-sku') return orderForm(null, { sku:b.dataset.sku, qty:b.dataset.qty });
@@ -569,9 +574,8 @@
   // Filtering re-renders the page; keep the reader where they were (the stock chart sits halfway down the dashboard).
   const keepScroll = () => { const y = window.scrollY; ctx.rerender(); if (window.scrollY !== y) window.scrollTo(window.scrollX, y); };
   document.addEventListener('change', e => { const t = e.target; if (!ctx) return;
-    if (t.matches?.('[data-scm-f]')) { ui[t.dataset.scmF] = t.value; if (t.dataset.scmF === 'fam') ui.series = ''; return keepScroll(); }
     if (t.matches?.('[data-scm-r]')) { const v = t.value.trim().replace(/[,\s]/g, ''); ui[t.dataset.scmR] = v !== '' && Number.isFinite(Number(v)) ? v : ''; return keepScroll(); }
-    if (t.matches?.('[data-scm-life]')) { ui.life = t.value; ctx.rerender(); return; } if (!t.matches?.('[data-scm-legs]')) return;
+    if (t.matches?.('[data-scm-life]')) { ui.life = t.value ? [t.value] : []; ctx.rerender(); return; } if (!t.matches?.('[data-scm-legs]')) return;
     const f = t.closest('form'), a = FIRST_LEG[f.querySelector('[name="firstLeg"]').value], b = LAST_LEG[f.querySelector('[name="lastLeg"]').value];
     if (a && b) { f.querySelector('[name="etaDays"]').value = a[2] + b[2]; syncEta(); } });
   document.addEventListener('change', e => { if (e.target.matches?.('[data-scm-line-sku]')) paintLines(); });

@@ -33,7 +33,7 @@
   };
   const toast = m => ctx?.toast?.(m);
 
-  const S = { data:null, loading:false, error:'', view:'products', cur:null, q:'', fam:'', series:'', status:'', gt:'', brand:'', pmin:'', pmax:'', rk:'msrp', sort:'sku', dir:1, onlyReq:false, creating:false, saving:{}, errs:{}, savedAt:null,
+  const S = { data:null, loading:false, error:'', view:'products', cur:null, q:'', fam:[], series:[], status:[], gt:[], brand:[], pmin:'', pmax:'', rk:'msrp', sort:'sku', dir:1, onlyReq:false, creating:false, saving:{}, errs:{}, savedAt:null,
     history:{}, histOpen:false, mode:'catalog', priceOpen:{}, preview:null, pvFilter:'all', skipErrors:false, imports:null, draft:null, busy:'', sel:new Set(), bulkKey:'', bulkVal:'', bulkNote:'' };
   const D = () => S.data || {};
   const spec = () => D().spec || { fields:[], slots:[], groups:[], families:[], statuses:[], visNames:{} };
@@ -157,11 +157,15 @@
      incomplete only) and sortable columns; the right half is the selected product. */
   const msrpOf = i => { const m = i.pricing?.fixed?.[0]; return m ? m.price : i.pricing?.msrp ?? (i.values.msrp === '' || i.values.msrp == null ? null : Number(i.values.msrp)); };
   const nameOf = i => (lang() === 'en' ? i.values.nameEn : i.values.nameZh) || i.values.nameZh || i.values.nameEn || '';
+  // Filters are multi-select (owner, 2026-11-14): an empty list means everything; '-' in the family list means "no family".
+  const pass = (sel, v) => !sel.length || sel.includes(v);
+  const famOk = fam => !S.fam.length || S.fam.some(f => f === '-' ? !fam : fam === f);
+  window.WorkOSMulti?.on('pl', (k, vals) => { S[k] = vals; if (k === 'fam') S.series = []; rerender(); });
   function filteredItems() {
     const q = S.q.trim().toLowerCase(), lo = S.pmin === '' ? null : Number(S.pmin), hi = S.pmax === '' ? null : Number(S.pmax);
     const list = items().filter(i => { const v = i.values, m = rangeVal(i, rangeKey());
-      return (!S.fam || (S.fam === '-' ? !v.family : v.family === S.fam)) && (!S.series || v.series === S.series) && (!S.status || v.status === S.status)
-        && (!S.gt || (v.goodsType || 'bulk') === S.gt) && (!S.brand || v.brand === S.brand) && (lo == null || (m != null && m >= lo)) && (hi == null || (m != null && m <= hi))
+      return famOk(v.family) && pass(S.series, v.series) && pass(S.status, v.status)
+        && pass(S.gt, v.goodsType || 'bulk') && pass(S.brand, v.brand) && (lo == null || (m != null && m >= lo)) && (hi == null || (m != null && m <= hi))
         && (!S.onlyReq || !i.completeness?.done) && (!q || [i.sku, v.nameZh, v.nameEn, v.series, v.brand, v.upc, v.refbSku].some(x => String(x || '').toLowerCase().includes(q))); });
     const key = i => S.sort === 'name' ? nameOf(i) : S.sort === 'fam' ? famName(i.values.family) + (i.values.series || '') : S.sort === 'status' ? String(i.values.status || '')
       : S.sort === 'msrp' ? msrpOf(i) ?? -1 : S.sort === 'cm' ? i.pricing?.fixed?.[0]?.cmPct ?? -999 : S.sort === 'npc' ? i.pricing?.fixed?.[0]?.cm ?? -1e9 : S.sort === 'req' ? (i.completeness?.need ? i.completeness.got / i.completeness.need : 1)
@@ -171,13 +175,13 @@
   function rail() {
     const all = items(), list = filteredItems(), inc = all.filter(i => !i.completeness?.done).length;
     // Series and brand only offer what the filters to their left allow (owner, 2026-11-13: pick 配件 and the series list shows accessory series only).
-    const inFam = i => !S.fam || (S.fam === '-' ? !i.values.family : i.values.family === S.fam);
-    const uniq = k => { const rows = all.filter(i => inFam(i) && (k !== 'brand' || !S.series || i.values.series === S.series)); return ownFirst(new Set(rows.map(i => i.values[k]).filter(Boolean)), k, rows, i => i.values); };
-    if (S.series && !uniq('series').includes(S.series)) S.series = '';
+    const inFam = i => famOk(i.values.family);
+    const uniq = k => { const rows = all.filter(i => inFam(i) && (k !== 'brand' || pass(S.series, i.values.series))); return ownFirst(new Set(rows.map(i => i.values[k]).filter(Boolean)), k, rows, i => i.values); };
+    if (S.series.length) { const ok = uniq('series'); S.series = S.series.filter(x => ok.includes(x)); }
     const statusName = k => L(spec().statuses.find(x => x.key === k)) || '';
     const gtOpts = fieldOf('goodsType')?.opts || [];
-    const sel = (k, label, opts) => `<select data-pl-flt="${k}" aria-label="${esc(label)}"><option value="">${esc(label)}</option>${opts.map(([v, n]) => `<option value="${esc(v)}" ${S[k] === v ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
-    const active = S.q || S.fam || S.series || S.status || S.gt || S.brand || S.pmin !== '' || S.pmax !== '' || S.onlyReq;
+    const sel = (k, label, opts) => window.WorkOSMulti.html({ scope:'pl', key:k, all:label, opts, sel:S[k], lang:lang() });
+    const active = S.q || S.fam.length || S.series.length || S.status.length || S.gt.length || S.brand.length || S.pmin !== '' || S.pmax !== '' || S.onlyReq;
     // Every header explains itself on hover, shows it can sort (▲▼ when sorted, a faint ↕ otherwise) and, except SKU, can be dragged
     // to another place; the order is saved with the person's columns (owner, 2026-11-13).
     const th = (k, label, cls = '') => `<th class="${cls} ${S.sort === k ? 'sorted' : ''} ${k !== 'sku' ? 'pl-movable' : ''}" data-pl-sort="${k}" ${k !== 'sku' ? `draggable="true" data-pl-colh="${esc(k)}"` : ''} title="${esc(colTip(k))}"><span class="pl-th">${label}<i class="pl-sorti" aria-hidden="true">${S.sort === k ? (S.dir > 0 ? '▲' : '▼') : '↕'}</i></span></th>`;
@@ -574,7 +578,7 @@ ${cols().map(k => cellOf(k, i)).join('')}</tr>`; }).join('')}</tbody></table>`
       t.disabled = true; ctx.api.post(`/products/library/imports/${encodeURIComponent(t.dataset.plUndo)}/undo`, {}).then(r => { toast(tr(`已撤销：恢复 ${r.restored} 处，移除新增产品 ${r.removed} 个${r.kept.length ? `，保留 ${r.kept.length} 项` : ''}`, `Undone: ${r.restored} values restored, ${r.removed} new products removed${r.kept.length ? `, ${r.kept.length} kept` : ''}`)); loadImports(); load(true); }).catch(x => { toast(x.message); t.disabled = false; }); return; }
     const a = t.dataset.pl;
     if (a === 'view') { S.view = t.dataset.v; if (S.view === 'imports' && !S.imports) loadImports(); if (S.view === 'settings') S.draft = null; return rerender(); }
-    if (a === 'clear-filters') { Object.assign(S, { q:'', fam:'', series:'', status:'', gt:'', brand:'', pmin:'', pmax:'', onlyReq:false }); return rerender(); }
+    if (a === 'clear-filters') { Object.assign(S, { q:'', fam:[], series:[], status:[], gt:[], brand:[], pmin:'', pmax:'', onlyReq:false }); return rerender(); }
     if (a === 'new') { S.view = 'products'; S.creating = true; S.errs = {}; return rerender(); }
     if (a === 'create-cancel') { S.creating = false; return rerender(); }
     if (a === 'create') { const box = document.getElementById('pl-new'), val = k => box?.querySelector(`[data-pl-new="${k}"]`)?.value.trim() || '';
@@ -600,7 +604,6 @@ ${cols().map(k => cellOf(k, i)).join('')}</tr>`; }).join('')}</tbody></table>`
     if (el.matches('[data-pl-f]')) { const k = el.dataset.plF, v = el.value.trim(); setTimeout(() => saveField(k, v), 0); return; }
     if (el.matches('[data-pl-upload]')) { const files = [...(el.files || [])]; el.value = ''; return upload(el.dataset.plUpload, files); }
     if (el.matches('[data-pl-import]')) { const f = el.files?.[0]; el.value = ''; return previewFile(f); }
-    if (el.matches('[data-pl-flt]')) { S[el.dataset.plFlt] = el.value; if (el.dataset.plFlt === 'fam') S.series = ''; return rerender(); }
     if (el.matches('[data-pl-p]')) { const v = el.value.trim().replace(/[$,]/g, ''); S[el.dataset.plP] = v !== '' && Number.isFinite(Number(v)) ? v : ''; return rerender(); }
     if (el.matches('[data-pl-col]')) { const k = el.dataset.plCol, cur = cols(); saveCols(el.checked ? [...cur.filter(x => x !== k), k] : cur.filter(x => x !== k)); return rerender(); }
     if (el.matches('[data-pl-sel]')) { el.checked ? S.sel.add(el.dataset.plSel) : S.sel.delete(el.dataset.plSel); return rerender(); }
