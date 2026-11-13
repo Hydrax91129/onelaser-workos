@@ -21,7 +21,7 @@
 .erpa-seg{display:inline-flex;background:#f1f2f6;border-radius:8px;padding:2px;gap:2px;white-space:nowrap}
 .erpa-seg button{border:0;background:transparent;font:inherit;font-size:12px;padding:5px 9px;border-radius:6px;cursor:pointer;color:#6b7280}
 .erpa-seg button.on{background:#fff;color:#1f2433;font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.1)}
-.erpa-seg button.on.lv-view,.erpa-seg button.on.lv-msrp{color:#245bdb}.erpa-seg button.on.lv-manage,.erpa-seg button.on.lv-full,.erpa-seg button.on.lv-allow{background:#3c64f4;color:#fff}
+.erpa-seg button.on.lv-view,.erpa-seg button.on.lv-msrp{color:#245bdb}.erpa-seg button.on.lv-manage,.erpa-seg button.on.lv-full,.erpa-seg button.on.lv-allow{background:#3c64f4;color:#fff}.erpa-seg button.on.lv-approve{background:#0f8a5f;color:#fff}
 .erpa-seg.ro button{cursor:not-allowed;opacity:.75}
 .erpa-empty{text-align:center;color:var(--muted,#9aa0b4);padding:28px!important}
 @media (max-width:1100px){.erpa-legend{grid-template-columns:repeat(2,minmax(0,1fr))}}
