@@ -20,6 +20,11 @@
   // Three statuses (owner, 2026-11-12): 缺货风险 / 正常 / 库存过多; the 系统判断 column says why.
   const STATUS = { risk:['缺货风险', 'Stockout risk', 'red'], ok:['正常', 'Normal', 'green'], overstock:['库存过多', 'Overstock', 'blue'] };
   const ORDER = ['risk', 'ok', 'overstock'];
+  /* Quantities show as whole units (owner, 2026-11-13): sales as units sold, the forecast as units a month,
+     the daily average (DS) only in the hover. A trend needs TREND_MIN units in 30 days (scm.ts TREND_MIN_UNITS). */
+  const TREND_MIN = 3;
+  const dsTip = (n, days) => tr(`日均 ${(n / days).toFixed(2)} 件`, `${(n / days).toFixed(2)} a day`);
+  const daysText = d => d == null ? '—' : d > 365 ? tr('1 年以上', '1 yr+') : fmt(d) + tr(' 天', 'd');
   /* PIM 生命周期 (product_catalog.status); 清库存 / 计划停售 / 停售 are sold down, never produced again. */
   const LIFE = { dev:['开发中', 'In development', 'grey'], launch:['上新中', 'Launching', 'blue'], live:['在售', 'Selling', 'green'], clearance:['清库存', 'Clearance', 'amber'], eolPlanned:['计划停售', 'Phasing out', 'amber'], eol:['停售', 'Discontinued', 'grey'] };
   // 头程 / 尾程 and their default days (owner, 2026-11-12)
@@ -69,10 +74,10 @@
     ['sku', 'SKU', tr('产品资料里的 SKU。', 'The SKU in the product library.')],
     ['', tr('产品', 'Product'), tr('产品资料里的名称。', 'Name from the product library.')],
     ['lifecycle', tr('SKU 状态', 'SKU status'), tr('产品资料“生命周期”里的状态：开发中 / 上新中 / 在售 / 清库存 / 计划停售 / 停售。清库存、计划停售、停售的 SKU 只卖完现有货：不建议生产，也不报缺货风险。', 'Lifecycle from the product library. Clearance, phasing out and discontinued SKUs are sold down: no production suggested and no stockout risk.')],
-    ['ds365', tr('DS · 365 天', 'DS · 365d'), tr('过去 365 天平均每天卖出的件数（Shopify 订单，取消和测试单不算）。', 'Average units sold per day over the last 365 days (Shopify).'), 'num'],
-    ['ds90', tr('DS · 90 天', 'DS · 90d'), tr('过去 90 天平均每天卖出的件数。', 'Average units sold per day over the last 90 days.'), 'num'],
-    ['ds30', tr('DS · 30 天', 'DS · 30d'), tr('过去 30 天平均每天卖出的件数；▲▼ 是和近 90 天比的涨跌（30% 以上算短期爆发或下滑）。', 'Average per day over the last 30 days; ▲▼ against the 90-day rate (30%+ is a burst or dip).'), 'num'],
-    ['forecast', tr('预测日销', 'Forecast / day'), tr('40% 近 30 天 + 30% 近 90 天 + 30% 全年 × 季节系数；短期爆发最多按近 90 天的 2 倍计入。后面的天数都按它算。', '40% last 30 + 30% last 90 + 30% the year × season; bursts count up to 2× the 90-day rate. Everything after uses it.'), 'num'],
+    ['sold365', tr('365 天销量', 'Sold · 365d'), tr('过去 365 天卖出的件数（Shopify 订单，取消和测试单不算）。鼠标放在数字上看日均（DS）。', 'Units sold in the last 365 days (Shopify; cancelled and test orders excluded). Hover a number for the daily average (DS).'), 'num'],
+    ['sold90', tr('90 天销量', 'Sold · 90d'), tr('过去 90 天卖出的件数。鼠标放在数字上看日均。', 'Units sold in the last 90 days. Hover for the daily average.'), 'num'],
+    ['sold30', tr('30 天销量', 'Sold · 30d'), tr(`过去 30 天卖出的件数。▲▼ 是近 30 天日均和近 90 天日均比的涨跌（30% 以上算短期爆发或下滑）；近 30 天卖不到 ${TREND_MIN} 件时样本太少，不显示。`, `Units sold in the last 30 days. ▲▼ compares the 30-day daily average with the 90-day one (30%+ is a burst or dip), shown only with ${TREND_MIN}+ units in 30 days.`), 'num'],
+    ['monthly', tr('预测月销', 'Forecast / month'), tr('按预测日销算的每月件数（向上取整）。预测日销 = 40% 近 30 天 + 30% 近 90 天 + 30% 全年 × 季节系数；短期爆发最多按近 90 天的 2 倍计入。后面的天数都按它算。', 'Units a month at the forecast daily rate (rounded up). Forecast = 40% last 30 + 30% last 90 + 30% the year × season; bursts count up to 2× the 90-day rate. Everything after uses it.'), 'num'],
     ['us', tr('美国LA仓', 'US LA'), tr('美国LA仓现在的数量（WMS）。', 'In the US LA warehouse now (WMS).'), 'num'],
     ['transit', tr('在途', 'In transit'), tr('已经发出、还没入美国仓的数量（WMS 在途运输中）。', 'Shipped, not yet in the US warehouse (WMS in transit).'), 'num'],
     ['dg', tr('东莞工厂仓', 'Dongguan'), tr('东莞工厂仓的成品数量。', 'Finished goods at the Dongguan factory.'), 'num'],
@@ -105,25 +110,25 @@
   /** One plain sentence on what the system saw and what it suggests (owner, 2026-11-12). */
   function why(x) {
     const parts = [], sep = tr('；', '; ');
-    if (x.signal === 'spike') parts.push(tr(`近 30 天日销 ${x.ds30}，比近 90 天${x.trendPct != null ? `高 ${x.trendPct}%` : '明显高'}（短期爆发，只部分计入）`, `30-day sales ${x.ds30}/day, ${x.trendPct != null ? x.trendPct + '% above' : 'well above'} the 90-day rate (a burst, counted in partly)`));
-    if (x.signal === 'dip') parts.push(tr(`近 30 天日销 ${x.ds30}，比近 90 天低 ${Math.abs(x.trendPct)}%（短期下滑）`, `30-day sales ${x.ds30}/day, ${Math.abs(x.trendPct)}% below the 90-day rate (a dip)`));
+    if (x.signal === 'spike') parts.push(tr(`近 30 天卖了 ${fmt(x.sold30 || 0)} 件，日均比近 90 天${x.trendPct != null ? `高 ${x.trendPct}%` : '明显高'}（短期爆发，只部分计入）`, `${fmt(x.sold30 || 0)} sold in 30 days, ${x.trendPct != null ? x.trendPct + '% above' : 'well above'} the 90-day daily rate (a burst, counted in partly)`));
+    if (x.signal === 'dip') parts.push(tr(`近 30 天卖了 ${fmt(x.sold30 || 0)} 件，日均比近 90 天低 ${Math.abs(x.trendPct)}%（短期下滑）`, `${fmt(x.sold30 || 0)} sold in 30 days, ${Math.abs(x.trendPct)}% below the 90-day daily rate (a dip)`));
     if (x.season >= 1.15) parts.push(tr(`去年接下来 90 天是全年平均的 ${x.season} 倍（旺季）`, `last year the coming 90 days sold ${x.season}× the yearly average (peak season)`));
     if (x.season <= 0.85) parts.push(tr(`去年接下来 90 天是全年平均的 ${x.season} 倍（淡季）`, `last year the coming 90 days sold ${x.season}× the yearly average (low season)`));
-    parts.push(tr(`预测日销 ${x.forecast}`, `forecast ${x.forecast}/day`));
+    parts.push(tr(`预测每月约 ${fmt(x.monthly || 0)} 件`, `forecast about ${fmt(x.monthly || 0)} a month`));
     if (x.wip) parts.push(tr(`在产 ${fmt(x.wip)} 件已算进建议生产`, `${fmt(x.wip)} in production counted in`));
     const plan = x.ship || x.make ? tr(`建议${x.ship ? `工厂现货先发 ${fmt(x.ship)} 件` : ''}${x.ship && x.make ? '，再' : ''}${x.make ? `下单生产 ${fmt(x.make)} 件${x.moq ? `（起订量 ${x.moq}）` : ''}` : ''}。`,
       `Suggest ${x.ship ? `shipping ${fmt(x.ship)} from factory stock` : ''}${x.ship && x.make ? ', then ' : ''}${x.make ? `ordering ${fmt(x.make)} from production${x.moq ? ` (MOQ ${x.moq})` : ''}` : ''}.`) : '';
     if (x.stopping) { const life = w(LIFE[x.lifecycle] || ['', '']);
       return tr(`产品资料里是“${life}”：只卖完现有货，不建议生产，也不报缺货风险。`, `Marked “${life}” in the product library: sell down what is left; no production and no stockout risk.`)
-        + (x.cover != null ? tr(`现有货（美国仓 + 在途）够卖 ${x.cover} 天。`, ` Stock on hand and on the way lasts ${x.cover} days.`) : '')
+        + (x.cover != null ? tr(`现有货（美国仓 + 在途）够卖 ${daysText(x.cover)}。`, ` Stock on hand and on the way lasts ${daysText(x.cover)}.`) : '')
         + (x.status === 'overstock' ? tr('库存还多，可考虑促销清货。', ' Still a lot left: consider a promotion.') : '')
         + (x.ship ? tr(`工厂还有成品，可发 ${fmt(x.ship)} 件到美国仓。`, ` Factory stock can ship ${fmt(x.ship)} to the US.`) : ''); }
     if (x.status === 'overstock' && !x.forecast) return tr('有库存但最近一年没有销量：暂停补货，考虑清库存。', 'Stock but no sales in the past year: hold reorders and consider clearing it.');
     if (!x.forecast) return tr('没有销量也没有库存：不建议补货。', 'No sales and no stock: no reorder suggested.');
     const head = parts.join(sep);
-    if (x.status === 'risk') return head + tr(`。现有货（美国仓 + 在途）够卖 ${x.cover} 天，补货要 ${x.leadDays} 天才到仓，会断货约 ${x.shortDays} 天。`, `. Stock on hand and on the way lasts ${x.cover} days; a reorder takes ${x.leadDays} days, so about ${x.shortDays} days without stock. `) + plan;
-    if (x.status === 'overstock') return head + tr(`。现有货够卖 ${x.cover} 天，比目标（${x.horizon} 天）多出 ${x.cover - x.horizon} 天：暂停补货，可考虑促销。`, `. Stock lasts ${x.cover} days, ${x.cover - x.horizon} days beyond the target (${x.horizon}): hold reorders, consider a promotion.`);
-    return head + tr(`。现有货够卖 ${x.cover} 天，撑得到补货到仓（${x.leadDays} 天）。`, `. Stock lasts ${x.cover} days, enough until a reorder arrives (${x.leadDays} days). `) + (plan || tr('暂不需要补货。', 'No reorder needed yet.'));
+    if (x.status === 'risk') return head + tr(`。现有货（美国仓 + 在途）够卖 ${daysText(x.cover)}，补货要 ${x.leadDays} 天才到仓，会断货约 ${x.shortDays} 天。`, `. Stock on hand and on the way lasts ${daysText(x.cover)}; a reorder takes ${x.leadDays} days, so about ${x.shortDays} days without stock. `) + plan;
+    if (x.status === 'overstock') return head + tr(`。现有货够卖 ${daysText(x.cover)}，比目标（${x.horizon} 天）多出 ${x.cover - x.horizon > 365 ? '1 年以上' : (x.cover - x.horizon) + ' 天'}：暂停补货，可考虑促销。`, `. Stock lasts ${daysText(x.cover)}, ${x.cover - x.horizon} days beyond the target (${x.horizon}): hold reorders, consider a promotion.`);
+    return head + tr(`。现有货够卖 ${daysText(x.cover)}，撑得到补货到仓（${x.leadDays} 天）。`, `. Stock lasts ${daysText(x.cover)}, enough until a reorder arrives (${x.leadDays} days). `) + (plan || tr('暂不需要补货。', 'No reorder needed yet.'));
   }
   /* 系统判断 shows on the status: hover or click (owner, 2026-11-12). One floating card, placed under the status. */
   const showWhy = btn => { let pop = document.getElementById('scm-why-pop'); if (!pop) { pop = document.createElement('div'); pop.id = 'scm-why-pop'; pop.className = 'scm-why-pop'; pop.setAttribute('role', 'tooltip'); document.body.appendChild(pop); }
@@ -148,11 +153,11 @@
         <span class="scm-sp"></span>${data.canManage ? `<button class="btn" data-scm="settings">${icon('sliders-horizontal')} ${tr('补货参数', 'Reorder settings')}</button><button class="btn primary" data-scm="sync" ${busy ? 'disabled' : ''}>${icon('arrows-clockwise')} ${busy ? tr('同步中…', 'Syncing…') : tr('同步 Shopify 销量', 'Sync Shopify sales')}</button>` : ''}${window.WorkOSErpAccess?.button?.('supply') || ''}</div>
       <div class="scm-table-wrap"><table class="scm-table"><thead><tr>${COLS().map(([k, label, tip, cls]) => headTh(k, label, tip, cls)).join('')}</tr></thead><tbody>
         ${list.map(x => { const st = STATUS[x.status] || STATUS.ok;
-          return `<tr><td class="mono">${esc(x.sku)}</td><td class="scm-name" title="${esc(nameOf(x))}">${esc(nameOf(x))}</td><td>${LIFE[x.lifecycle] ? `<span class="scm-pill scm-life ${LIFE[x.lifecycle][2]}">${w(LIFE[x.lifecycle])}</span>` : '—'}</td><td class="num">${x.ds365}</td><td class="num">${x.ds90}</td><td class="num">${x.ds30}${trend(x)}</td>
-            <td class="num" title="${tr(`季节系数 ${x.season}`, `season ${x.season}`)}"><b>${x.forecast}</b></td>
+          return `<tr><td class="mono">${esc(x.sku)}</td><td class="scm-name" title="${esc(nameOf(x))}">${esc(nameOf(x))}</td><td>${LIFE[x.lifecycle] ? `<span class="scm-pill scm-life ${LIFE[x.lifecycle][2]}">${w(LIFE[x.lifecycle])}</span>` : '—'}</td><td class="num" title="${esc(dsTip(x.sold365 || 0, 365))}">${fmt(x.sold365 || 0)}</td><td class="num" title="${esc(dsTip(x.sold90 || 0, 90))}">${fmt(x.sold90 || 0)}</td><td class="num" title="${esc(dsTip(x.sold30 || 0, 30))}">${fmt(x.sold30 || 0)}${trend(x)}</td>
+            <td class="num" title="${tr(`预测日销 ${x.forecast} 件 · 季节系数 ${x.season}`, `forecast ${x.forecast} a day · season ${x.season}`)}"><b>${fmt(x.monthly || 0)}</b></td>
             <td class="num">${fmt(x.us)}</td><td class="num">${fmt(x.transit)}</td><td class="num">${fmt(x.dg)}</td><td class="num">${fmt(x.jn)}</td>
             <td class="num scm-tot"><b>${fmt(x.finished)}</b></td><td class="num">${x.wip ? fmt(x.wip) : '—'}</td><td class="num scm-tot"><b>${fmt(x.pipeline)}</b></td>
-            <td class="num ${x.status === 'risk' ? 'red' : ''}" title="${tr('美国仓 + 在途能卖的天数；成品合计和成品 + 在产能卖的天数在下面', 'Days that US + in transit last; below: finished, and finished + in production')}">${x.cover == null ? '—' : fmt(x.cover) + tr(' 天', 'd')}${x.coverAll != null ? `<small class="scm-sub">${tr(`成品 ${fmt(x.coverFinished)} · 含在产 ${fmt(x.coverAll)}`, `fin. ${fmt(x.coverFinished)} · +WIP ${fmt(x.coverAll)}`)}</small>` : ''}</td>
+            <td class="num ${x.status === 'risk' ? 'red' : ''}" title="${tr('美国仓 + 在途能卖的天数；成品合计和成品 + 在产能卖的天数在下面', 'Days that US + in transit last; below: finished, and finished + in production')}">${daysText(x.cover)}${x.coverAll != null ? `<small class="scm-sub">${tr(`成品 ${daysText(x.coverFinished)} · 含在产 ${daysText(x.coverAll)}`, `fin. ${daysText(x.coverFinished)} · +WIP ${daysText(x.coverAll)}`)}</small>` : ''}</td>
             <td>${esc(x.moq || '—')}</td><td class="num">${x.productionDays}${x.productionFromLibrary ? '' : '*'}</td><td class="num">${x.firstLegDays}${x.firstLegFromLibrary ? '' : '*'}</td>
             <td class="num scm-days" title="${esc(daysWhy(x))}"><b>${x.leadDays} ${tr('天', 'd')}</b>${x.factory > 0 ? `<small class="scm-sub">${tr(`工厂现货 · 重新生产要 ${x.supplyDays} 天`, `factory stock · ${x.supplyDays}d if made`)}</small>` : ''}</td><td class="num nowrap" title="${esc(x.arriveOn || '')}">${esc(md(x.arriveOn))}</td>
             <td class="num ${x.shortDays ? 'red' : ''}">${x.shortDays ? `<b>${x.shortDays} ${tr('天', 'd')}</b>${x.cover != null ? `<small class="scm-sub">${tr(`${outOn(x)} 卖完`, `runs out ${outOn(x)}`)}</small>` : ''}` : '—'}</td>
@@ -160,8 +165,8 @@
             <td><button type="button" class="scm-pill ${st[2]} scm-why-btn" data-why="${esc(why(x))}" aria-label="${esc(w(st))}: ${esc(why(x))}">${w(st)}</button></td></tr>`; }).join('') || `<tr><td colspan="24" class="scm-empty">${tr('没有符合的 SKU', 'No matching SKU')}</td></tr>`}
       </tbody></table></div>
       <section class="scm-legend"><h4>${icon('info')} ${tr('字段说明', 'What the columns mean')}</h4><dl>${[
-        [tr('DS · 365 / 90 / 30 天', 'DS · 365 / 90 / 30d'), tr('过去 365 / 90 / 30 天平均每天卖出的件数（Shopify 订单，取消和测试单不算）。', 'Average units sold per day over the last 365 / 90 / 30 days (Shopify; cancelled and test orders excluded).')],
-        [tr('预测日销', 'Forecast / day'), tr('40% 近 30 天 + 30% 近 90 天 + 30% 全年 × 季节系数。季节系数 = 去年接下来 90 天的日销 ÷ 全年平均（0.5–2 倍，满一年数据才算）。近 30 天比近 90 天高 30% 以上算短期爆发，最多按近 90 天的 2 倍计入；低 30% 以上算短期下滑，如实计入。', '40% last 30 days + 30% last 90 days + 30% the year × season. Season = last year’s next 90 days ÷ yearly average (0.5–2×, with a full year of data). A 30-day rate 30%+ above the 90-day rate is a burst, counted in up to 2×; 30%+ below is a dip, counted in fully.')],
+        [tr('365 / 90 / 30 天销量', 'Sold · 365 / 90 / 30d'), tr('过去 365 / 90 / 30 天卖出的件数（Shopify 订单，取消和测试单不算）。鼠标放在数字上看日均（DS）。', 'Units sold in the last 365 / 90 / 30 days (Shopify; cancelled and test orders excluded). Hover a number for the daily average (DS).')],
+        [tr('预测月销', 'Forecast / month'), tr('预测日销 × 30（向上取整）。预测日销 = 40% 近 30 天 + 30% 近 90 天 + 30% 全年 × 季节系数。季节系数 = 去年接下来 90 天的日销 ÷ 全年平均（0.5–2 倍，满一年数据才算）。近 30 天日均比近 90 天高 30% 以上算短期爆发，最多按近 90 天的 2 倍计入；低 30% 以上算短期下滑，如实计入；近 30 天卖不到 3 件不算涨跌。', 'Forecast a day × 30, rounded up. Forecast a day = 40% last 30 days + 30% last 90 days + 30% the year × season. Season = last year’s next 90 days ÷ yearly average (0.5–2×, with a full year of data). A 30-day rate 30%+ above the 90-day rate is a burst, counted in up to 2×; 30%+ below is a dip, counted in fully.')],
         [tr('美国LA仓 / 在途 / 东莞 / 济南', 'US LA / in transit / Dongguan / Jinan'), tr('各仓库现在的数量，取自库存管理（WMS）。', 'What each warehouse holds now, from Inventory (WMS).')],
         [tr('成品合计', 'Finished'), tr('美国LA仓 + 在途 + 东莞工厂仓 + 济南工厂仓。', 'US LA + in transit + Dongguan + Jinan.')],
         [tr('在产（半成品）', 'In production'), tr('采购单里已下单、还没完工的数量。', 'Ordered on purchase orders and not finished yet.')],
@@ -187,15 +192,15 @@
   const svgEsc = esc;
   function dashView() {
     const it = data.items, sh = data.shipments, os = data.orders || [], sales = data.sales || { weekly:[], last30:0, prev30:0 };
-    const sum = (a, f) => a.reduce((n, x) => n + (f(x) || 0), 0), fc = sum(it, x => x.forecast), fin = sum(it, x => x.finished), wip = sum(it, x => x.wip);
+    const sum = (a, f) => a.reduce((n, x) => n + (f(x) || 0), 0), fc = sum(it, x => x.forecast), fcMonth = sum(it, x => x.monthly), fin = sum(it, x => x.finished), wip = sum(it, x => x.wip);
     const transitUnits = sum(sh.filter(x => x.status !== 'arrived'), x => x.units), delivered = os.filter(o => o.status === 'delivered'), onTime = delivered.filter(o => o.onTime).length;
     const delta = sales.prev30 ? Math.round((sales.last30 - sales.prev30) / sales.prev30 * 100) : null;
     const tile = (label, value, note, tone = '') => `<div class="scm-tile ${tone}"><span>${label}</span><b>${value}</b><em>${note}</em></div>`;
     return `<div class="scm-dash">
       <div class="scm-tiles">
         ${tile(tr('近 30 天销量', 'Sold, last 30 days'), fmt(sales.last30), delta == null ? tr('没有前 30 天数据', 'no prior period') : `<span class="${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}%</span> ${tr('对比前 30 天', 'vs the 30 days before')}`)}
-        ${tile(tr('预测日销（合计）', 'Forecast per day'), (Math.round(fc * 10) / 10).toLocaleString('en-US'), tr('所有 SKU 加总', 'all SKUs'))}
-        ${tile(tr('成品库存', 'Finished goods'), fmt(fin), fc > 0 ? tr(`按预测日销够卖约 ${fmt(Math.floor(fin / fc))} 天`, `about ${fmt(Math.floor(fin / fc))} days at the forecast`) : tr('没有销量', 'no sales'))}
+        ${tile(tr('预测月销（合计）', 'Forecast per month'), fmt(fcMonth), tr('件 · 所有 SKU 加总', 'units · all SKUs'))}
+        ${tile(tr('成品库存', 'Finished goods'), fmt(fin), fc > 0 ? tr(`按预测够卖约 ${daysText(Math.floor(fin / fc))}`, `about ${daysText(Math.floor(fin / fc))} at the forecast`) : tr('没有销量', 'no sales'))}
         ${tile(tr('在产（半成品）', 'In production'), fmt(wip), tr(`${os.filter(o => o.status === 'issued').length} 张采购单生产中`, `${os.filter(o => o.status === 'issued').length} orders in production`))}
         ${tile(tr('在途', 'In transit'), fmt(transitUnits), tr(`${sh.filter(x => x.status !== 'arrived').length} 个货柜 · ${sh.filter(x => x.status === 'in_transit' && x.daysLeft < 0).length} 个过了预计到港`, `${sh.filter(x => x.status !== 'arrived').length} shipments · ${sh.filter(x => x.status === 'in_transit' && x.daysLeft < 0).length} past ETA`))}
         ${(() => { const s365 = sum(it, x => x.sold365), turns = fin > 0 ? s365 / fin : null; return tile(tr('库存周转率', 'Inventory turnover'), turns == null ? '—' : (Math.round(turns * 10) / 10) + tr(' 次/年', '×/yr'), turns ? tr(`库存天数约 ${fmt(Math.round(365 / turns))} 天 · 年销 ${fmt(s365)} 件`, `about ${fmt(Math.round(365 / turns))} days of inventory · ${fmt(s365)} sold/yr`) : tr('没有成品库存', 'no finished stock')); })()}
@@ -234,7 +239,7 @@
     const band = r => r.turns == null ? ['grey', tr('无库存', 'no stock')] : r.dio == null ? ['red', tr('有货没销量', 'no sales')] : r.dio > 180 ? ['red', tr('周转慢', 'slow')] : r.dio > 90 ? ['amber', tr('偏慢', 'slowish')] : ['green', tr('健康', 'healthy')];
     return `<div class="scm-table-wrap"><table class="scm-table scm-mini-table"><thead><tr><th>SKU</th><th>${tr('产品', 'Product')}</th><th class="num">${tr('近 365 天销量', 'Sold 365d')}</th><th class="num">${tr('成品库存', 'Finished')}</th><th class="num">${tr('周转次数 / 年', 'Turns / yr')}</th><th>${tr('库存天数', 'Days of inventory')}</th><th>${tr('判断', 'Read')}</th></tr></thead><tbody>
       ${rows.map(r => { const [cls, label] = band(r); return `<tr><td class="mono">${svgEsc(r.x.sku)}</td><td class="scm-name" title="${svgEsc(nameOf(r.x))}">${svgEsc(nameOf(r.x))}</td><td class="num">${fmt(r.x.sold365)}</td><td class="num">${fmt(r.x.finished)}</td>
-        <td class="num"><b>${r.turns == null ? '—' : r1d(r.turns)}</b></td><td><div class="scm-inline-bar"><i class="seg dio-${cls}" style="width:${r.dio == null ? 0 : Math.min(100, r.dio / maxDio * 100).toFixed(1)}%"></i><span>${r.dio == null ? '—' : fmt(r.dio) + tr(' 天', 'd')}</span></div></td>
+        <td class="num"><b>${r.turns == null ? '—' : r1d(r.turns)}</b></td><td><div class="scm-inline-bar"><i class="seg dio-${cls}" style="width:${r.dio == null ? 0 : Math.min(100, r.dio / maxDio * 100).toFixed(1)}%"></i><span>${daysText(r.dio)}</span></div></td>
         <td><span class="scm-pill ${cls}">${label}</span></td></tr>`; }).join('')}</tbody></table></div>`;
   }
   function whTable(it) {
@@ -268,7 +273,7 @@
     const rows = it.filter(x => x.cover != null).sort((a, b) => (a.cover - a.leadDays) - (b.cover - b.leadDays)), cap = Math.max(60, ...rows.map(x => x.leadDays * 2));
     if (!rows.length) return `<p class="scm-hint">${tr('没有销量的 SKU 不在这里。', 'SKUs without sales are not shown.')}</p>`;
     const st = x => STATUS[x.status] || STATUS.ok;
-    return `<div class="scm-hbars cover">${rows.map(x => `<div class="row"><span class="lab mono">${svgEsc(x.sku)}</span><div class="track"><i class="seg cov ${x.status}" style="width:${Math.min(100, x.cover / cap * 100).toFixed(2)}%" data-tip="${svgEsc(tr(`${x.sku}：可售 ${x.cover} 天，到仓要 ${x.leadDays} 天${x.shortDays ? `，会断货约 ${x.shortDays} 天` : ''}`, `${x.sku}: lasts ${x.cover} days, reorder takes ${x.leadDays}${x.shortDays ? `, about ${x.shortDays} days without stock` : ''}`))}"></i>
+    return `<div class="scm-hbars cover">${rows.map(x => `<div class="row"><span class="lab mono">${svgEsc(x.sku)}</span><div class="track"><i class="seg cov ${x.status}" style="width:${Math.min(100, x.cover / cap * 100).toFixed(2)}%" data-tip="${svgEsc(tr(`${x.sku}：可售 ${x.cover} 天，到仓要 ${x.leadDays} 天${x.shortDays ? `，会断货约 ${x.shortDays} 天` : ''}`, `${x.sku}: lasts ${daysText(x.cover)}, reorder takes ${x.leadDays}${x.shortDays ? `, about ${x.shortDays} days without stock` : ''}`))}"></i>
       <b class="mark" style="left:${Math.min(100, x.leadDays / cap * 100).toFixed(2)}%"></b>${x.cover > cap ? '<em class="more">›</em>' : ''}</div><span class="val"><span class="scm-pill ${st(x)[2]}">${w(st(x))}</span></span></div>`).join('')}</div>`;
   }
   function statusBars(it) {
