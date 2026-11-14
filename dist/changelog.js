@@ -22,6 +22,9 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.75', date:'2026-11-14T06:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      zh:['登录不再一小时就掉线：一直在用就保持登录，闲置 24 小时才自动退出，登录满 7 天需要重新登录一次（钉钉和邮箱密码登录都一样）'],
+      en:['No more sign-outs after an hour: you stay signed in while you use WorkOS, are signed out after 24 idle hours, and sign in again every 7 days (DingTalk and email alike)'] },
     { version:'1.74', date:'2026-11-14T05:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       zh:['供应链运营（产品资料、定价试算器、库存、供应链）的筛选下拉都可以多选：点名称只看这一项，和以前一样快；点前面的勾选框可以同时选几项（比如“停产清存 + 下架封存”、“主机 + 配件”）；按钮上显示选了几项，“全部”一键清除。出入库、调拨、盘点对话框里找 SKU 的筛选也一样'],
       en:['Supply chain filters (product library, pricing calculator, inventory, supply chain) are multi-select: click a name to show only it, as fast as before; tick the boxes to combine several (e.g. Clearance + Delisted, Machine + Accessory); the button shows how many are picked and “All” clears them. The SKU finder in goods-in / out / transfer / count dialogs works the same way'] },
