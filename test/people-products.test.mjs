@@ -27,7 +27,7 @@ test('sidebar sections follow the requested order, and restricted pages are gate
   assert.deepEqual(ids('reports'), [], 'no Reports group in the sidebar: the analysis pages are tabs of their parent pages');
   for (const id of ['okr-analysis', 'project-analysis', 'team']) assert.ok(ids('hidden').includes(id), `${id} keeps its route for links`);
   assert.doesNotMatch(live.match(/const navSections = \[([\s\S]*?)\];/)[1], /'reports'/);
-  assert.deepEqual(ids('product'), ['products', 'wms', 'scm'], '供应链运营: PIM, WMS and SCM; permissions live on each module, not in the menu');
+  assert.deepEqual(ids('product'), ['products', 'wms', 'scm', 'orders'], '供应链运营: PIM, WMS, SCM and 订单履约; permissions live on each module, not in the menu');
   assert.ok(ids('hidden').includes('product-cost') && ids('hidden').includes('supply-chain'), 'pricing and supply chain are tabs now; old links still open them');
   assert.deepEqual(ids('marketing'), ['kol'], 'KOL management sits in its own Marketing section');
   assert.deepEqual(ids('labs'), ['support', 'knowledge', 'quality']);

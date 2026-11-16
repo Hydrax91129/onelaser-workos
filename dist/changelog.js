@@ -22,6 +22,9 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.76', date:'2026-11-17T07:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      zh:['新增“订单履约”（供应链运营）：每张订单一条时间线——收全款 → 出货（机器 48 小时、快递 24 小时）→ 在途 → 到站约送货 → 签收验货 → 客户做出第一件作品 → 邀请评价（Trustpilot → BBB → Google → Facebook）。超时标红并写明负责人；没收全款不能出货，例外只有主管理员能特批；零售、经销商、KOL 分开（按 Shopify 标签），KOL 单要先批准、最后记内容链接；可以从 Shopify 同步最近 60 天的订单，也能手工新建线下订单；主管理员可做 Shopify 连接检查'],
+      en:['New Order fulfillment (supply chain operations): one timeline per order: paid in full → shipped (48 h machines, 24 h parcels) → in transit → delivery booked at the terminal → delivered and inspected → first piece made → review invited (Trustpilot → BBB → Google → Facebook). Late orders turn red and show their owner; nothing ships before full payment unless a main admin releases it; retail, dealer and KOL orders are kept apart (Shopify tags), KOL orders are approved first and end with a content link; sync the last 60 days from Shopify or add offline orders by hand; main admins get a Shopify connection check'] },
     { version:'1.75', date:'2026-11-14T06:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       zh:['登录不再一小时就掉线：一直在用就保持登录，闲置 24 小时才自动退出，登录满 7 天需要重新登录一次（钉钉和邮箱密码登录都一样）'],
       en:['No more sign-outs after an hour: you stay signed in while you use WorkOS, are signed out after 24 idle hours, and sign in again every 7 days (DingTalk and email alike)'] },

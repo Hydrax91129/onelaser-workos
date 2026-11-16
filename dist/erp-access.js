@@ -25,6 +25,7 @@
     ['warehouse', 'warehouse', '仓库库存', 'Warehouse stock', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage'], ['approve', '审批', 'Approve']], '管理 = 入库、出库、调拨、提交盘点调整；审批 = 管理 + 确认盘点调整（自己提交的也由自己确认）。只有主管理员能设审批', 'Manage = goods in, out, transfers and submitting counts; approve = manage + confirming counts (your own too). Only main admins grant approve'],
     ['returns', 'arrow-u-up-left', '退货维修', 'Returns & repairs', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 登记退货、维修、入库上架和售出；查看 = 只看退货记录', 'Manage = register returns, repair, put away and sell; view = see the returns only'],
     ['kol', 'users-three', 'KOL 管理', 'KOL management', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 新增和编辑 KOL、记录寄样和发布、从 UpPromote 同步；查看可以看到 KOL 的联系方式和佣金', 'Manage = add and edit KOLs, log samples and content, sync UpPromote; view shows KOL contact details and commission'],
+    ['orders', 'package', '订单履约', 'Order fulfillment', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '查看 = 看订单和客户联系方式；管理 = 新建订单、记录收款和每一步（出货、物流、签收、上手、评价）。未收全款特批发货只有主管理员能做', 'View = orders and customer contact details; Manage = create orders and record payments and each step (shipping, freight, delivery, getting started, review). Releasing unpaid orders stays main-admin only'],
     ['dealers', 'storefront', '经销商', 'Dealers', [['none', '无', 'None'], ['view', '查看', 'View'], ['manage', '管理', 'Manage']], '管理 = 审核经销商、发货并填写物流单号、取消未付款订单', 'Manage = approve dealers, ship with tracking, cancel unpaid orders']
   ];
 
@@ -36,6 +37,7 @@
     returns:{ areas:['returns'], zh:'退货权限', en:'Returns permissions', back:'wms', bzh:'退货维修', ben:'Returns' },
     supply:{ areas:['supply'], zh:'供应链权限', en:'Supply chain permissions', back:'scm', bzh:'供应链管理', ben:'Supply chain' },
     dealers:{ areas:['dealers'], zh:'经销商权限', en:'Dealer permissions', back:'products', bzh:'经销商订单', ben:'Dealer orders' },
+    orders:{ areas:['orders'], zh:'订单履约权限', en:'Order fulfillment permissions', back:'orders', bzh:'订单履约', ben:'Order fulfillment' },
     kol:{ areas:['kol'], zh:'KOL 权限', en:'KOL permissions', back:'kol', bzh:'KOL 管理', ben:'KOL management' } };
   const pageOf = () => PAGES[ctx?.area?.() || ''] || null;
   /** The permissions button for a module, or '' when this person cannot set that module's access. */
