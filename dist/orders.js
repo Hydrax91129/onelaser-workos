@@ -17,6 +17,15 @@
   const when = v => v ? new Date(v).toLocaleString(lang() === 'en' ? 'en-US' : 'zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
   const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   const KIND = { retail:['零售', 'Retail', 'blue'], dealer:['经销商', 'Dealer', 'violet'], kol:['KOL', 'KOL', 'amber'] };
+  // Retail splits in two (owner, 2026-11-17): the customer checked out on the website, or we placed the order for them
+  // (Shopify draft order or POS, the offline tag, or an order added here).
+  const TYPE = { retail_online:['零售 · 在线结账', 'Retail · online checkout'], retail_manual:['零售 · 手动下单', 'Retail · manual order'], dealer:KIND.dealer, kol:KIND.kol };
+  // Ship-from warehouses: the WMS locations (wms.ts LOCATIONS, without "in transit").
+  const WH = { us:['美国LA仓', 'US LA warehouse'], dg:['东莞工厂仓', 'Dongguan factory'], jn:['济南工厂仓', 'Jinan factory'] };
+  const CANCEL = { customer:['客户取消', 'Customer changed their mind'], fraud:['疑似欺诈', 'Fraud'], inventory:['缺货', 'Out of stock'], declined:['付款被拒', 'Payment declined'], staff:['员工操作失误', 'Staff error'], other:['其他', 'Other'] };
+  const cancelText = o => w(CANCEL[o.cancelReason]) || o.cancelReason || '';
+  const place = c => [[c.city, c.state].filter(Boolean).join(', '), c.country].filter(Boolean).join(' · ');
+  const typeOf = o => o.kind === 'retail' ? (o.channel === 'offline' ? 'retail_manual' : 'retail_online') : o.kind;
   const STAGE = { pay:['待收全款', 'Awaiting full payment'], approve:['待批准发货', 'Awaiting approval'], ship:['待出货', 'To ship'], transit:['运输中', 'In transit'],
     delivery:['到站待约送货', 'At terminal, book delivery'], running:['待上手', 'Getting started'], review:['待邀请评价', 'Invite a review'], content:['待 KOL 内容', 'Awaiting KOL content'],
     done:['已完成', 'Done'], cancelled:['已取消', 'Cancelled'] };
@@ -35,9 +44,22 @@
     return h < 0 ? tr(`超时 ${t}`, `${t} late`) : tr(`剩 ${t}`, `${t} left`);
   }
   const chip = (txt, cls = '') => `<span class="ord-chip ${cls}">${esc(txt)}</span>`;
-  const kindChip = o => chip(w(KIND[o.kind]), KIND[o.kind]?.[2]) + (o.channel === 'offline' ? ' ' + chip(tr('线下', 'Offline'), 'grey') : '') + (o.kindNote === 'zero_untagged' ? ' ' + `<span class="ord-chip warn" title="${tr('0 元订单，Shopify 里没有 kol 标签：请确认类型', '$0 order without a kol tag in Shopify: check the type')}">${tr('待确认', 'Check')}</span>` : '');
+  const kindChip = o => chip(w(KIND[o.kind]), KIND[o.kind]?.[2]) + (o.channel === 'offline' && o.kind === 'retail' ? ' ' + chip(tr('手动下单', 'Manual order'), 'grey') : '') + (o.kindNote === 'zero_untagged' ? ' ' + `<span class="ord-chip warn" title="${tr('0 元订单，Shopify 里没有 kol 标签：请确认类型', '$0 order without a kol tag in Shopify: check the type')}">${tr('待确认', 'Check')}</span>` : '');
+  const flagChips = o => [o.stage === 'cancelled' ? chip(tr('已取消', 'Cancelled'), 'warn') : '', o.refund === 'full' ? chip(tr('已退款', 'Refunded'), 'warn') : o.refund === 'partial' ? chip(tr(`部分退款 ${usd(o.refundedCents)}`, `Refunded ${usd(o.refundedCents)}`), 'amber') : '',
+    o.exchange ? chip(tr('换货', 'Exchange'), 'violet') : ''].filter(Boolean).join(' ');
   const stageChip = o => `<span class="ord-stage ${o.late ? 'late' : o.stage === 'done' ? 'done' : ''}">${esc(w(STAGE[o.stage]))}</span>${o.due && !['done', 'cancelled'].includes(o.stage) ? `<small class="${o.late ? 'late' : ''}">${esc(dueText(o))}</small>` : ''}`;
-  const dots = o => `<span class="ord-dots" aria-hidden="true">${NODES(o.kind).map(n => `<i class="${nodeDone(o, n) ? 'on' : stageNode(o) === n ? (o.late ? 'late' : 'now') : ''}"></i>`).join('')}</span>`;
+  // Numbered progress dots; the numbers match the six-step guide at the top of the page (owner, 2026-11-17).
+  const dots = o => `<span class="ord-dots">${NODES(o.kind).map((n, i) => { const c = nodeDone(o, n) ? 'on' : stageNode(o) === n ? (o.late ? 'late' : 'now') : '';
+    return `<i class="${c}" title="${esc(`${i + 1} ${w(NODE_LABEL[n])}${c === 'on' ? tr(' · 已完成', ' · done') : c === 'late' ? tr(' · 超时', ' · late') : c === 'now' ? tr(' · 进行中', ' · current') : ''}`)}">${i + 1}</i>`; }).join('')}</span>`;
+  // The six steps, shown large at the top right of the page.
+  const GUIDE = [['收款', 'Paid', '收齐全款才出货（KOL：批准发货）', 'Full payment before shipping (KOL: approved)'],
+    ['出货', 'Shipped', '机器 48 小时、快递 24 小时内出货，填物流单号', 'Machines in 48 h, parcels in 24 h; enter tracking'],
+    ['在途', 'In transit', '跟踪物流；到站后打电话约送货', 'Track it; book delivery once at the terminal'],
+    ['签收', 'Delivered', '客户签收，检查有没有破损', 'Signed for, checked for damage'],
+    ['会用', 'Up and running', '培训，客户做出第一件作品', 'Training until the first finished piece'],
+    ['评价', 'Review', '邀请好评（KOL：发布内容）', 'Ask for a review (KOL: content posted)']];
+  const guide = () => `<section class="ord-guide" aria-label="${tr('订单 6 步', 'Six steps of an order')}"><h2>${tr('订单 6 步', 'Six steps of an order')}</h2><ol>${GUIDE.map((g, i) => `<li><i>${i + 1}</i><div><b>${tr(g[0], g[1])}</b><small>${tr(g[2], g[3])}</small></div></li>`).join('')}</ol>
+    <p class="ord-legend"><span><i class="on"></i>${tr('已完成', 'Done')}</span><span><i class="now"></i>${tr('进行中', 'Current')}</span><span><i class="late"></i>${tr('超时', 'Late')}</span><span><i></i>${tr('未开始', 'Not yet')}</span><em>${tr('经销商订单到第 4 步签收结束', 'Dealer orders end at step 4')}</em></p></section>`;
   const me = () => ctx?.state?.()?.actor?.id;
 
   function configure(next) { ctx = next; window.WorkOSMulti?.on('ord', (k, vals) => { ui[k] = vals; ctx.rerender(); }); }
@@ -48,11 +70,12 @@
     finally { loading = false; ctx.rerender(); }
   }
   const KPI_FILTER = { lateShip:o => o.stage === 'ship' && o.late, owed:o => o.stage === 'pay', terminal:o => o.stage === 'delivery', damaged:o => o.damage === 'damaged', firstPiece:o => o.stage === 'running' && o.late };
+  const TAB_FILTER = { open:o => !['done', 'cancelled'].includes(o.stage), done:o => o.stage === 'done', cancelled:o => o.stage === 'cancelled', refund:o => !!o.refund, exchange:o => !!o.exchange, all:() => true };
   function filtered() {
     const q = ui.q.trim().toLowerCase(), pass = (sel, v) => !sel.length || sel.includes(v);
-    return data.items.filter(o => (ui.tab === 'all' || (ui.tab === 'open' ? !['done', 'cancelled'].includes(o.stage) : ['done', 'cancelled'].includes(o.stage)))
-      && pass(ui.kind, o.kind) && pass(ui.stage, o.stage) && (!ui.mine || o.owner === me()) && (!ui.late || o.late) && (!ui.kpi || KPI_FILTER[ui.kpi](o))
-      && (!q || [o.number, o.customer.name, o.customer.email, o.customer.city, o.tracking, ...o.lines.map(l => l.sku + ' ' + l.name)].some(x => String(x || '').toLowerCase().includes(q))))
+    return data.items.filter(o => TAB_FILTER[ui.tab](o)
+      && pass(ui.kind, typeOf(o)) && pass(ui.stage, o.stage) && (!ui.mine || o.owner === me()) && (!ui.late || o.late) && (!ui.kpi || KPI_FILTER[ui.kpi](o))
+      && (!q || [o.number, o.customer.name, o.customer.email, o.customer.city, o.customer.state, o.customer.country, o.note?.text, o.tracking, ...o.lines.map(l => l.sku + ' ' + l.name)].some(x => String(x || '').toLowerCase().includes(q))))
       .sort((a, b) => (b.late - a.late) || (a.due && b.due ? Date.parse(a.due) - Date.parse(b.due) : 0) || String(b.placedAt).localeCompare(String(a.placedAt)));
   }
 
@@ -62,18 +85,18 @@
     const s = data.summary, list = filtered(), open = data.items.filter(o => !['done', 'cancelled'].includes(o.stage));
     const kpi = (k, label, value, note, bad) => `<button type="button" class="scm-kpi ord-kpi ${bad ? 'red' : ''} ${ui.kpi === k ? 'on' : ''}" data-ord="kpi" data-v="${k}" title="${tr('点一下只看这些订单', 'Show only these orders')}"><span>${label}</span><b>${value}</b><em>${note}</em></button>`;
     const avg = (v, unit) => v == null ? '—' : v + unit;
-    const count = k => open.filter(o => o.kind === k).length;
+    const count = k => open.filter(o => typeOf(o) === k).length;
     return `<div class="ord">
       <div class="page-heading"><div><div class="eyebrow">WORK OS · ORDER TO SUCCESS</div><h1>${tr('订单履约', 'Order fulfillment')}</h1>
         <p>${tr(`从收全款到客户会用、留下好评。机器收全款后 ${data.settings.shipHoursLtl} 小时内出货，快递件 ${data.settings.shipHoursParcel} 小时；签收 ${data.settings.trainDays} 天还没做出第一件作品就主动联系。`,
           `From full payment to a customer who can use the machine and leaves a review. Machines ship within ${data.settings.shipHoursLtl} h of full payment, parcels within ${data.settings.shipHoursParcel} h; no first piece ${data.settings.trainDays} days after delivery means we reach out.`)}</p></div>
-        <div class="ord-actions">
+        <div class="ord-side"><div class="ord-actions">
           ${data.canManage ? `<button class="btn primary" data-ord="new">${icon('plus')} ${tr('新建订单', 'New order')}</button>` : ''}
           ${data.canManage && data.shopify ? `<button class="btn" data-ord="sync">${icon('arrows-clockwise')} ${tr('同步 Shopify 订单', 'Sync Shopify orders')}</button>` : ''}
           ${data.canRelease ? `<button class="btn" data-ord="settings">${icon('gear')} ${tr('负责人与时限', 'Owners & deadlines')}</button>` : ''}
           ${data.canRelease && data.shopify ? `<button class="btn" data-ord="check">${icon('plugs-connected')} ${tr('Shopify 连接检查', 'Shopify check')}</button>` : ''}
           ${window.WorkOSErpAccess?.button?.('orders') || ''}
-        </div></div>
+        </div>${guide()}</div></div>
       ${!data.shopify ? `<div class="ord-note">${icon('storefront')} ${tr('这里还没连接 Shopify：订单可以手工新建；连接后点“同步 Shopify 订单”拉最近 60 天的订单。', 'Shopify is not connected here: add orders by hand; once connected, Sync Shopify orders pulls the last 60 days.')}</div>` : ''}
       ${s.zeroUntagged ? `<div class="ord-note warn">${icon('warning')} ${tr(`${s.zeroUntagged} 张 0 元订单在 Shopify 里没有 kol 标签，已先当成 KOL：请打开确认类型。`, `${s.zeroUntagged} $0 orders have no kol tag in Shopify and are treated as KOL for now: open them to confirm.`)}</div>` : ''}
       <div class="scm-kpis ord-kpis">
@@ -89,11 +112,12 @@
         <b>${avg(s.deliverToFirstDays, tr(' 天', ' d'))}</b><em>${tr('签收 → 第一件作品', 'Delivered → first piece')}</em>
         <b>${s.reviewRate == null ? '—' : s.reviewRate + '%'}</b><em>${tr('零售客户留下评价', 'Retail customers reviewing')}</em>
         <b>${s.avgRating == null ? '—' : s.avgRating}</b><em>${tr('平均评分', 'Average rating')}</em></div>
-      <div class="scm-tabs">${[['open', tr('进行中', 'Open'), open.length], ['closed', tr('已完成', 'Done'), data.items.length - open.length], ['all', tr('全部', 'All'), data.items.length]]
+      <div class="scm-tabs">${[['open', tr('进行中', 'Open')], ['done', tr('已完成', 'Done')], ['cancelled', tr('已取消', 'Cancelled')], ['refund', tr('退款', 'Refunds')], ['exchange', tr('换货', 'Exchanges')], ['all', tr('全部', 'All')]]
+        .map(([k, t]) => [k, t, data.items.filter(TAB_FILTER[k]).length])
         .map(([k, t, n]) => `<button class="${ui.tab === k ? 'on' : ''}" data-ord="tab" data-v="${k}">${t} <b>${n}</b></button>`).join('')}</div>
       <div class="ord-filters">
         <label class="ord-search">${icon('magnifying-glass')}<input data-ord-q value="${esc(ui.q)}" placeholder="${tr('订单号、客户、城市、跟踪号、SKU', 'Order, customer, city, tracking, SKU')}"></label>
-        <div class="scm-mf">${window.WorkOSMulti.html({ scope:'ord', key:'kind', all:tr('全部类型', 'All types'), opts:Object.entries(KIND).map(([k, v]) => [k, `${w(v)} (${count(k)})`]), sel:ui.kind, lang:lang() })}</div>
+        <div class="scm-mf">${window.WorkOSMulti.html({ scope:'ord', key:'kind', all:tr('全部类型', 'All types'), opts:Object.entries(TYPE).map(([k, v]) => [k, `${w(v)} (${count(k)})`]), sel:ui.kind, lang:lang() })}</div>
         <div class="scm-mf">${window.WorkOSMulti.html({ scope:'ord', key:'stage', all:tr('全部阶段', 'All stages'), opts:Object.keys(STAGE).map(k => [k, w(STAGE[k])]), sel:ui.stage, lang:lang() })}</div>
         <label class="ord-check"><input type="checkbox" data-ord-flag="mine" ${ui.mine ? 'checked' : ''}> ${tr('我负责的', 'Mine')}</label>
         <label class="ord-check"><input type="checkbox" data-ord-flag="late" ${ui.late ? 'checked' : ''}> ${tr('只看超时', 'Late only')}</label>
@@ -102,15 +126,17 @@
       </div>
       <div class="scm-table-wrap"><table class="scm-table ord-table"><thead><tr>
         <th>${tr('订单', 'Order')}</th><th>${tr('类型', 'Type')}</th><th>${tr('客户', 'Customer')}</th><th>${tr('产品', 'Product')}</th><th class="num">${tr('金额 / 未收', 'Total / owed')}</th>
-        <th>${tr('进度', 'Progress')}</th><th>${tr('当前阶段', 'Stage')}</th><th>${tr('负责人', 'Owner')}</th><th>${tr('物流', 'Freight')}</th></tr></thead>
+        <th>${tr('进度', 'Progress')}</th><th>${tr('当前阶段', 'Stage')}</th><th>${tr('负责人', 'Owner')}</th><th>${tr('发货仓', 'Ships from')}</th><th>${tr('物流', 'Freight')}</th><th>${tr('最新备注', 'Latest note')}</th></tr></thead>
         <tbody>${list.map(o => `<tr class="${o.late ? 'late' : ''}" data-ord-open="${esc(o.id)}" tabindex="0">
-          <td class="mono">${esc(o.number)}<small>${esc(day(o.placedAt))}</small></td><td>${kindChip(o)}</td>
-          <td>${esc(o.customer.name || '—')}<small>${esc([o.customer.city, o.customer.state].filter(Boolean).join(', '))}</small></td>
+          <td class="mono">${esc(o.number)}<small>${esc(day(o.placedAt))}</small></td><td>${kindChip(o)}${flagChips(o) ? '<br>' + flagChips(o) : ''}</td>
+          <td>${esc(o.customer.name || '—')}<small>${esc(place(o.customer))}</small></td>
           <td>${esc(o.lines.map(l => `${l.qty > 1 ? l.qty + ' × ' : ''}${l.name || l.sku}`).join(', '))}<small>${o.shipment === 'parcel' ? tr('快递', 'Parcel') : 'LTL'}${o.liftgate ? tr(' · 尾板', ' · liftgate') : ''}${o.residential ? tr(' · 住宅', ' · residential') : ''}</small></td>
           <td class="num">${usd(o.totalCents)}${o.owedCents && o.stage === 'pay' ? `<small class="late">${tr('未收', 'owed')} ${usd(o.owedCents)}</small>` : ''}</td>
           <td>${dots(o)}</td><td>${stageChip(o)}</td><td>${esc(o.ownerName || (o.stage === 'approve' ? tr('主管理员', 'Main admin') : '—'))}</td>
-          <td class="mono">${o.tracking ? `${esc(o.carrier)}<small>${esc(o.tracking)}</small>` : '—'}</td></tr>`).join('')
-          || `<tr><td colspan="9" class="ord-empty">${tr('没有符合的订单', 'No matching orders')}</td></tr>`}</tbody></table></div>
+          <td>${o.shipFrom ? esc(w(WH[o.shipFrom])) : `<span class="ord-muted">${tr('未定', 'Not set')}</span>`}</td>
+          <td class="mono">${o.tracking ? `${esc(o.carrier)}<small>${esc(o.tracking)}</small>` : '—'}</td>
+          <td class="ord-note-cell">${o.note ? `<span class="ord-note-text" title="${esc(o.note.text)}">${esc(o.note.text)}</span><small>${esc(o.note.byName)} · ${esc(when(o.note.at))}</small>` : ''}${data.canManage ? `<button type="button" class="scm-link" data-ord-note="${esc(o.id)}">${icon('note-pencil')} ${tr('加备注', 'Add note')}</button>` : ''}</td></tr>`).join('')
+          || `<tr><td colspan="11" class="ord-empty">${tr('没有符合的订单', 'No matching orders')}</td></tr>`}</tbody></table></div>
     </div>`;
   }
 
@@ -120,10 +146,16 @@
     paintDetail();
   }
   function timeline(o) {
-    return `<ol class="ord-line">${NODES(o.kind).map(n => { const done = nodeDone(o, n), now = !done && stageNode(o) === n;
-      return `<li class="${done ? 'done' : now ? (o.late ? 'late' : 'now') : ''}"><b>${esc(w(NODE_LABEL[n]))}</b><small>${done ? esc(when(nodeAt(o, n)) || '✓') : now ? esc(dueText(o) || tr('进行中', 'In progress')) : ''}</small></li>`; }).join('')}</ol>`;
+    return `<ol class="ord-line">${NODES(o.kind).map((n, i) => { const done = nodeDone(o, n), now = !done && stageNode(o) === n;
+      return `<li class="${done ? 'done' : now ? (o.late ? 'late' : 'now') : ''}"><b>${i + 1} ${esc(w(NODE_LABEL[n]))}</b><small>${done ? esc(when(nodeAt(o, n)) || '✓') : now ? esc(dueText(o) || tr('进行中', 'In progress')) : ''}</small></li>`; }).join('')}</ol>`;
   }
   const field = (label, html) => `<label class="field"><span>${label}</span>${html}</label>`;
+  // Warehouse picker with this order's WMS stock in each warehouse.
+  const whSelect = (o, required) => `<select name="shipFrom" ${required ? 'required' : ''}>${required ? '' : `<option value="">${tr('未定', 'Not set')}</option>`}${Object.keys(WH).map(k => {
+    const have = (o.stock || []).map(s => `${s[k] ?? 0}`).join(' / ');
+    return `<option value="${k}" ${(o.shipFrom || (required ? 'us' : '')) === k ? 'selected' : ''}>${esc(w(WH[k]))}${have ? tr(` · 库存 ${have}`, ` · stock ${have}`) : ''}</option>`; }).join('')}</select>`;
+  const stockTable = o => o.stock?.length ? `<table class="ord-stock"><thead><tr><th>SKU</th>${Object.keys(WH).map(k => `<th class="num">${esc(w(WH[k]))}</th>`).join('')}</tr></thead><tbody>${o.stock.map(s => `<tr><td class="mono">${esc(s.sku)}</td>${Object.keys(WH).map(k => `<td class="num ${k === o.shipFrom ? 'on' : ''}">${esc(s[k] ?? 0)}</td>`).join('')}</tr>`).join('')}</tbody></table>
+    <p class="ord-hint">${tr('WMS 当前库存（只读）。出库仍在 WMS 里做。', 'Current WMS stock (read only). Record the outbound in WMS.')}</p>` : '';
   function actions(o) {
     if (!data.canManage && !data.canRelease) return '';
     const f = (step, inner, btn, cls = 'primary') => `<form class="ord-step" data-ord-step="${step}">${inner}<button class="btn ${cls}" type="submit">${btn}</button><p class="ord-error" role="alert"></p></form>`;
@@ -133,7 +165,7 @@
     if (['pay', 'approve'].includes(o.stage) && data.canRelease) out.push(f('release', field(o.stage === 'approve' ? tr('批准原因（例如合作约定）', 'Reason (e.g. the agreement)') : tr('特批原因', 'Reason'), `<input name="reason" required minlength="3" maxlength="500">`)
       + (o.stage === 'pay' ? field(tr('约定付款日', 'Promised payment date'), `<input name="payBy" type="date" min="${today()}">`) : ''), o.stage === 'approve' ? tr('批准发货', 'Approve shipping') : tr('特批发货（未收全款）', 'Release before full payment'), o.stage === 'approve' ? 'primary' : 'danger'));
     if (!data.canManage) return out.join('');
-    if (o.stage === 'ship') out.push(f('ship', field(tr('货运公司', 'Carrier'), `<input name="carrier" required maxlength="80" placeholder="${tr('GTZ 上选的承运商', 'Carrier booked on GTZ')}">`)
+    if (o.stage === 'ship') out.push(f('ship', field(tr('发货仓（WMS）', 'Ships from (WMS)'), whSelect(o, true)) + field(tr('货运公司', 'Carrier'), `<input name="carrier" required maxlength="80" placeholder="${tr('GTZ 上选的承运商', 'Carrier booked on GTZ')}">`)
       + field(tr('跟踪号', 'Tracking number'), `<input name="tracking" required maxlength="80">`) + field(tr('预计到达', 'ETA'), `<input name="eta" type="date" min="${today()}">`), tr('已提货出货', 'Picked up and shipped')));
     if (['transit', 'delivery'].includes(o.stage)) {
       out.push(f('track', field(tr('新的预计到达', 'New ETA'), `<input name="eta" type="date">`) + field(tr('跟进说明', 'Note'), `<input name="note" maxlength="500" placeholder="${tr('例如：已到中转站', 'e.g. reached the hub')}">`), tr('记录跟进', 'Record an update'), ''));
@@ -155,27 +187,36 @@
     const c = o.customer, EV = { created:['新建订单', 'Order created'], imported:['从 Shopify 导入', 'Imported from Shopify'], payment:['记录收款', 'Payment recorded'], release:['特批 / 批准发货', 'Released / approved'],
       kind:['改订单类型', 'Type changed'], delivery_needs:['改送货要求', 'Delivery needs changed'], ship:['出货', 'Shipped'], track:['物流跟进', 'Freight update'], terminal:['到达货站', 'At terminal'],
       appointment:['约好送货', 'Delivery booked'], delivered:['签收', 'Delivered'], first_piece:['第一件作品', 'First piece'], review_invited:['发评价邀请', 'Review invited'], reviewed:['客户已评价', 'Reviewed'],
-      content:['KOL 内容', 'KOL content'], note:['备注', 'Note'], cancel:['取消订单', 'Cancelled'] };
-    const detailText = e => { const d = e.details || {}; return [d.carrier, d.tracking, d.eta && tr('预计 ' + d.eta, 'ETA ' + d.eta), d.on, d.damage === 'damaged' ? tr('有破损', 'damaged') : '', d.platform && PLATFORM[d.platform], d.rating && d.rating + '★', d.reason, d.text, d.note, d.url, d.kind && w(KIND[d.kind]), d.paid != null && '$' + d.paid].filter(Boolean).join(' · '); };
+      content:['KOL 内容', 'KOL content'], note:['备注', 'Note'], cancel:['取消订单', 'Cancelled'], refund:['退款', 'Refund'], exchange:['换货', 'Exchange'] };
+    const detailText = e => { const d = e.details || {}; return [d.carrier, d.tracking, d.eta && tr('预计 ' + d.eta, 'ETA ' + d.eta), d.on, d.damage === 'damaged' ? tr('有破损', 'damaged') : '', d.platform && PLATFORM[d.platform], d.rating && d.rating + '★', d.reason, d.text, d.note, d.url, d.kind && w(KIND[d.kind]), d.paid != null && '$' + d.paid, d.amount != null && tr('退款 $', 'refund $') + d.amount, d.newOrder, d.shipFrom && w(WH[d.shipFrom])].filter(Boolean).join(' · '); };
     const body = `<div class="ord-detail">
-      <div class="ord-head">${kindChip(o)} ${stageChip(o)} ${o.ownerName ? `<span class="ord-owner">${icon('user')} ${esc(o.ownerName)}</span>` : ''}</div>
+      <div class="ord-head">${kindChip(o)} ${flagChips(o)} ${stageChip(o)} ${o.ownerName ? `<span class="ord-owner">${icon('user')} ${esc(o.ownerName)}</span>` : ''}</div>
       ${timeline(o)}
+      ${o.stage === 'cancelled' || o.refund || o.exchange || o.note ? `<div class="ord-flags">
+        ${o.stage === 'cancelled' ? `<p><b>${tr('已取消', 'Cancelled')}</b> · ${esc(when(o.cancelledAt))}${cancelText(o) ? ' · ' + esc(cancelText(o)) : ''}</p>` : ''}
+        ${o.refund ? `<p><b>${o.refund === 'full' ? tr('已全额退款', 'Fully refunded') : tr('部分退款', 'Partly refunded')}</b> ${usd(o.refundedCents)}${o.refundNote ? ' · ' + esc(o.refundNote) : ''}</p>` : ''}
+        ${o.exchange ? `<p><b>${tr('换货', 'Exchange')}</b>${o.exchange.reason ? ' · ' + esc(o.exchange.reason) : tr(' · Shopify 标签 exchange', ' · Shopify tag exchange')}${o.exchange.newOrder ? tr(` · 新订单 ${esc(o.exchange.newOrder)}`, ` · new order ${esc(o.exchange.newOrder)}`) : ''}${o.exchange.byName ? ' · ' + esc(o.exchange.byName) : ''}</p>` : ''}
+        ${o.note ? `<p><b>${tr('最新备注', 'Latest note')}</b> · ${esc(o.note.text)} <small>${esc(o.note.byName)} · ${esc(when(o.note.at))}</small></p>` : ''}</div>` : ''}
       <div class="ord-grid">
-        <section><h4>${tr('客户与送货', 'Customer & delivery')}</h4><p><b>${esc(c.name || '—')}</b><br>${esc(c.email)}${c.phone ? ' · ' + esc(c.phone) : ''}<br>${esc([c.city, c.state, c.zip].filter(Boolean).join(', '))}</p>
+        <section><h4>${tr('客户与送货', 'Customer & delivery')}</h4><p><b>${esc(c.name || '—')}</b><br>${esc(c.email)}${c.phone ? ' · ' + esc(c.phone) : ''}<br>${esc([c.city, c.state, c.zip, c.country].filter(Boolean).join(', '))}</p>
           <p class="ord-hint">${o.shipment === 'parcel' ? tr('快递件', 'Parcel') : 'LTL'} · ${o.liftgate ? tr('需要尾板', 'Liftgate') : tr('不需要尾板', 'No liftgate')} · ${o.residential ? tr('住宅地址', 'Residential') : tr('商业地址', 'Commercial')}</p></section>
         <section><h4>${tr('产品与金额', 'Items & payment')}</h4><p>${o.lines.map(l => `${esc(l.qty)} × ${esc(l.name || l.sku)} <span class="mono">${esc(l.sku)}</span>`).join('<br>')}</p>
           <p>${tr('金额', 'Total')} <b>${usd(o.totalCents)}</b> · ${tr('已收', 'Paid')} <b>${usd(o.paidCents)}</b>${o.owedCents ? ` · <b class="late">${tr('未收', 'Owed')} ${usd(o.owedCents)}</b>` : ''}</p>
           ${o.release ? `<p class="ord-hint">${tr('特批 / 批准', 'Released')}：${esc(o.release.byName)} · ${esc(when(o.release.at))} · ${esc(o.release.reason)}${o.release.payBy ? tr(` · 约定 ${o.release.payBy} 付款`, ` · pay by ${o.release.payBy}`) : ''}</p>` : ''}</section>
-        <section><h4>${tr('物流', 'Freight')}</h4><p>${o.tracking ? `${esc(o.carrier)} <span class="mono">${esc(o.tracking)}</span>` : tr('还没出货', 'Not shipped yet')}${o.eta ? `<br>${tr('预计到达', 'ETA')} ${esc(o.eta)}` : ''}${o.appointmentOn ? `<br>${tr('约好送货', 'Delivery booked')} ${esc(o.appointmentOn)}` : ''}${o.damage === 'damaged' ? `<br><b class="late">${tr('签收有破损：请转退货维修并向承运商索赔', 'Delivered damaged: open a return and file a carrier claim')}</b>` : ''}</p></section>
+        <section><h4>${tr('物流', 'Freight')}</h4><p>${tr('发货仓', 'Ships from')}：<b>${o.shipFrom ? esc(w(WH[o.shipFrom])) : tr('未定', 'Not set')}</b><br>${o.tracking ? `${esc(o.carrier)} <span class="mono">${esc(o.tracking)}</span>` : tr('还没出货', 'Not shipped yet')}${o.eta ? `<br>${tr('预计到达', 'ETA')} ${esc(o.eta)}` : ''}${o.appointmentOn ? `<br>${tr('约好送货', 'Delivery booked')} ${esc(o.appointmentOn)}` : ''}${o.damage === 'damaged' ? `<br><b class="late">${tr('签收有破损：请转退货维修并向承运商索赔', 'Delivered damaged: open a return and file a carrier claim')}</b>` : ''}</p></section>
         <section><h4>${tr('上手与评价', 'Getting started & review')}</h4><p>${o.firstPieceAt ? tr(`第一件作品 ${when(o.firstPieceAt)}`, `First piece ${when(o.firstPieceAt)}`) : tr('还没做出第一件作品', 'No first piece yet')}${o.reviewInvitedAt ? `<br>${tr('已邀请评价', 'Review invited')} · ${esc(PLATFORM[o.reviewPlatform] || '')}` : ''}${o.reviewedAt ? `<br>${tr('已评价', 'Reviewed')} ${esc(o.reviewRating)}★ · ${esc(PLATFORM[o.reviewPlatform] || '')}` : ''}${o.contentUrl ? `<br><a href="${esc(o.contentUrl)}" target="_blank" rel="noopener">${tr('KOL 内容', 'KOL content')}</a>` : ''}</p></section>
       </div>
+      ${stockTable(o)}
       ${o.stage !== 'done' && o.stage !== 'cancelled' ? `<h4>${tr('下一步', 'Next step')}</h4><div class="ord-steps">${actions(o)}</div>` : ''}
-      ${data.canManage && o.stage !== 'cancelled' ? `<details class="ord-more"><summary>${tr('改类型、送货要求、备注、取消', 'Type, delivery needs, note, cancel')}</summary><div class="ord-steps">
+      ${data.canManage ? `<details class="ord-more" ${o.stage === 'cancelled' ? 'open' : ''}><summary>${tr('备注、退款、换货、改类型、送货要求、取消', 'Note, refund, exchange, type, delivery needs, cancel')}</summary><div class="ord-steps">
+        <form class="ord-step" data-ord-step="note">${field(tr('备注', 'Note'), `<input name="text" required maxlength="2000">`)}<button class="btn" type="submit">${tr('加备注', 'Add note')}</button><p class="ord-error" role="alert"></p></form>
+        ${o.source === 'manual' && o.paidCents > o.refundedCents ? `<form class="ord-step" data-ord-step="refund">${field(tr('退款金额（美元）', 'Refund (USD)'), `<input name="amount" type="number" min="0.01" step="0.01" max="${((o.paidCents - o.refundedCents) / 100).toFixed(2)}" required>`)}${field(tr('退款原因', 'Reason'), `<input name="reason" required minlength="3" maxlength="500">`)}<button class="btn danger" type="submit">${tr('记录退款', 'Record refund')}</button><p class="ord-error" role="alert"></p></form>`
+          : o.source === 'shopify' ? `<p class="ord-hint">${tr('Shopify 订单在 Shopify 里退款，同步后这里显示退款金额。', 'Refund Shopify orders in Shopify; the refunded amount shows here after a sync.')}</p>` : ''}
+        ${o.stage !== 'cancelled' ? `<form class="ord-step" data-ord-step="exchange">${field(tr('换货原因', 'Exchange reason'), `<input name="reason" required minlength="3" maxlength="500" value="${esc(o.exchange?.reason || '')}">`)}${field(tr('新订单号（选填）', 'New order number (optional)'), `<input name="newOrder" maxlength="60" value="${esc(o.exchange?.newOrder || '')}">`)}<button class="btn" type="submit">${tr('记为换货', 'Mark as exchange')}</button><p class="ord-error" role="alert"></p></form>
         <form class="ord-step" data-ord-step="kind">${field(tr('订单类型', 'Type'), `<select name="kind">${Object.entries(KIND).map(([k, v]) => `<option value="${k}" ${o.kind === k ? 'selected' : ''}>${w(v)}</option>`).join('')}</select>`)}<button class="btn" type="submit">${tr('保存类型', 'Save type')}</button><p class="ord-error" role="alert"></p></form>
         <form class="ord-step" data-ord-step="delivery_needs">${field(tr('运输方式', 'Shipping'), `<select name="shipment"><option value="ltl" ${o.shipment === 'ltl' ? 'selected' : ''}>LTL</option><option value="parcel" ${o.shipment === 'parcel' ? 'selected' : ''}>${tr('快递', 'Parcel')}</option></select>`)}
-          <label class="ord-check"><input type="checkbox" name="liftgate" ${o.liftgate ? 'checked' : ''}> ${tr('需要尾板', 'Liftgate')}</label><label class="ord-check"><input type="checkbox" name="residential" ${o.residential ? 'checked' : ''}> ${tr('住宅地址', 'Residential')}</label><button class="btn" type="submit">${tr('保存送货要求', 'Save delivery needs')}</button><p class="ord-error" role="alert"></p></form>
-        <form class="ord-step" data-ord-step="note">${field(tr('备注', 'Note'), `<input name="text" required maxlength="2000">`)}<button class="btn" type="submit">${tr('加备注', 'Add note')}</button><p class="ord-error" role="alert"></p></form>
-        <form class="ord-step" data-ord-step="cancel">${field(tr('取消原因', 'Reason to cancel'), `<input name="reason" required minlength="3" maxlength="500">`)}<button class="btn danger" type="submit">${tr('取消订单', 'Cancel order')}</button><p class="ord-error" role="alert"></p></form>
+          <label class="ord-check"><input type="checkbox" name="liftgate" ${o.liftgate ? 'checked' : ''}> ${tr('需要尾板', 'Liftgate')}</label><label class="ord-check"><input type="checkbox" name="residential" ${o.residential ? 'checked' : ''}> ${tr('住宅地址', 'Residential')}</label>${field(tr('发货仓', 'Ships from'), whSelect(o, false))}<button class="btn" type="submit">${tr('保存送货要求', 'Save delivery needs')}</button><p class="ord-error" role="alert"></p></form>
+        <form class="ord-step" data-ord-step="cancel">${field(tr('取消原因', 'Reason to cancel'), `<input name="reason" required minlength="3" maxlength="500">`)}<button class="btn danger" type="submit">${tr('取消订单', 'Cancel order')}</button><p class="ord-error" role="alert"></p></form>` : ''}
       </div></details>` : ''}
       <h4>${tr('记录', 'History')}</h4><ul class="ord-events">${o.events.map(e => `<li><b>${esc(w(EV[e.kind]) || e.kind)}</b> <span>${esc(detailText(e))}</span><small>${esc(e.by)} · ${esc(when(e.at))}</small></li>`).join('')}</ul>
     </div>`;
@@ -190,7 +231,7 @@
         ${field(tr('类型', 'Type'), `<select name="kind">${Object.entries(KIND).map(([k, v]) => `<option value="${k}">${w(v)}</option>`).join('')}</select>`)}
         ${field(tr('运输方式', 'Shipping'), `<select name="shipment"><option value="ltl">LTL</option><option value="parcel">${tr('快递', 'Parcel')}</option></select>`)}</div>
       <div class="ord-row">${field(tr('客户姓名 / 公司', 'Customer'), `<input name="name" required maxlength="200">`)}${field(tr('邮箱', 'Email'), `<input name="email" type="email" maxlength="254">`)}${field(tr('电话', 'Phone'), `<input name="phone" maxlength="40">`)}</div>
-      <div class="ord-row">${field(tr('城市', 'City'), `<input name="city" maxlength="100">`)}${field(tr('州', 'State'), `<input name="state" maxlength="2" placeholder="CA">`)}${field(tr('邮编', 'ZIP'), `<input name="zip" maxlength="10">`)}</div>
+      <div class="ord-row">${field(tr('城市', 'City'), `<input name="city" maxlength="100">`)}${field(tr('州', 'State'), `<input name="state" maxlength="2" placeholder="CA">`)}${field(tr('邮编', 'ZIP'), `<input name="zip" maxlength="10">`)}${field(tr('国家', 'Country'), `<input name="country" maxlength="2" value="US" required>`)}</div>
       <div class="ord-row">${field('SKU', `<input name="sku" required maxlength="80">`)}${field(tr('产品名称', 'Product'), `<input name="product" maxlength="200">`)}${field(tr('数量', 'Qty'), `<input name="qty" type="number" min="1" value="1" required>`)}</div>
       <div class="ord-row">${field(tr('订单金额（美元，KOL 填 0）', 'Total (USD, 0 for KOL)'), `<input name="total" type="number" min="0" step="0.01" required>`)}${field(tr('已收金额', 'Received'), `<input name="paid" type="number" min="0" step="0.01" value="0">`)}
         <div class="field"><span>${tr('送货要求', 'Delivery needs')}</span><label class="ord-check"><input type="checkbox" name="liftgate"> ${tr('需要尾板', 'Liftgate')}</label><label class="ord-check"><input type="checkbox" name="residential"> ${tr('住宅地址', 'Residential')}</label></div></div>
@@ -224,9 +265,19 @@
       ${r.errors?.length ? `<li class="bad"><small>${esc(r.errors.join('; '))}</small></li>` : ''}</ul>`, `<button class="btn" data-live-action="close">${tr('关闭', 'Close')}</button>`);
   }
 
+  function quickNote(id) {
+    const o = data.items.find(x => x.id === id); if (!o) return;
+    ctx.modal(tr(`订单 ${o.number} 加备注`, `Add a note to ${o.number}`), `<form id="ord-note" class="ord-form" data-id="${esc(id)}">
+      ${o.note ? `<p class="ord-hint">${tr('上一条', 'Previous')}：${esc(o.note.text)} · ${esc(o.note.byName)} · ${esc(when(o.note.at))}</p>` : ''}
+      ${field(tr('备注（例如：客户要求下午 3 点后送货）', 'Note (e.g. deliver after 3 pm)'), `<textarea name="text" rows="3" required maxlength="2000"></textarea>`)}
+      <p class="ord-hint">${tr('全部备注都在订单的“记录”里。', 'Every note stays in the order history.')}</p><p class="ord-error" role="alert"></p></form>`,
+      `<button class="btn" data-live-action="close">${tr('取消', 'Cancel')}</button><button class="btn primary" type="submit" form="ord-note">${tr('保存备注', 'Save note')}</button>`);
+  }
+
   /* ---------- events ---------- */
   document.addEventListener('click', async e => {
     if (!ctx) return;
+    const nb = e.target.closest?.('[data-ord-note]'); if (nb) return quickNote(nb.dataset.ordNote);
     const row = e.target.closest?.('[data-ord-open]'); if (row) return openOrder(row.dataset.ordOpen);
     const b = e.target.closest?.('[data-ord]'); if (!b) return;
     const a = b.dataset.ord;
@@ -249,8 +300,8 @@
       if (step === 'payment') body.paid = Number(v.paid);
       if (step === 'release') { body.reason = String(v.reason || '').trim(); if (v.payBy) body.payBy = v.payBy; }
       if (step === 'kind') body.kind = v.kind;
-      if (step === 'delivery_needs') Object.assign(body, { shipment:v.shipment, liftgate:!!f.querySelector('[name="liftgate"]')?.checked, residential:!!f.querySelector('[name="residential"]')?.checked });
-      if (step === 'ship') Object.assign(body, { carrier:String(v.carrier).trim(), tracking:String(v.tracking).trim(), ...(v.eta ? { eta:v.eta } : {}) });
+      if (step === 'delivery_needs') Object.assign(body, { shipment:v.shipment, liftgate:!!f.querySelector('[name="liftgate"]')?.checked, residential:!!f.querySelector('[name="residential"]')?.checked, ...(v.shipFrom ? { shipFrom:v.shipFrom } : {}) });
+      if (step === 'ship') Object.assign(body, { shipFrom:v.shipFrom || 'us', carrier:String(v.carrier).trim(), tracking:String(v.tracking).trim(), ...(v.eta ? { eta:v.eta } : {}) });
       if (step === 'track') Object.assign(body, { ...(v.eta ? { eta:v.eta } : {}), note:String(v.note || '').trim() });
       if (step === 'appointment') body.on = v.on;
       if (step === 'delivered') body.damage = v.damage;
@@ -258,6 +309,8 @@
       if (step === 'reviewed') Object.assign(body, { platform:v.platform, rating:Number(v.rating) });
       if (step === 'content') body.url = String(v.url).trim();
       if (step === 'note') body.text = String(v.text).trim();
+      if (step === 'refund') { if (!window.confirm?.(tr(`确定记录退款 $${v.amount}？`, `Record a refund of $${v.amount}?`))) return; Object.assign(body, { amount:Number(v.amount), reason:String(v.reason).trim() }); }
+      if (step === 'exchange') Object.assign(body, { reason:String(v.reason).trim(), ...(String(v.newOrder || '').trim() ? { newOrder:String(v.newOrder).trim() } : {}) });
       if (step === 'cancel') { if (!window.confirm?.(tr('确定取消这张订单？', 'Cancel this order?'))) return; body.reason = String(v.reason).trim(); }
       try { await ctx.api.post(`/orders/${encodeURIComponent(detail.id)}/step`, body); ctx.toast?.(tr('已保存', 'Saved')); data = null; load(); await openOrder(detail.id); }
       catch (x) { const el = err(); if (el) el.textContent = x.message || tr('保存失败', 'Could not save'); }
@@ -267,10 +320,16 @@
       e.preventDefault(); const v = Object.fromEntries(new FormData(f));
       try {
         const r = await ctx.api.post('/orders', { number:String(v.number).trim(), kind:v.kind, channel:'offline', shipment:v.shipment, liftgate:!!f.querySelector('[name="liftgate"]').checked, residential:!!f.querySelector('[name="residential"]').checked,
-          customer:{ name:String(v.name).trim(), email:String(v.email || '').trim(), phone:String(v.phone || '').trim(), city:String(v.city || '').trim(), state:String(v.state || '').trim(), zip:String(v.zip || '').trim(), country:'US' },
+          customer:{ name:String(v.name).trim(), email:String(v.email || '').trim(), phone:String(v.phone || '').trim(), city:String(v.city || '').trim(), state:String(v.state || '').trim(), zip:String(v.zip || '').trim(), country:String(v.country || 'US').trim().toUpperCase() },
           lines:[{ sku:String(v.sku).trim(), name:String(v.product || '').trim(), qty:Number(v.qty) }], total:Number(v.total), paid:Number(v.paid || 0) });
         ctx.closeOverlay(); ctx.toast?.(tr('已新建订单', 'Order created')); data = null; load(); openOrder(r.id);
       } catch (x) { err().textContent = x.message || tr('保存失败', 'Could not save'); }
+    }
+    if (f.id === 'ord-note') {
+      e.preventDefault(); const text = String(Object.fromEntries(new FormData(f)).text || '').trim();
+      try { await ctx.api.post(`/orders/${encodeURIComponent(f.dataset.id)}/step`, { step:'note', text }); ctx.closeOverlay(); ctx.toast?.(tr('已加备注', 'Note added')); data = null; load(); }
+      catch (x) { err().textContent = x.message || tr('保存失败', 'Could not save'); }
+      return;
     }
     if (f.id === 'ord-settings') {
       e.preventDefault(); const v = Object.fromEntries(new FormData(f));

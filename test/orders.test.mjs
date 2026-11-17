@@ -15,6 +15,8 @@ const DATA = {
     order({ id:'a', number:'#1', stage:'ship', late:true, due:new Date(Date.now() - 5 * H).toISOString(), owner:'m6', ownerName:'Gu An', paidAt:new Date(Date.now() - 53 * H).toISOString() }),
     order({ id:'b', number:'#2', stage:'pay', paidCents:100000, owedCents:499900, due:new Date(Date.now() + 20 * H).toISOString(), owner:'m4', ownerName:'Zhou Ming' }),
     order({ id:'c', number:'#K-1', kind:'kol', kindNote:'zero_untagged', totalCents:0, paidCents:0, stage:'approve' }),
+    order({ id:'e', number:'#5', stage:'cancelled', cancelReason:'customer', refundedCents:599900, refund:'full', customer:{ name:'Sample Buyer E', city:'Toronto', state:'ON', country:'CA' } }),
+    order({ id:'f', number:'#6', channel:'offline', stage:'done', exchange:{ reason:'Wrong lens', newOrder:'#7' }, note:{ text:'Call after 3 pm', byName:'Gu An', at:'2026-11-16T10:00:00Z' }, shipFrom:'dg' }),
     order({ id:'d', number:'#D-1', kind:'dealer', stage:'done', shippedAt:'2026-11-01T00:00:00Z', deliveredAt:'2026-11-05T00:00:00Z', carrier:'Demo Freight', tracking:'PRO-1' }),
   ],
   summary:{ lateShip:1, owedCents:499900, owedOrders:1, terminalNoAppt:0, damaged:0, noFirstPiece:0, lateTotal:1, zeroUntagged:1, payToShipHours:30, shipToDeliverDays:8, deliverToFirstDays:4, reviewRate:40, avgRating:4.8 },
@@ -46,9 +48,9 @@ test('board: five numbers, late orders first, filters by number, type and "mine"
   w.click(app.querySelector('.mf[data-mf-key="kind"] [data-mf-all]')); app = w.render();
   const mine = app.querySelector('[data-ord-flag="mine"]'); mine.checked = true; mine.dispatchEvent(new w.window.Event('change', { bubbles:true }));
   app = w.render(); assert.deepEqual(rows(app), ['#1'], 'mine = the stage owner is me');
-  w.click(app.querySelector('[data-ord="tab"][data-v="closed"]')); mine.checked = false; app = w.render();
+  w.click(app.querySelector('[data-ord="tab"][data-v="done"]')); mine.checked = false; app = w.render();
   const m2 = app.querySelector('[data-ord-flag="mine"]'); m2.checked = false; m2.dispatchEvent(new w.window.Event('change', { bubbles:true })); app = w.render();
-  assert.deepEqual(rows(app), ['#D-1']);
+  assert.deepEqual(rows(app).sort(), ['#6', '#D-1'], 'done only: the cancelled order has its own tab');
 });
 
 test('order dialog: the timeline, the next step for this stage, and shipping posts carrier and tracking', async () => {
@@ -56,11 +58,26 @@ test('order dialog: the timeline, the next step for this stage, and shipping pos
   const w = load(detail); w.render(); await tick(); const app = w.render();
   w.click(app.querySelector('tr[data-ord-open="a"]')); await tick();
   const m = w.document.getElementById('overlay-root');
-  assert.deepEqual([...m.querySelectorAll('.ord-line li b')].map(b => b.textContent), ['收款', '出货', '在途', '签收', '会用', '评价']);
-  assert.equal(m.querySelector('.ord-line li.late b').textContent, '出货', 'the late step is red');
+  assert.deepEqual([...m.querySelectorAll('.ord-line li b')].map(b => b.textContent), ['1 收款', '2 出货', '3 在途', '4 签收', '5 会用', '6 评价']);
+  assert.equal(m.querySelector('.ord-line li.late b').textContent, '2 出货', 'the late step is red');
   assert.ok(m.querySelector('[data-ord-step="ship"]'), 'next step: ship'); assert.ok(!m.querySelector('[data-ord-step="release"]'), 'only main admins see the release form');
   const f = m.querySelector('[data-ord-step="ship"]');
   f.querySelector('[name="carrier"]').value = 'Demo Freight'; f.querySelector('[name="tracking"]').value = 'PRO-77';
   f.dispatchEvent(new w.window.Event('submit', { bubbles:true, cancelable:true })); await tick();
-  assert.deepEqual(JSON.parse(JSON.stringify(w.posts[0])), ['/orders/a/step', { step:'ship', carrier:'Demo Freight', tracking:'PRO-77' }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(w.posts[0])), ['/orders/a/step', { step:'ship', shipFrom:'us', carrier:'Demo Freight', tracking:'PRO-77' }]);
+});
+
+test('cancelled, refund and exchange tabs; country and ship-from columns; the latest note and a quick "add note"', async () => {
+  const w = load(); w.render(); await tick(); let app = w.render();
+  const tab = v => { w.click(app.querySelector(`[data-ord="tab"][data-v="${v}"]`)); app = w.render(); return rows(app); };
+  assert.deepEqual(tab('cancelled'), ['#5']); assert.match(app.innerHTML, /已退款/); assert.match(app.innerHTML, /Toronto, ON · CA/);
+  assert.deepEqual(tab('refund'), ['#5']); assert.deepEqual(tab('exchange'), ['#6']);
+  assert.match(app.innerHTML, /东莞工厂仓/, 'ships from a WMS warehouse'); assert.match(app.innerHTML, /Call after 3 pm/, 'latest note in the list');
+  w.click(app.querySelector('[data-ord="clear"]') || app.querySelector('[data-ord="tab"][data-v="all"]')); app = w.render();
+  w.click(app.querySelector('[data-ord-note="f"]')); const f = w.document.querySelector('#ord-note'); assert.ok(f, 'the note dialog opens, not the order');
+  f.querySelector('[name="text"]').value = 'Customer prefers email';
+  f.dispatchEvent(new w.window.Event('submit', { bubbles:true, cancelable:true })); await tick();
+  assert.deepEqual(JSON.parse(JSON.stringify(w.posts[0])), ['/orders/f/step', { step:'note', text:'Customer prefers email' }]);
+  const kinds = [...app.querySelectorAll('.mf[data-mf-key="kind"] [data-mf-one]')].map(x => x.getAttribute('data-mf-one'));
+  assert.deepEqual(kinds, ['retail_online', 'retail_manual', 'dealer', 'kol'], 'retail splits into online checkout and manual orders');
 });
