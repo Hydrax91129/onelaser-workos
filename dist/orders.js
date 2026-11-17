@@ -98,6 +98,7 @@
           ${window.WorkOSErpAccess?.button?.('orders') || ''}
         </div>${guide()}</div></div>
       ${!data.shopify ? `<div class="ord-note">${icon('storefront')} ${tr('这里还没连接 Shopify：订单可以手工新建；连接后点“同步 Shopify 订单”拉最近 60 天的订单。', 'Shopify is not connected here: add orders by hand; once connected, Sync Shopify orders pulls the last 60 days.')}</div>` : ''}
+      ${s.notOut ? `<div class="ord-note warn">${icon('warehouse')} ${tr(`${s.notOut} 张订单已发货但还没从 WMS 扣减实际库存：打开订单点“确认 WMS 出库”。`, `${s.notOut} shipped orders are not out of WMS stock yet: open them and confirm the outbound.`)}</div>` : ''}
       ${s.zeroUntagged ? `<div class="ord-note warn">${icon('warning')} ${tr(`${s.zeroUntagged} 张 0 元订单在 Shopify 里没有 kol 标签，已先当成 KOL：请打开确认类型。`, `${s.zeroUntagged} $0 orders have no kol tag in Shopify and are treated as KOL for now: open them to confirm.`)}</div>` : ''}
       <div class="scm-kpis ord-kpis">
         ${kpi('lateShip', tr('超时未出货', 'Late to ship'), s.lateShip, tr('超过 48 / 24 小时', 'past 48 / 24 h'), s.lateShip)}
@@ -153,9 +154,11 @@
   // Warehouse picker with this order's WMS stock in each warehouse.
   const whSelect = (o, required) => `<select name="shipFrom" ${required ? 'required' : ''}>${required ? '' : `<option value="">${tr('未定', 'Not set')}</option>`}${Object.keys(WH).map(k => {
     const have = (o.stock || []).map(s => `${s[k] ?? 0}`).join(' / ');
-    return `<option value="${k}" ${(o.shipFrom || (required ? 'us' : '')) === k ? 'selected' : ''}>${esc(w(WH[k]))}${have ? tr(` · 库存 ${have}`, ` · stock ${have}`) : ''}</option>`; }).join('')}</select>`;
-  const stockTable = o => o.stock?.length ? `<table class="ord-stock"><thead><tr><th>SKU</th>${Object.keys(WH).map(k => `<th class="num">${esc(w(WH[k]))}</th>`).join('')}</tr></thead><tbody>${o.stock.map(s => `<tr><td class="mono">${esc(s.sku)}</td>${Object.keys(WH).map(k => `<td class="num ${k === o.shipFrom ? 'on' : ''}">${esc(s[k] ?? 0)}</td>`).join('')}</tr>`).join('')}</tbody></table>
-    <p class="ord-hint">${tr('WMS 当前库存（只读）。出库仍在 WMS 里做。', 'Current WMS stock (read only). Record the outbound in WMS.')}</p>` : '';
+    return `<option value="${k}" ${(o.shipFrom || (required ? 'us' : '')) === k ? 'selected' : ''}>${esc(w(WH[k]))}${have ? tr(` · 实际库存 ${have}`, ` · on hand ${have}`) : ''}</option>`; }).join('')}</select>`;
+  const outBox = () => `<label class="ord-check"><input type="checkbox" name="wmsOut" checked> ${tr('同时从 WMS 扣减实际库存（仓库已手动出库就取消勾选）', 'Also take it out of WMS stock (untick if the warehouse already did)')}</label>`;
+  const stockTable = o => o.stock?.length ? `<table class="ord-stock"><thead><tr><th>SKU</th>${Object.keys(WH).map(k => `<th class="num">${esc(w(WH[k]))}<small>${tr('实际 / 占用 / 可售', 'on hand / held / available')}</small></th>`).join('')}</tr></thead><tbody>${o.stock.map(s => `<tr><td class="mono">${esc(s.sku)}</td>${Object.keys(WH).map(k => { const r = s.reserved?.[k] || 0, a = (s[k] ?? 0) - r;
+      return `<td class="num ${k === (o.shipFrom || 'us') ? 'on' : ''}">${esc(s[k] ?? 0)} / ${esc(r)} / <b class="${a < 0 ? 'late' : ''}">${esc(a)}</b></td>`; }).join('')}</tr>`).join('')}</tbody></table>
+    <p class="ord-hint">${tr('WMS 库存。未提货的订单占用库存（包括这一张）；点“已提货出货”时才从实际库存扣减。', 'WMS stock. Orders not picked up yet hold stock (this one included); on-hand stock drops when you click Picked up and shipped.')}</p>` : '';
   function actions(o) {
     if (!data.canManage && !data.canRelease) return '';
     const f = (step, inner, btn, cls = 'primary') => `<form class="ord-step" data-ord-step="${step}">${inner}<button class="btn ${cls}" type="submit">${btn}</button><p class="ord-error" role="alert"></p></form>`;
@@ -166,7 +169,8 @@
       + (o.stage === 'pay' ? field(tr('约定付款日', 'Promised payment date'), `<input name="payBy" type="date" min="${today()}">`) : ''), o.stage === 'approve' ? tr('批准发货', 'Approve shipping') : tr('特批发货（未收全款）', 'Release before full payment'), o.stage === 'approve' ? 'primary' : 'danger'));
     if (!data.canManage) return out.join('');
     if (o.stage === 'ship') out.push(f('ship', field(tr('发货仓（WMS）', 'Ships from (WMS)'), whSelect(o, true)) + field(tr('货运公司', 'Carrier'), `<input name="carrier" required maxlength="80" placeholder="${tr('GTZ 上选的承运商', 'Carrier booked on GTZ')}">`)
-      + field(tr('跟踪号', 'Tracking number'), `<input name="tracking" required maxlength="80">`) + field(tr('预计到达', 'ETA'), `<input name="eta" type="date" min="${today()}">`), tr('已提货出货', 'Picked up and shipped')));
+      + field(tr('跟踪号', 'Tracking number'), `<input name="tracking" required maxlength="80">`) + field(tr('预计到达', 'ETA'), `<input name="eta" type="date" min="${today()}">`) + outBox(), tr('已提货出货', 'Picked up and shipped')));
+    if (o.shippedAt && !o.wmsOutAt) out.push(f('wms_out', `<p class="ord-hint late">${tr('已发货，但还没从 WMS 扣减实际库存（Shopify 里标了发货）。', 'Shipped, but not taken out of WMS stock yet (fulfilled in Shopify).')}</p>` + field(tr('发货仓（WMS）', 'Ships from (WMS)'), whSelect(o, true)) + outBox(), tr('确认 WMS 出库', 'Confirm WMS outbound')));
     if (['transit', 'delivery'].includes(o.stage)) {
       out.push(f('track', field(tr('新的预计到达', 'New ETA'), `<input name="eta" type="date">`) + field(tr('跟进说明', 'Note'), `<input name="note" maxlength="500" placeholder="${tr('例如：已到中转站', 'e.g. reached the hub')}">`), tr('记录跟进', 'Record an update'), ''));
       if (!o.terminalAt) out.push(f('terminal', '', tr('已到目的地货站', 'At destination terminal'), ''));
@@ -185,7 +189,7 @@
   function paintDetail() {
     const o = detail; if (!o) return;
     const c = o.customer, EV = { created:['新建订单', 'Order created'], imported:['从 Shopify 导入', 'Imported from Shopify'], payment:['记录收款', 'Payment recorded'], release:['特批 / 批准发货', 'Released / approved'],
-      kind:['改订单类型', 'Type changed'], delivery_needs:['改送货要求', 'Delivery needs changed'], ship:['出货', 'Shipped'], track:['物流跟进', 'Freight update'], terminal:['到达货站', 'At terminal'],
+      kind:['改订单类型', 'Type changed'], delivery_needs:['改送货要求', 'Delivery needs changed'], ship:['出货', 'Shipped'], wms_out:['WMS 出库', 'WMS outbound'], track:['物流跟进', 'Freight update'], terminal:['到达货站', 'At terminal'],
       appointment:['约好送货', 'Delivery booked'], delivered:['签收', 'Delivered'], first_piece:['第一件作品', 'First piece'], review_invited:['发评价邀请', 'Review invited'], reviewed:['客户已评价', 'Reviewed'],
       content:['KOL 内容', 'KOL content'], note:['备注', 'Note'], cancel:['取消订单', 'Cancelled'], refund:['退款', 'Refund'], exchange:['换货', 'Exchange'] };
     const detailText = e => { const d = e.details || {}; return [d.carrier, d.tracking, d.eta && tr('预计 ' + d.eta, 'ETA ' + d.eta), d.on, d.damage === 'damaged' ? tr('有破损', 'damaged') : '', d.platform && PLATFORM[d.platform], d.rating && d.rating + '★', d.reason, d.text, d.note, d.url, d.kind && w(KIND[d.kind]), d.paid != null && '$' + d.paid, d.amount != null && tr('退款 $', 'refund $') + d.amount, d.newOrder, d.shipFrom && w(WH[d.shipFrom])].filter(Boolean).join(' · '); };
@@ -203,7 +207,7 @@
         <section><h4>${tr('产品与金额', 'Items & payment')}</h4><p>${o.lines.map(l => `${esc(l.qty)} × ${esc(l.name || l.sku)} <span class="mono">${esc(l.sku)}</span>`).join('<br>')}</p>
           <p>${tr('金额', 'Total')} <b>${usd(o.totalCents)}</b> · ${tr('已收', 'Paid')} <b>${usd(o.paidCents)}</b>${o.owedCents ? ` · <b class="late">${tr('未收', 'Owed')} ${usd(o.owedCents)}</b>` : ''}</p>
           ${o.release ? `<p class="ord-hint">${tr('特批 / 批准', 'Released')}：${esc(o.release.byName)} · ${esc(when(o.release.at))} · ${esc(o.release.reason)}${o.release.payBy ? tr(` · 约定 ${o.release.payBy} 付款`, ` · pay by ${o.release.payBy}`) : ''}</p>` : ''}</section>
-        <section><h4>${tr('物流', 'Freight')}</h4><p>${tr('发货仓', 'Ships from')}：<b>${o.shipFrom ? esc(w(WH[o.shipFrom])) : tr('未定', 'Not set')}</b><br>${o.tracking ? `${esc(o.carrier)} <span class="mono">${esc(o.tracking)}</span>` : tr('还没出货', 'Not shipped yet')}${o.eta ? `<br>${tr('预计到达', 'ETA')} ${esc(o.eta)}` : ''}${o.appointmentOn ? `<br>${tr('约好送货', 'Delivery booked')} ${esc(o.appointmentOn)}` : ''}${o.damage === 'damaged' ? `<br><b class="late">${tr('签收有破损：请转退货维修并向承运商索赔', 'Delivered damaged: open a return and file a carrier claim')}</b>` : ''}</p></section>
+        <section><h4>${tr('物流', 'Freight')}</h4><p>${tr('发货仓', 'Ships from')}：<b>${o.shipFrom ? esc(w(WH[o.shipFrom])) : tr('未定（默认占用美国LA仓）', 'Not set (holds US LA stock)')}</b><br>${o.wmsOutAt ? `${tr('WMS 出库', 'WMS outbound')}：${o.wmsOut?.mode === 'manual' ? tr('仓库手动出库', 'recorded by the warehouse') : o.wmsOut?.mode === 'before' ? tr('上线前已发货', 'shipped before go-live') : esc(when(o.wmsOutAt))}<br>` : o.stage !== 'cancelled' ? `${tr('占用库存中，未出库', 'Holding stock, not out yet')}<br>` : ''}${o.tracking ? `${esc(o.carrier)} <span class="mono">${esc(o.tracking)}</span>` : tr('还没出货', 'Not shipped yet')}${o.eta ? `<br>${tr('预计到达', 'ETA')} ${esc(o.eta)}` : ''}${o.appointmentOn ? `<br>${tr('约好送货', 'Delivery booked')} ${esc(o.appointmentOn)}` : ''}${o.damage === 'damaged' ? `<br><b class="late">${tr('签收有破损：请转退货维修并向承运商索赔', 'Delivered damaged: open a return and file a carrier claim')}</b>` : ''}</p></section>
         <section><h4>${tr('上手与评价', 'Getting started & review')}</h4><p>${o.firstPieceAt ? tr(`第一件作品 ${when(o.firstPieceAt)}`, `First piece ${when(o.firstPieceAt)}`) : tr('还没做出第一件作品', 'No first piece yet')}${o.reviewInvitedAt ? `<br>${tr('已邀请评价', 'Review invited')} · ${esc(PLATFORM[o.reviewPlatform] || '')}` : ''}${o.reviewedAt ? `<br>${tr('已评价', 'Reviewed')} ${esc(o.reviewRating)}★ · ${esc(PLATFORM[o.reviewPlatform] || '')}` : ''}${o.contentUrl ? `<br><a href="${esc(o.contentUrl)}" target="_blank" rel="noopener">${tr('KOL 内容', 'KOL content')}</a>` : ''}</p></section>
       </div>
       ${stockTable(o)}
@@ -301,7 +305,8 @@
       if (step === 'release') { body.reason = String(v.reason || '').trim(); if (v.payBy) body.payBy = v.payBy; }
       if (step === 'kind') body.kind = v.kind;
       if (step === 'delivery_needs') Object.assign(body, { shipment:v.shipment, liftgate:!!f.querySelector('[name="liftgate"]')?.checked, residential:!!f.querySelector('[name="residential"]')?.checked, ...(v.shipFrom ? { shipFrom:v.shipFrom } : {}) });
-      if (step === 'ship') Object.assign(body, { shipFrom:v.shipFrom || 'us', carrier:String(v.carrier).trim(), tracking:String(v.tracking).trim(), ...(v.eta ? { eta:v.eta } : {}) });
+      if (step === 'wms_out') Object.assign(body, { shipFrom:v.shipFrom || 'us', wmsOut:!!f.querySelector('[name="wmsOut"]')?.checked });
+      if (step === 'ship') Object.assign(body, { shipFrom:v.shipFrom || 'us', wmsOut:!!f.querySelector('[name="wmsOut"]')?.checked, carrier:String(v.carrier).trim(), tracking:String(v.tracking).trim(), ...(v.eta ? { eta:v.eta } : {}) });
       if (step === 'track') Object.assign(body, { ...(v.eta ? { eta:v.eta } : {}), note:String(v.note || '').trim() });
       if (step === 'appointment') body.on = v.on;
       if (step === 'delivered') body.damage = v.damage;

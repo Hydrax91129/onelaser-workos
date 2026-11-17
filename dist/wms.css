@@ -117,3 +117,12 @@ html[data-theme=dark] .wms-opgroup{background:#1d1f27;border-color:#343745}html[
 .wms .page-heading .heading-actions{flex-wrap:nowrap;flex:0 0 auto}.wms .page-heading .heading-actions .btn{padding:6px 10px;font-size:13px;white-space:nowrap}
 @media (max-width:1280px){.wms .page-heading .heading-actions{flex-wrap:wrap;justify-content:flex-end}}
 .wms-badge{background:#3c64f4!important;color:#fff!important}
+
+/* Held by orders and available stock (owner, 2026-11-17) */
+.wms-table td.held{color:#9a5b00;font-weight:600}.wms-table td.neg{color:#d92d20}
+.wms-status{display:inline-block;font-size:11px;font-weight:600;border-radius:999px;padding:1px 7px;margin-right:6px;vertical-align:1px;background:#eef0f5;color:#4b5263}
+.wms-status.live{background:#e8f6ee;color:#17803d}.wms-status.launch{background:#eef3ff;color:#245bdb}.wms-status.dev{background:#f2edff;color:#6b3fd1}
+.wms-status.stop{background:#fff4e0;color:#9a5b00}.wms-status.eol{background:#fdecea;color:#a8261c}
+html[data-theme=dark] .wms-status{background:#2a2d38;color:#c9ccd6}html[data-theme=dark] .wms-status.live{background:#16301f;color:#6fd394}html[data-theme=dark] .wms-status.stop{background:#33270f;color:#f2c46b}html[data-theme=dark] .wms-status.eol{background:#3a1c1a;color:#f19a91}html[data-theme=dark] .wms-status.launch{background:#1b2340;color:#8fa9ff}html[data-theme=dark] .wms-status.dev{background:#2a2142;color:#bda4ff}
+.wms-table tfoot .wms-sum td{position:sticky;bottom:0;background:#f3f5fa;font-weight:700;border-top:2px solid var(--border,#d7dbe7)}
+html[data-theme=dark] .wms-table tfoot .wms-sum td{background:#232735;border-top-color:#3a3f4f}

@@ -131,3 +131,16 @@ test('movement log: operation date, how it was made, and the batch size', async 
   const t = w.render().querySelector('.wms-table').textContent;
   for (const x of ['操作日期', '操作方式', '批量入库', '本批 12 个 SKU · 共 340 件', '手动出库', '期初导入', '2026-11-02']) assert.ok(t.includes(x), x);
 });
+
+test('on hand, held by orders and available; a totals row over the filtered SKUs; product status on each row', async () => {
+  const items = [{ sku:'A-1', name:'a', type:'', status:'live', qty:{ us:10, dg:5 }, reserved:{ us:3 } }, { sku:'B-2', name:'b', type:'', status:'clearance', qty:{ us:2 }, reserved:{ us:4 } }];
+  const w = load({ locations:LOCATIONS, items, movements:[], canOperate:false, statuses:[{ key:'live', zh:'在售', en:'Selling' }, { key:'clearance', zh:'停产清存', en:'Discontinued' }] });
+  w.render(); await tick(); const app = w.render();
+  const cells = r => [...r.querySelectorAll('td.num')].map(td => td.textContent.trim());
+  const row = sku => [...app.querySelectorAll('.wms-table tbody tr')].find(r => r.textContent.includes(sku));
+  assert.deepEqual(cells(row('A-1')).slice(-3), ['15', '3', '12'], 'total on hand, held, available');
+  assert.deepEqual(cells(row('B-2')).slice(-3), ['2', '4', '-2'], 'oversold shows negative');
+  assert.match(row('B-2').innerHTML, /wms-status stop[^>]*>停产清存/);
+  const sum = app.querySelector('tfoot .wms-sum'); assert.match(sum.textContent, /合计（2 个 SKU）/);
+  assert.deepEqual(cells(sum).slice(-3), ['17', '7', '10']);
+});

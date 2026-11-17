@@ -62,9 +62,9 @@ test('order dialog: the timeline, the next step for this stage, and shipping pos
   assert.equal(m.querySelector('.ord-line li.late b').textContent, '2 出货', 'the late step is red');
   assert.ok(m.querySelector('[data-ord-step="ship"]'), 'next step: ship'); assert.ok(!m.querySelector('[data-ord-step="release"]'), 'only main admins see the release form');
   const f = m.querySelector('[data-ord-step="ship"]');
-  f.querySelector('[name="carrier"]').value = 'Demo Freight'; f.querySelector('[name="tracking"]').value = 'PRO-77';
+  f.querySelector('[name="wmsOut"]').checked = true; f.querySelector('[name="carrier"]').value = 'Demo Freight'; f.querySelector('[name="tracking"]').value = 'PRO-77';
   f.dispatchEvent(new w.window.Event('submit', { bubbles:true, cancelable:true })); await tick();
-  assert.deepEqual(JSON.parse(JSON.stringify(w.posts[0])), ['/orders/a/step', { step:'ship', shipFrom:'us', carrier:'Demo Freight', tracking:'PRO-77' }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(w.posts[0])), ['/orders/a/step', { step:'ship', shipFrom:'us', wmsOut:true, carrier:'Demo Freight', tracking:'PRO-77' }]);
 });
 
 test('cancelled, refund and exchange tabs; country and ship-from columns; the latest note and a quick "add note"', async () => {
