@@ -22,6 +22,12 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.76', date:'2026-11-18T12:00:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
+      short:c('任务详情里能看到完成结果、附件和评分', 'Task details show the completion result, files and score'),
+      title:c('任务详情显示完成结果', 'Completion result in task details'),
+      changes:[c('点“完成”时写的完成结果和附件，现在在任务详情的“当前成果”里显示，验收人和下达人打开任务就能看到，不再显示“尚未提交成果”。', 'The result and files written when a task is completed now show under Current deliverable in the task details, so the reviewer and assigner see them instead of “No deliverable submitted yet”.'),
+        c('能评分的人（验收人、下达人、直属领导）可以直接在任务详情里打分（0–10），低于 5 分任务退回未完成。', 'People who may score it (reviewer, assigner, manager) can score it right in the task details (0–10); below 5 sends it back.'),
+        c('点“完成”完成的任务，不再错误显示“验收人 3 天内没有处理，系统已自动通过”。', 'Tasks completed with Complete no longer wrongly say the reviewer made no decision within 3 days.')] },
     { version:'1.75', date:'2026-11-14T06:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       zh:['登录不再一小时就掉线：一直在用就保持登录，闲置 24 小时才自动退出，登录满 7 天需要重新登录一次（钉钉和邮箱密码登录都一样）'],
       en:['No more sign-outs after an hour: you stay signed in while you use WorkOS, are signed out after 24 idle hours, and sign in again every 7 days (DingTalk and email alike)'] },
