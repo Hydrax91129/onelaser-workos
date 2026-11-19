@@ -76,3 +76,6 @@ test('the reviewer can save a 0–10 human score from the task thread; it goes t
  const input=box.querySelector('[name=score]');input.value='8.5';await h.emit('input',input);await h.click('[data-mb=human-score-submit]');
  const call=h.calls.find(x=>x.path==='/tasks/t1/completion/score');assert.ok(call,'posts the human score');assert.deepEqual(call.payload,{completionId:'completion-fixture',score:8.5,note:''});
 });
+test('task updates show the newest first',async()=>{const h=await harness();await h.click('[data-mb=updates][data-id=t1]');
+ for(const body of ['First fixture update','Second fixture update']){const input=h.document.querySelector('[data-mb-update-draft]');input.value=body;await h.emit('input',input);await h.emit('submit',h.document.querySelector('[data-mb-update-form]'));}
+ const posts=[...h.document.querySelectorAll('.mb-updates-feed article')].map(a=>a.textContent);assert.equal(posts.length,2);assert.match(posts[0],/Second fixture update/);assert.match(posts[1],/First fixture update/);});

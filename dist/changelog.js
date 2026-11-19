@@ -22,6 +22,10 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.77', date:'2026-11-18T20:00:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
+      short:c('任务讨论里最新的更新排在最上面', 'Newest task updates first'),
+      title:c('任务更新最新在前', 'Newest updates first'),
+      changes:[c('任务的“更新与讨论”里，最近发布的更新显示在最上面，往下是更早的。', 'In a task’s Updates, the most recent update is shown at the top, older ones below.')] },
     { version:'1.76', date:'2026-11-18T12:00:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
       short:c('任务详情里能看到完成结果、附件和评分', 'Task details show the completion result, files and score'),
       title:c('任务详情显示完成结果', 'Completion result in task details'),
