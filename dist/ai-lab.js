@@ -125,11 +125,22 @@
   const fileUrl = f => `/api/ai-lab/files/${encodeURIComponent(f.id)}`;
   const fileChip = f => f.kind === 'image'
     ? `<a class="ail-thumb" href="${esc(fileUrl(f))}" title="${esc(f.name)}"><img src="${esc(fileUrl(f))}" alt="${esc(f.name)}" loading="lazy"></a>`
-    : `<a class="ail-file" href="${esc(fileUrl(f))}" title="${esc(f.name)}">${icon(f.kind === 'pdf' ? 'file-pdf' : 'file-text')}<span>${esc(f.name)}</span></a>`;
+    : `<a class="ail-file" href="${esc(fileUrl(f))}" title="${esc(f.name)}">${icon(f.kind === 'pdf' ? 'file-pdf' : f.kind === 'text' ? 'file-text' : 'file')}<span>${esc(f.name)}</span></a>`;
   const fileB64 = f => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => no(r.error); r.readAsDataURL(f); });
-  const pendingHtml = () => pending.length ? `<div class="ail-pending">${pending.map(f => `<span class="ail-pend">${icon(f.kind === 'image' ? 'image' : f.kind === 'pdf' ? 'file-pdf' : 'file-text')}${esc(f.name)}<button type="button" data-ail="unattach" data-id="${esc(f.id)}" aria-label="${tr('移除', 'Remove')}">${icon('x')}</button></span>`).join('')}</div>` : '';
+  const pendingHtml = () => pending.length ? `<div class="ail-pending">${pending.map(f => `<span class="ail-pend">${icon(f.kind === 'image' ? 'image' : f.kind === 'pdf' ? 'file-pdf' : f.kind === 'text' ? 'file-text' : 'file')}${esc(f.name)}<button type="button" data-ail="unattach" data-id="${esc(f.id)}" aria-label="${tr('移除', 'Remove')}">${icon('x')}</button></span>`).join('')}</div>` : '';
+  // Big photos are scaled down in the browser first (long edge 2400 px), so a phone photo of a drawing always fits.
+  async function shrink(f) {
+    if (!/^image\/(png|jpeg|webp)$/.test(f.type) || f.size <= 4.5 * 1024 * 1024 || typeof createImageBitmap !== 'function') return f;
+    try {
+      const img = await createImageBitmap(f), k = Math.min(1, 2400 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.88));
+      return blob ? new File([blob], f.name.replace(/\.\w+$/, '') + '.jpg', { type:'image/jpeg' }) : f;
+    } catch { return f; }
+  }
   async function attach(files) {
-    for (const f of files) {
+    for (const raw of files) { const f = await shrink(raw);
       window.WorkOSUpload?.status('ail-files', tr(`正在上传 ${f.name}…`, `Uploading ${f.name}…`));
       try { pending.push(await ctx.api.post('/ai-lab/files', { name:f.name || 'image.png', mime:f.type || '', dataBase64:await fileB64(f) })); window.WorkOSUpload?.status('ail-files', ''); }
       catch (e) { window.WorkOSUpload?.status('ail-files', `${f.name}：${e.message || tr('上传失败', 'Upload failed')}`, true); }
@@ -161,7 +172,7 @@
   }
   function render(page) {
     // upload-zone.js loads after this file, so the box is registered on each render (re-registering is harmless).
-    window.WorkOSUpload?.register('ail-files', { lang:lang(), accept:[], multiple:true, maxBytes:25 * 1024 * 1024, onFiles:files => attach(files) });
+    window.WorkOSUpload?.register('ail-files', { lang:lang(), accept:[], multiple:true, maxBytes:50 * 1024 * 1024, onFiles:files => attach(files) });
     desk = { 'ai-mech':'mech', 'ai-elec':'elec', 'ai-soft':'soft' }[page] || 'mech';
     if (!chats && !error) { loadList(); return `<div class="ail"><p class="ail-hint">${tr('正在连接 AI超算…', 'Connecting…')}</p></div>`; }
     if (error && !chats) return `<div class="ail"><div class="ail-alert">${esc(error)}</div></div>`;
@@ -178,7 +189,7 @@
         <header class="ail-top"><div>${icon(d.icon)} <b>${tr(d.zh, d.en)}</b></div><span class="ail-status ${ready ? 'on' : ''}">${ready ? tr('算力在线', 'Online') : tr('AI 引擎未接入', 'Engine not connected')}</span></header>
         <div class="ail-msgs">${messagesHtml()}</div>
         <form class="ail-compose" id="ail-compose" data-upload-scope="ail-files">
-          ${window.WorkOSUpload ? window.WorkOSUpload.html({ id:'ail-files', lang:lang(), accept:[], multiple:true, maxBytes:25 * 1024 * 1024, label:tr('上传图纸、照片、PDF、DXF / STEP：拖到这里、粘贴截图，或点击选择', 'Attach drawings, photos, PDF, DXF / STEP: drag here, paste a screenshot, or click'), hint:tr('图片 5 MB、PDF 25 MB 以内', 'images up to 5 MB, PDF up to 25 MB') }) : ''}
+          ${window.WorkOSUpload ? window.WorkOSUpload.html({ id:'ail-files', lang:lang(), accept:[], multiple:true, maxBytes:50 * 1024 * 1024, label:tr('上传任何文件（图纸、照片、PDF、CAD、Excel…）：拖到这里、粘贴截图，或点击选择', 'Attach any file (drawings, photos, PDF, CAD, Excel…): drag here, paste a screenshot, or click'), hint:'' }) : ''}
           <div data-ail-pending>${pendingHtml()}</div>
           <textarea name="text" rows="3" maxlength="20000" placeholder="${tr('描述你的需求，越具体越好（尺寸、功率、用途、预算……）。Enter 发送，Shift + Enter 换行', 'Describe what you need: sizes, power, use, budget… Enter to send, Shift + Enter for a new line')}">${esc(draft)}</textarea>
           <div class="ail-compose-bar"><small>${tr('结果供参考，涉及安全和量产请由工程师复核', 'Review safety-critical and production designs with an engineer')}</small>
