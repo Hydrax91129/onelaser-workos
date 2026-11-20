@@ -8,6 +8,7 @@
   'use strict';
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   const icon = n => `<i class="ph ph-${n}" aria-hidden="true"></i>`;
+  let pending = []; // attached files waiting to be sent
   let ctx = null, chats = null, ready = true, loading = false, error = '', chat = null, desk = 'mech', sending = false, poll = null, draft = '';
   const previews = new Map(); // block text → preview url
   const lang = () => ctx?.lang() === 'en' ? 'en' : 'zh';
@@ -31,7 +32,7 @@
   };
 
   function configure(next) { ctx = next; }
-  function reset() { chats = null; chat = null; error = ''; loading = false; sending = false; draft = ''; stopPoll(); previews.clear(); }
+  function reset() { pending = []; chats = null; chat = null; error = ''; loading = false; sending = false; draft = ''; stopPoll(); previews.clear(); }
   async function loadList() {
     if (loading) return; loading = true;
     try { const r = await ctx.api.get('/ai-lab/chats'); chats = r.chats || []; ready = r.ready !== false; error = ''; }
@@ -120,6 +121,22 @@
   }
 
   /* ---------- page ---------- */
+  // An attached file in a message: a thumbnail for images, a chip for PDFs and text files; both open in the file preview.
+  const fileUrl = f => `/api/ai-lab/files/${encodeURIComponent(f.id)}`;
+  const fileChip = f => f.kind === 'image'
+    ? `<a class="ail-thumb" href="${esc(fileUrl(f))}" title="${esc(f.name)}"><img src="${esc(fileUrl(f))}" alt="${esc(f.name)}" loading="lazy"></a>`
+    : `<a class="ail-file" href="${esc(fileUrl(f))}" title="${esc(f.name)}">${icon(f.kind === 'pdf' ? 'file-pdf' : 'file-text')}<span>${esc(f.name)}</span></a>`;
+  const fileB64 = f => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => no(r.error); r.readAsDataURL(f); });
+  const pendingHtml = () => pending.length ? `<div class="ail-pending">${pending.map(f => `<span class="ail-pend">${icon(f.kind === 'image' ? 'image' : f.kind === 'pdf' ? 'file-pdf' : 'file-text')}${esc(f.name)}<button type="button" data-ail="unattach" data-id="${esc(f.id)}" aria-label="${tr('移除', 'Remove')}">${icon('x')}</button></span>`).join('')}</div>` : '';
+  async function attach(files) {
+    for (const f of files) {
+      window.WorkOSUpload?.status('ail-files', tr(`正在上传 ${f.name}…`, `Uploading ${f.name}…`));
+      try { pending.push(await ctx.api.post('/ai-lab/files', { name:f.name || 'image.png', mime:f.type || '', dataBase64:await fileB64(f) })); window.WorkOSUpload?.status('ail-files', ''); }
+      catch (e) { window.WorkOSUpload?.status('ail-files', `${f.name}：${e.message || tr('上传失败', 'Upload failed')}`, true); }
+    }
+    const box = document.querySelector('[data-ail-pending]'); if (box) box.innerHTML = pendingHtml();
+  }
+
   function messagesHtml() {
     if (!chat || !chat.messages.length) {
       const d = DESKS[desk];
@@ -127,7 +144,7 @@
         <div class="ail-examples">${d.examples.map(([zh, en]) => `<button type="button" data-ail="example" data-text="${esc(tr(zh, en))}">${icon('sparkle')}<span>${esc(tr(zh, en))}</span></button>`).join('')}</div></div>`;
     }
     return chat.messages.map(m => m.role === 'user'
-      ? `<div class="ail-msg user"><div class="ail-bubble">${esc(m.text).replace(/\n/g, '<br>')}</div></div>`
+      ? `<div class="ail-msg user"><div class="ail-bubble">${m.files?.length ? `<div class="ail-files">${m.files.map(fileChip).join('')}</div>` : ''}${esc(m.text).replace(/\n/g, '<br>')}</div></div>`
       : `<div class="ail-msg ai"><div class="ail-avatar">${icon('cpu')}</div><div class="ail-answer">${m.text ? markdown(m.text, m.status === 'streaming') : ''}
           ${m.status === 'streaming' ? `<div class="ail-thinking"><i></i><i></i><i></i> ${m.text ? tr('正在输出', 'Writing') : tr('正在计算', 'Computing')}</div>` : ''}
           ${m.status === 'error' ? `<p class="ail-error">${tr('这次没有算完，请重试。', 'This one did not finish; please try again.')}</p>` : ''}
@@ -143,6 +160,8 @@
     if (!busy) ensurePreviews();
   }
   function render(page) {
+    // upload-zone.js loads after this file, so the box is registered on each render (re-registering is harmless).
+    window.WorkOSUpload?.register('ail-files', { lang:lang(), accept:[], multiple:true, maxBytes:25 * 1024 * 1024, onFiles:files => attach(files) });
     desk = { 'ai-mech':'mech', 'ai-elec':'elec', 'ai-soft':'soft' }[page] || 'mech';
     if (!chats && !error) { loadList(); return `<div class="ail"><p class="ail-hint">${tr('正在连接 AI超算…', 'Connecting…')}</p></div>`; }
     if (error && !chats) return `<div class="ail"><div class="ail-alert">${esc(error)}</div></div>`;
@@ -158,7 +177,9 @@
       <section class="ail-main">
         <header class="ail-top"><div>${icon(d.icon)} <b>${tr(d.zh, d.en)}</b></div><span class="ail-status ${ready ? 'on' : ''}">${ready ? tr('算力在线', 'Online') : tr('AI 引擎未接入', 'Engine not connected')}</span></header>
         <div class="ail-msgs">${messagesHtml()}</div>
-        <form class="ail-compose" id="ail-compose">
+        <form class="ail-compose" id="ail-compose" data-upload-scope="ail-files">
+          ${window.WorkOSUpload ? window.WorkOSUpload.html({ id:'ail-files', lang:lang(), accept:[], multiple:true, maxBytes:25 * 1024 * 1024, label:tr('上传图纸、照片、PDF、DXF / STEP：拖到这里、粘贴截图，或点击选择', 'Attach drawings, photos, PDF, DXF / STEP: drag here, paste a screenshot, or click'), hint:tr('图片 5 MB、PDF 25 MB 以内', 'images up to 5 MB, PDF up to 25 MB') }) : ''}
+          <div data-ail-pending>${pendingHtml()}</div>
           <textarea name="text" rows="3" maxlength="20000" placeholder="${tr('描述你的需求，越具体越好（尺寸、功率、用途、预算……）。Enter 发送，Shift + Enter 换行', 'Describe what you need: sizes, power, use, budget… Enter to send, Shift + Enter for a new line')}">${esc(draft)}</textarea>
           <div class="ail-compose-bar"><small>${tr('结果供参考，涉及安全和量产请由工程师复核', 'Review safety-critical and production designs with an engineer')}</small>
             <button type="button" class="btn" data-ail="stop" ${chat?.busy ? '' : 'hidden'}>${icon('stop')} ${tr('停止', 'Stop')}</button>
@@ -168,12 +189,12 @@
   }
 
   async function send(text) {
-    text = String(text || '').trim(); if (!text || sending) return;
+    text = String(text || '').trim(); if ((!text && !pending.length) || sending) return;
     sending = true;
     try {
       if (!chat || chat.desk !== desk) { chat = await ctx.api.post('/ai-lab/chats', { desk }); chats = [{ id:chat.id, desk, title:'', busy:true }, ...(chats || [])]; }
-      chat = await ctx.api.post(`/ai-lab/chats/${encodeURIComponent(chat.id)}/messages`, { text });
-      draft = ''; const c = chats.find(x => x.id === chat.id); if (c) { c.title = chat.title; c.busy = true; }
+      chat = await ctx.api.post(`/ai-lab/chats/${encodeURIComponent(chat.id)}/messages`, { text, fileIds:pending.map(f => f.id) });
+      draft = ''; pending = []; const c = chats.find(x => x.id === chat.id); if (c) { c.title = chat.title; c.busy = true; }
       startPoll();
     } catch (e) { ctx.toast?.(e.message || tr('发送失败', 'Could not send')); }
     finally { sending = false; ctx.rerender(); }
@@ -189,6 +210,7 @@
     if (a === 'new') { stopPoll(); chat = null; draft = ''; ctx.rerender(); setTimeout(() => document.querySelector('.ail-compose textarea')?.focus(), 0); return; }
     if (a === 'example') { draft = b.dataset.text; const t = document.querySelector('.ail-compose textarea'); if (t) { t.value = draft; t.focus(); } return; }
     if (a === 'stop' && chat) { try { await ctx.api.post(`/ai-lab/chats/${encodeURIComponent(chat.id)}/stop`, {}); } catch { /* the poll shows the state */ } return; }
+    if (a === 'unattach') { pending = pending.filter(f => f.id !== b.dataset.id); const box = document.querySelector('[data-ail-pending]'); if (box) box.innerHTML = pendingHtml(); return; }
     if (a === 'toggle-code') { b.closest('.ail-code')?.querySelector('pre')?.classList.toggle('collapsed'); return; }
     if (a === 'copy') { try { await navigator.clipboard.writeText(blockText(b)); ctx.toast?.(tr('已复制', 'Copied')); } catch { ctx.toast?.(tr('复制失败', 'Could not copy')); } return; }
     if (a === 'download') {

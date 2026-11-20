@@ -55,3 +55,9 @@ html[data-theme=dark] .ail-examples button{background:#1d2130;border-color:#2c30
 html[data-theme=dark] .ail-table td{border-color:#2c303c}html[data-theme=dark] .ail-compose textarea{background:#11141b;border-color:#2c303c;color:#e7e9ef}
 html[data-theme=dark] .ail-answer code{background:#262a36}html[data-theme=dark] .ail-answer blockquote{background:#1b2030;color:#c9ccd6}
 .ail [hidden]{display:none!important}
+.ail-compose .up-zone{padding:8px 12px;min-height:0}.ail-compose .up-zone small{font-size:11px}
+.ail-pending{display:flex;flex-wrap:wrap;gap:6px}.ail-pend{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border,#d7dbe7);border-radius:999px;padding:3px 6px 3px 10px;font-size:12.5px;background:#f6f7fb}
+.ail-pend button{border:0;background:none;cursor:pointer;color:#8a90a3;padding:0 2px}.ail-pend button:hover{color:#d92d20}
+.ail-files{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}.ail-thumb img{display:block;max-width:180px;max-height:140px;border-radius:8px;border:1px solid rgba(255,255,255,.4)}
+.ail-file{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.18);color:#fff;border-radius:8px;padding:4px 8px;font-size:12.5px;text-decoration:none}
+html[data-theme=dark] .ail-pend{background:#1d2130;border-color:#2c303c;color:#d8dbe4}
