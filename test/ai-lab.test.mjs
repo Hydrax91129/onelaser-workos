@@ -37,3 +37,24 @@ test('answers render as Markdown with tables; svg and html blocks get a sandboxe
   assert.deepEqual(w.posts.map(p => p[0]), ['/ai-lab/previews'], 'only the drawing gets a preview, not the python code');
   assert.equal(w.posts[0][1].kind, 'svg');
 });
+
+test('attach files: the upload box sends each file, chips show before sending, and the message carries the file ids', async () => {
+  const chat = { id:'c2', desk:'mech', title:'', busy:false, messages:[] };
+  const { window, document } = parseHTML('<!doctype html><html><body><div id="app"></div></body></html>');
+  let onFiles = null;
+  window.WorkOSUpload = { html:() => '<div class="up-zone"></div>', register:(id, o) => { if (id === 'ail-files') onFiles = o.onFiles; }, status:() => {} };
+  class FR { readAsDataURL() { this.result = 'data:image/png;base64,QUJD'; this.onload(); } }
+  vm.runInNewContext(read('ai-lab.js'), { window, document, console, setTimeout, clearTimeout, URL, Blob:class {}, navigator:{}, FileReader:FR });
+  const posts = [];
+  const api = { get:async p => p === '/ai-lab/chats' ? { ready:true, chats:[] } : chat,
+    post:async (p, b) => { posts.push([p, b]); return p === '/ai-lab/files' ? { id:'f1', name:b.name, kind:'image' } : p === '/ai-lab/chats' ? chat : { ...chat, busy:true }; } };
+  window.WorkOSAiLab.configure({ api, lang:() => 'zh', rerender:() => {}, toast:() => {} });
+  const render = () => { document.getElementById('app').innerHTML = window.WorkOSAiLab.render('ai-mech'); return document.getElementById('app'); };
+  render(); await tick(); render();
+  assert.ok(onFiles, 'the upload box is registered');
+  await onFiles([{ name:'sketch.png', type:'image/png' }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(posts[0])), ['/ai-lab/files', { name:'sketch.png', mime:'image/png', dataBase64:'QUJD' }]);
+  assert.match(render().querySelector('[data-ail-pending]').textContent, /sketch\.png/);
+  document.querySelector('#ail-compose').dispatchEvent(new window.Event('submit', { bubbles:true, cancelable:true })); await tick(); await tick();
+  assert.deepEqual(JSON.parse(JSON.stringify(posts.at(-1))), ['/ai-lab/chats/c2/messages', { text:'', fileIds:['f1'] }], 'a file alone can be sent');
+});
