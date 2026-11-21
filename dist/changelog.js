@@ -22,6 +22,15 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.78', date:'2026-11-21T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('新增“公司制度”：员工手册、公司政策、SOP、企业文化，带版本和签收', 'New Policies area: handbook, policies, SOPs and culture, with versions and sign-off'),
+      title:c('公司制度', 'Company policies'),
+      changes:[
+        c('左侧新增“公司制度”：员工手册、公司政策、SOP 作业流程、企业文化。每个人只看到适用于自己的文件（按地区和部门）。', 'New Policies group on the left: Employee handbook, Company policies, SOPs and Company culture. Everyone sees the documents that apply to them (by region and department).'),
+        c('每份文件有版本记录：草稿 → 提交审批 → 主管理员发布；旧版本都能查看，写明生效日期、改了什么、谁发布。', 'Every document has versions: draft → approval → published by a main admin. Earlier versions stay readable with the effective date, what changed and who published it.'),
+        c('需要签收的文件，员工读完点“我已阅读并同意”签收；管理人能看到谁签了、谁没签，一键提醒，导出签收表。', 'Documents can require sign-off: employees confirm “I have read and agree”; editors see who signed, remind the rest and export the list.'),
+        c('中英文两个版本，标明以哪个语言为准，可以 AI 翻译另一种语言后再核对。', 'Chinese and English versions, with the official language marked; AI can translate one into the other for you to check.'),
+      ] },
     { version:'1.77', date:'2026-11-18T20:00:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
       short:c('任务讨论里最新的更新排在最上面', 'Newest task updates first'),
       title:c('任务更新最新在前', 'Newest updates first'),
