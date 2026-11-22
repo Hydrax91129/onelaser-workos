@@ -14,9 +14,11 @@
     [/^采购单草稿：(.*)$/, m => `Draft purchase order: ${m[1]}`], [/^采购单已下达生产：(.*)$/, m => `Purchase order in production: ${m[1]}`], [/^到港入仓：(.*)$/, m => `Arrival to receive: ${m[1]}`],
     [/^(.*) · (\d+) 个 SKU、(\d+) 件 · 预计交期 (\S+?)。/, m => `${m[1]} · ${m[2]} SKUs, ${m[3]} units · expected ${m[4]}. Review it in Supply chain → Purchase orders and click “Issue” once the factory confirms.`],
     [/^(.*) · 预计交期 (\S+?)。$/, m => `${m[1]} · expected ${m[2]}.`],
+    [/^请阅读并签收：(.*)$/, m => `Please read and sign: ${m[1]}`], [/^制度待发布：(.*)$/, m => `Waiting to publish: ${m[1]}`], [/^制度被退回：(.*)$/, m => `Sent back: ${m[1]}`], [/^制度已发布：(.*)$/, m => `Published: ${m[1]}`],
+    [/^第 (\d+) 版$/, m => `Version ${m[1]}`], [/^(新发布|需要签收)$/, () => 'Newly published; please sign'], [/^提醒$/, () => 'Reminder'],
     [/^(\d+) 个 SKU、(\d+) 件已到港/, m => `${m[1]} SKUs, ${m[2]} units at port. Confirm the quantity and bin of each line in Inventory → Arrivals.`],
   ];
-  const sysText = (i, v) => { if (lang() !== 'en' || !['scm_order', 'wms_arrival'].includes(i.kind)) return null; for (const [re, f] of SYS) { const m = re.exec(String(v || '')); if (m) return esc(f(m)); } return null; };
+  const sysText = (i, v) => { if (lang() !== 'en' || !['scm_order', 'wms_arrival', 'policy_ack', 'policy_approval'].includes(i.kind)) return null; for (const [re, f] of SYS) { const m = re.exec(String(v || '')); if (m) return esc(f(m)); } return null; };
   let ctx = null, data = { items:[], unread:0 }, open = null, loading = false, timer = null; // open: null | 'action' | 'update'
   const lang = () => ctx?.lang?.() === 'en' ? 'en' : 'zh';
   const tr = (zh, en) => lang() === 'en' ? en : zh;
@@ -29,6 +31,7 @@
     it_reminder:['key', 'IT 提醒', 'IT reminder', '#579bfc'],
     quality:['shield-warning', '品质问题', 'Quality issue', '#e2445c'],
     scm_order:['clipboard-text', '采购单', 'Purchase order', '#579bfc'], wms_arrival:['boat', '到港入仓', 'Arrival', '#00a86b'],
+    policy_ack:['signature', '制度签收', 'Policy to sign', '#e2445c'], policy_approval:['book-open-text', '公司制度', 'Company policy', '#a25ddc'],
   };
   const ago = iso => { const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
     if (m < 1) return tr('刚刚', 'just now'); if (m < 60) return tr(`${m} 分钟前`, `${m} min ago`); const h = Math.round(m / 60); if (h < 24) return tr(`${h} 小时前`, `${h} h ago`); return tr(`${Math.round(h / 24)} 天前`, `${Math.round(h / 24)} d ago`); };
@@ -40,8 +43,8 @@
     ctx.api.get('/inbox').then(r => { data = { items:r.items || [], unread:r.unread || 0 }; }).catch(() => {}).finally(() => { loading = false; paint(); });
   }
   const CTA = { submission:['去验收', 'Review'], completion:['去验收', 'Review'], task_new:['去领取', 'Pick up'], assigned:['去领取', 'Pick up'], review_revise:['去修改', 'Rework'] };
-  const isAction = i => i.action === true || (i.action === undefined && ['submission', 'nudge', 'okr', 'hr_reminder', 'it_reminder', 'quality', 'task_new', 'assigned', 'review_revise'].includes(i.kind));
-  const REMINDER = ['nudge', 'okr', 'hr_reminder', 'it_reminder', 'quality'];
+  const isAction = i => i.action === true || (i.action === undefined && ['submission', 'nudge', 'okr', 'hr_reminder', 'it_reminder', 'quality', 'task_new', 'assigned', 'review_revise', 'policy_ack'].includes(i.kind));
+  const REMINDER = ['nudge', 'okr', 'hr_reminder', 'it_reminder', 'quality', 'policy_ack'];
   const isDone = i => i.done !== undefined ? i.done : REMINDER.includes(i.kind) ? i.read : false;
   const actions = () => data.items.filter(i => isAction(i) && !isDone(i));
   const updates = () => data.items.filter(i => !isAction(i));
@@ -87,6 +90,7 @@
     else if (it.kind === 'okr') { window.location.hash = '#okr'; }
     else if (it.kind === 'hr_reminder') { window.location.hash = '#hr'; }
     else if (it.kind === 'it_reminder') { window.location.hash = '#it'; }
+    else if (it.kind === 'policy_ack' || it.kind === 'policy_approval') { window.location.hash = '#pol-handbook'; }
     else if (it.kind === 'quality') { window.location.hash = '#quality'; if (it.issueId) window.WorkOSQuality?.open(it.issueId); }
     else paint();
   });
