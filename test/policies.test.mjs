@@ -57,5 +57,5 @@ test('policies pages are wired into the app shell, inbox, file preview and help'
   const live = read('live-app.js'), index = read('index.html');
   for (const id of ['pol-handbook', 'pol-policy', 'pol-sop', 'pol-culture']) { assert.match(live, new RegExp(`'${id}'`)); assert.match(read('help-tips.js'), new RegExp(`'${id}'`)); }
   assert.match(index, /policies\.js[^"]*" defer/); assert.match(index, /policies\.css/);
-  assert.match(read('inbox.js'), /policy_ack/); assert.match(read('file-preview.js'), /policies/);
+  assert.match(read('inbox.js'), /policy_ack/); assert.match(live, /policiesAccess === true/); assert.match(read('file-preview.js'), /policies/);
 });

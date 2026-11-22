@@ -91,7 +91,8 @@
     const head = `<div class="page-heading"><div><div class="eyebrow">WORK OS · ${tr('公司制度', 'POLICIES')}</div><h1>${esc(w(CATS[ui.cat]))}</h1><p>${esc(w(CAT_HINT[ui.cat]))}</p></div>
       <div class="heading-actions">${isAdmin() ? `<button class="btn" data-pol="access">${icon('shield')} ${tr('权限', 'Access')}</button>` : ''}${editor() ? `<button class="btn primary" data-pol="new">${icon('plus')} ${tr('新建', 'New')}</button>` : ''}</div></div>`;
     setTimeout(afterPaint);
-    return `<div class="pol">${head}${todoBar()}
+    const closed = data.open === false ? `<div class="pol-todo-row muted">${icon('lock-simple')}<b>${tr('目前只有你和编辑人能看到“公司制度”，员工看不到。', 'Only you and the editors can see Policies for now; employees cannot.')}</b>${isAdmin() ? `<button class="pol-chip" data-pol="access">${tr('去开放给全员', 'Open to everyone')}</button>` : ''}</div>` : '';
+    return `<div class="pol">${head}${closed}${todoBar()}
       <div class="pol-split ${ui.sel ? 'has-sel' : ''}">
         <aside class="pol-list">
           <div class="pol-tools"><label class="pol-search">${icon('magnifying-glass')}<input type="search" data-pol-q value="${esc(ui.q)}" placeholder="${tr('搜索标题和正文', 'Search titles and text')}"></label>
@@ -325,6 +326,8 @@
   }
   function paintAccess(first) {
     const body = !access ? `<p class="pol-hint">${tr('正在读取…', 'Loading…')}</p>` : access.error ? `<div class="pol-alert">${esc(access.error)}</div>` : `
+      <div class="pol-open"><label class="pol-check"><input type="checkbox" data-pol-open ${data?.open ? 'checked' : ''}> <b>${tr('对全员开放', 'Open to everyone')}</b></label>
+        <p class="pol-small">${tr('关闭时只有主管理员和下面“可管理”的人能看到这个区域，员工看不到、也不会收到签收提醒。打开后员工就能看到适用于自己的文件，需要签收的会收到提醒。', 'While closed, only main admins and the editors below see this area; employees neither see it nor get sign-off requests. Once open, employees see the documents that apply to them and are asked to sign where needed.')}</p></div>
       <p class="pol-small">${tr('“可管理”的人可以新建和修改制度、提交审批、看签收情况。员工手册和公司政策只有主管理员能发布；某个部门的 SOP 也可以由这个部门的主管（同时可管理）发布。所有员工都能看到适用于自己的已发布文件。', 'Editors write documents, send them for approval and see sign-off. Only main admins publish the handbook and company policies; a one-department SOP may also be published by that department’s manager if they are an editor. Everyone reads the published documents that apply to them.')}</p>
       <div class="pol-table"><table><thead><tr><th>${tr('成员', 'Member')}</th><th>${tr('权限', 'Access')}</th></tr></thead><tbody>${access.people.map(p => `<tr><td>${esc(p.name)}${p.title ? ` <small>${esc(p.title)}</small>` : ''}${p.manager ? ` ${badge(tr('主管', 'Manager'), 'gray')}` : ''}</td>
         <td>${p.admin ? badge(tr('主管理员', 'Main admin'), 'blue') : `<select data-pol-access="${esc(p.id)}" ${p.id === ctx.actor?.()?.id ? 'disabled' : ''}>${opt('none', tr('只读（看适用的文件）', 'Read only'), p.level)}${opt('manage', tr('可管理', 'Editor'), p.level)}</select>`}</td></tr>`).join('')}</tbody></table></div>`;
@@ -385,6 +388,13 @@
     const t = e.target;
     if (t.matches('[data-pol-agree]')) { const b = document.querySelector('[data-pol="ack"]'); if (b) b.disabled = !t.checked; return; }
     if (t.matches('[data-pol-mine]')) { ui.mine = t.checked; ui.sel = null; ctx.rerender(); return; }
+    if (t.matches('[data-pol-open]')) {
+      const on = t.checked;
+      if (on && !confirm(tr('确认开放给全员？需要签收的文件会通知适用的员工。', 'Open to everyone? People will be asked to sign the documents that need it.'))) { t.checked = false; return; }
+      try { const r = await ctx.api.post('/policies-settings', { open:on }); ctx.toast?.(on ? tr(`已开放给全员${r.asked ? `，已通知 ${r.asked} 条签收` : ''}`, `Open to everyone${r.asked ? `; ${r.asked} sign-off requests sent` : ''}`) : tr('已关闭，只有你和编辑人能看到', 'Closed: only you and the editors can see it')); data = null; await load(); }
+      catch (err) { t.checked = !on; ctx.toast?.(err.message); }
+      return;
+    }
     if (t.matches('[data-pol-access]')) { try { await ctx.api.post('/policies-access', { userId:t.dataset.polAccess, level:t.value }); ctx.toast?.(tr('已保存', 'Saved')); } catch (err) { ctx.toast?.(err.message); await openAccess(); } }
   });
   let qTimer = null;

@@ -66,3 +66,4 @@ html[data-theme=dark] .pol-card-title,html[data-theme=dark] .pol-body{color:#e7e
 html[data-theme=dark] .pol-body blockquote{background:#1b2030;color:#c9ccd6}html[data-theme=dark] .pol-seg button{background:#171a22;color:#d8dbe4}html[data-theme=dark] .pol-seg button.on{background:#e7e9ef;color:#171a22}
 html[data-theme=dark] .pol-sign{background:#2a2410;border-color:#5a4a1a;color:#f1e3b5}html[data-theme=dark] .pol-sign.done{background:#13261b;border-color:#24503a;color:#9fe0b8}
 html[data-theme=dark] .pol-draftbox,html[data-theme=dark] .pol-todo-row{background:#1d2130;border-color:#2c303c;color:#d8dbe4}html[data-theme=dark] .pol-chip{background:#171a22}
+.pol-open{border:1px solid var(--border,#e4e7ef);border-radius:10px;padding:10px 12px;margin-bottom:12px;background:#f7f8fa}.pol-open .pol-small{margin-top:4px}
