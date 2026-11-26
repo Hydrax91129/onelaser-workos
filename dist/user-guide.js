@@ -47,8 +47,8 @@
         <tr><th>${chip('st-hold', '被暂停', 'Paused')}</th><td>${tr('因外部原因暂停。暂停期间即使过了截止日期，也不会自动变为延期。', 'Paused for an outside reason. A paused task never turns Overdue, even past its due date.')}</td></tr>
         <tr><th>${chip('st-review', '待审批', 'In review')}</th><td>${tr('已经做完，等待审核人确认。', 'Work is finished and waiting for the reviewer.')}</td></tr>
         <tr><th>${chip('st-done', '完成', 'Done')}</th><td>${tr('选择完成时，必须写清楚完成结果和自我评价，AI 会根据结果自动打分。', 'To mark Done you write the result and a self-evaluation; AI scores it automatically.')}</td></tr>
-        <tr><th>${chip('st-overdue', '延期', 'Overdue')}</th><td>${tr('过了截止日期还没完成，系统立即自动变为延期；把截止日期改到以后，就恢复成进行中。', 'Past the due date and not finished: the system switches it to Overdue at once; move the due date later and it goes back to Working.')}</td></tr>
-        <tr><th>${chip('st-abandoned', '放弃', 'Abandoned')}</th><td>${tr('任务做不到时自己选择放弃。系统不会自动把任务改成放弃。', 'Choose this yourself when a task cannot be done. The system never sets it for you.')}</td></tr>
+        <tr><th>${chip('st-overdue', '延期', 'Overdue')}</th><td>${tr('过了截止日期还没完成，系统立即自动变为延期；把截止日期改到以后，就恢复成进行中（还没写过进展的恢复成未开始）。', 'Past the due date and not finished: the system switches it to Overdue at once; move the due date later and it goes back to Working (Not started if no progress was posted yet).')}</td></tr>
+        <tr><th>${chip('st-abandoned', '放弃', 'Abandoned')}</th><td>${tr('任务做不到时手动选择放弃。系统不会自动把任务改成放弃。', 'Choose this by hand when a task cannot be done. The system never sets it for you.')}</td></tr>
       </tbody></table>
       <p>${tr('员工可以选择的状态：进行中、被暂停、待审批、完成、延期、放弃。“未开始”由系统设置，不能手动选回。', 'Statuses you can choose: Working, Paused, In review, Done, Overdue, Abandoned. “Not started” is set by the system and cannot be chosen again.')}</p>
       <h3>${tr('常用操作', 'Everyday actions')}</h3>

@@ -610,7 +610,7 @@
     const me = state.actor.id, source = task.source || (task.kr_id ? 'okr' : task.created_by !== task.owner_id ? 'direct' : 'self'), definer = task.assigned_by || task.created_by;
     const def = source === 'self' ? (task.owner_id === me || task.reviewer_id === me || manager()) : (task.reviewer_id === me || definer === me || (manager() && task.owner_id !== me));
     // A task from your own key result is yours to plan: you set its due date and priority (the name follows the KR).
-    return { def, plan: def || (source === 'okr' && task.owner_id === me), status: def || task.owner_id === me, owner: manager() && task.submission_version === 0, criteria: def && task.submission_version === 0 };
+    return { def, plan: def || (!!task.own_plan && task.owner_id === me), status: def || task.owner_id === me, owner: manager() && task.submission_version === 0, criteria: def && task.submission_version === 0 };
   }
   function taskEditForm(task) {
     const r = taskEditRights(task), dis = ok => ok ? '' : 'disabled', status = task.board_status || 'not_started';
@@ -625,7 +625,7 @@
       </div>
       ${field('description',tr('期望成果','Expected outcome'),`<textarea name="description" required maxlength="10000" rows="3" ${dis(r.def)}>${esc(task.description)}</textarea>`,true)}
       ${field('criteria',tr('验收标准（每行一项）','Acceptance criteria (one per line)'),`<textarea name="criteria" required rows="3" maxlength="20000" ${dis(r.criteria)}>${esc((task.criteria || []).join('\n'))}</textarea>${task.submission_version > 0 ? `<small class="hint">${tr('已经提交过成果，验收标准不能再改。','Evidence has been submitted, so the criteria are fixed.')}</small>` : ''}`,true)}
-      ${!r.def ? `<p class="hint">${tr('这是别人下达给你的任务：你可以改状态；名称、截止时间和标准由下达人修改。','This task was assigned to you: you can change its status; the assigner changes the name, due date and criteria.')}</p>` : ''}
+      ${!r.def ? `<p class="hint">${r.plan ? tr('这是你 OKR 里的任务：截止时间、优先级和状态你可以自己改；名称和标准跟着关键结果。','This task comes from your OKR: you can change its due date, priority and status; the name and criteria follow the key result.') : tr('这是别人下达给你的任务：你可以改状态；名称、截止时间和标准由下达人修改。','This task was assigned to you: you can change its status; the assigner changes the name, due date and criteria.')}</p>` : ''}
       <p class="hint">${tr('保存后个人任务会同步更新。要标记“完成”，请在个人任务写完成结果。','Saved changes appear in the Task hub at once. To mark it Done, write the result in the Task hub.')}</p>
       <div class="inline-actions"><button class="btn primary small" type="submit">${tr('保存修改','Save changes')}</button><button class="btn small" type="button" data-live-action="task-edit-cancel">${tr('取消','Cancel')}</button></div>
       <div class="form-error" role="alert"></div></form>`;

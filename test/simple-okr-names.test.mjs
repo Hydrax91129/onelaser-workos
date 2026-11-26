@@ -41,7 +41,7 @@ test('task status: six employee choices, Not started is system-only, overdue and
   const board = read('task-board.js'), pj = read('projects.js');
   assert.match(board, /function statusChoices\(\)\{return data\.config\.status\.filter\(l=>l\.id!=='not_started'\);\}/);
   assert.match(board, /options\(m\.field==='status'\?statusChoices\(\)/); assert.match(board, /options\(statusChoices\(\)\.filter\(l=>l\.id!=='done'\),'pick-batch-status'\)/, 'bulk status offers every choice except Done, which needs a written result');
-  assert.match(board, /放弃只能自己选/); assert.doesNotMatch(board, /15 天无更新/, 'tasks are never abandoned automatically');
+  assert.match(board, /系统不会自动改成放弃/); assert.doesNotMatch(board, /15 天无更新/, 'tasks are never abandoned automatically');
   for (const k of ['overdue:\'overdue\'', 'abandoned:\'abandoned\'']) assert.ok(pj.includes(k), k);
   assert.match(pj, /stuck:\['被暂停'/); assert.match(pj, /filter\(k => field !== 'status' \|\| k !== 'todo'\)/);
 });
