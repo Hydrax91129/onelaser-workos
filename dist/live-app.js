@@ -609,7 +609,8 @@
   function taskEditRights(task) {
     const me = state.actor.id, source = task.source || (task.kr_id ? 'okr' : task.created_by !== task.owner_id ? 'direct' : 'self'), definer = task.assigned_by || task.created_by;
     const def = source === 'self' ? (task.owner_id === me || task.reviewer_id === me || manager()) : (task.reviewer_id === me || definer === me || (manager() && task.owner_id !== me));
-    return { def, status: def || task.owner_id === me, owner: manager() && task.submission_version === 0, criteria: def && task.submission_version === 0 };
+    // A task from your own key result is yours to plan: you set its due date and priority (the name follows the KR).
+    return { def, plan: def || (source === 'okr' && task.owner_id === me), status: def || task.owner_id === me, owner: manager() && task.submission_version === 0, criteria: def && task.submission_version === 0 };
   }
   function taskEditForm(task) {
     const r = taskEditRights(task), dis = ok => ok ? '' : 'disabled', status = task.board_status || 'not_started';
@@ -618,8 +619,8 @@
       ${field('title',tr('任务名称','Task name'),`<input name="title" required minlength="3" maxlength="200" value="${esc(task.title)}" ${dis(r.def)}>`,true)}
       <div class="form-grid">
         ${field('status',tr('状态','Status'),status === 'done' ? `<input value="${tr('完成','Done')}" disabled>` : `<select name="status" ${dis(r.status)}>${TASK_STATUSES.map(([v,zh,en]) => `<option value="${v}" ${v === status ? 'selected' : ''}>${tr(zh,en)}</option>`).join('')}</select>`)}
-        ${field('priority',tr('优先级','Priority'),`<select name="priority" ${dis(r.def)}>${TASK_PRIORITIES.map(([v,zh,en]) => `<option value="${v}" ${v === (task.board_priority || '') ? 'selected' : ''}>${tr(zh,en)}</option>`).join('')}</select>`)}
-        ${field('dueAt',tr('截止时间','Due'),`<input name="dueAt" type="datetime-local" required value="${localInput(task.due_at)}" ${dis(r.def)}>`)}
+        ${field('priority',tr('优先级','Priority'),`<select name="priority" ${dis(r.plan)}>${TASK_PRIORITIES.map(([v,zh,en]) => `<option value="${v}" ${v === (task.board_priority || '') ? 'selected' : ''}>${tr(zh,en)}</option>`).join('')}</select>`)}
+        ${field('dueAt',tr('截止时间','Due'),`<input name="dueAt" type="datetime-local" required value="${localInput(task.due_at)}" ${dis(r.plan)}>`)}
         ${field('ownerId',tr('负责人','Owner'),r.owner ? `<select name="ownerId">${people.map(u => `<option value="${esc(u.id)}" ${u.id === task.owner_id ? 'selected' : ''}>${esc(displayName(u.id))}</option>`).join('')}</select>` : `<input value="${esc(displayName(task.owner_id))}" disabled>`)}
       </div>
       ${field('description',tr('期望成果','Expected outcome'),`<textarea name="description" required maxlength="10000" rows="3" ${dis(r.def)}>${esc(task.description)}</textarea>`,true)}
