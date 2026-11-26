@@ -22,6 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.78', date:'2026-11-26T12:00:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
+      short:c('任务不再自动变“放弃”；OKR 任务的截止日期自己改；库存流水显示中英文名', 'No more automatic Abandoned; set your own OKR task dates; names in stock movements'),
+      title:c('任务状态和截止日期、库存流水显示产品名', 'Task status and dates, product names in stock movements'),
+      changes:[c('任务不会再因为 15 天没写更新就自动变成“放弃”，需要放弃时手动选。之前被自动改成放弃的任务已经恢复（过了截止日期的显示延期）。', 'Tasks no longer turn Abandoned after 15 days without an update; choose Abandoned by hand when needed. Tasks the old rule abandoned are back (past-due ones show Overdue).'),
+        c('来自自己 OKR 的任务，截止日期和优先级可以自己改。', 'For tasks from your own OKR, you can change the due date and priority yourself.'),
+        c('把截止日期改到以后，“延期”会自动变回进行中（还没写过进展的变回未开始）。', 'Moving the due date later turns Overdue back into Working (Not started if no progress was posted yet).'),
+        c('库存管理的“出入库流水”在 SKU 旁边加了中文名和英文名两列，取自 SKU 管理里的产品资料，也可以按名称搜索。', 'Stock movements now show the Chinese and English product names from SKU management next to the SKU, and you can search by name.')] },
     { version:'1.77', date:'2026-11-18T20:00:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
       short:c('任务讨论里最新的更新排在最上面', 'Newest task updates first'),
       title:c('任务更新最新在前', 'Newest updates first'),

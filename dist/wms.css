@@ -25,6 +25,7 @@ div.wms-kpi{cursor:default}
 .wms-table th{position:sticky;top:0;background:#f7f8fb;text-align:left;font-weight:600;color:#5b6170;padding:9px 10px;border-bottom:1px solid var(--border,#e4e7ef);white-space:nowrap;z-index:1}
 .wms-table td{padding:8px 10px;border-bottom:1px solid #f0f1f5;vertical-align:middle}
 .wms-table td small{display:block;color:var(--muted,#9aa0b4);font-size:11.5px}
+.wms-table td.wms-name{min-width:120px;max-width:240px;white-space:normal;line-height:1.35}
 .wms-table .num{text-align:right;font-variant-numeric:tabular-nums}.wms-table .strong{font-weight:700}
 .wms-table td.zero{color:#c0c4ce}.wms-table td.out{color:#e2445c;font-weight:700}
 .wms-table .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}

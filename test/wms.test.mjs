@@ -131,3 +131,22 @@ test('movement log: operation date, how it was made, and the batch size', async 
   const t = w.render().querySelector('.wms-table').textContent;
   for (const x of ['操作日期', '操作方式', '批量入库', '本批 12 个 SKU · 共 340 件', '手动出库', '期初导入', '2026-11-02']) assert.ok(t.includes(x), x);
 });
+
+test('movement log shows the product library Chinese and English names next to the SKU, and searches them', async () => {
+  const movements = [move('1', 'A-1', 'in', { nameZh:'示例主机', nameEn:'Demo host' }), move('2', 'B-2', 'out', { nameZh:'', nameEn:'Demo part' })];
+  const w = load({ locations:LOCATIONS, items:[], movements, canOperate:true });
+  w.render(); await tick(); w.render();
+  w.click('[data-wms="tab"][data-v="log"]');
+  const table = w.render().querySelector('.wms-table');
+  const heads = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
+  assert.deepEqual(heads.slice(heads.indexOf('SKU'), heads.indexOf('SKU') + 3), ['SKU', '中文名', '英文名']);
+  const cells = [...table.querySelectorAll('tbody tr')][0].querySelectorAll('td');
+  assert.equal(cells.length, heads.length, 'every row has a cell for every column');
+  assert.deepEqual([...table.querySelectorAll('tbody tr')].map(r => [...r.querySelectorAll('td.wms-name')].map(td => td.textContent)), [['示例主机', 'Demo host'], ['—', 'Demo part']]);
+  w.window.HTMLElement.prototype.setSelectionRange ??= () => {}; // the page keeps the caret after redrawing; the test DOM has no caret
+  for (const [q, sku] of [['示例主机', 'A-1'], ['demo part', 'B-2']]) {
+    const search = w.document.querySelector('[data-wms-search]'); search.value = q; search.dispatchEvent(new w.window.Event('input', { bubbles:true }));
+    await tick(); const rows = [...w.render().querySelectorAll('.wms-table tbody tr')];
+    assert.equal(rows.length, 1, q); assert.match(rows[0].textContent, new RegExp(sku));
+  }
+});
