@@ -39,7 +39,7 @@
         `${chip('src-self', '自建', 'Self')} ${tr('你自己新建的任务。', 'A task you created yourself.')}`
       ])}
       <h3>${tr('哪些内容不能改', 'What you cannot change')}</h3>
-      <p>${tr('来自下达、OKR 和项目的任务，执行人<b>不能修改</b>任务名称、截止日期、优先级和负责人，只有设定任务的人可以改。执行人负责更新进度、选择状态、提交完成结果。', 'For tasks that come from an assignment, an OKR or a project, the assignee <b>cannot change</b> the title, due date, priority or owner; only the person who set the task can. The assignee posts progress, chooses the status and submits the result.')}</p>
+      <p>${tr('来自下达、OKR 和项目的任务，执行人<b>不能修改</b>任务名称、截止日期、优先级和负责人，只有设定任务的人可以改。执行人负责更新进度、选择状态、提交完成结果。例外：来自你自己 OKR 的任务，截止日期和优先级你可以自己改。', 'For tasks that come from an assignment, an OKR or a project, the assignee <b>cannot change</b> the title, due date, priority or owner; only the person who set the task can. The assignee posts progress, chooses the status and submits the result. Exception: for tasks from your own OKR, you can change the due date and priority yourself.')}</p>
       <h3>${tr('任务状态', 'Task status')}</h3>
       <table class="ug-table ug-status"><tbody>
         <tr><th>${chip('st-not', '未开始', 'Not started')}</th><td>${tr('每个任务的默认状态。', 'The default for every new task.')}</td></tr>
