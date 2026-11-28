@@ -22,6 +22,14 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.79', date:'2026-11-28T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('出入库录错了，7 天内可以撤销；发票金额改名“Invoice 总金额”', 'Undo a wrong stock movement within 7 days; invoice amount renamed “Invoice total”'),
+      title:c('库存流水可撤销', 'Undo stock movements'),
+      changes:[
+        c('库存管理 → 出入库流水：有库存“管理”权限的人，可以在录入后 7 天内撤销录错的入库、出库或调拨。要写撤销原因；系统反向记一笔，原记录保留并标“已撤销”，写明谁、什么时候、为什么。', 'Inventory → Movements: people who manage stock can undo a wrong goods in, goods out or transfer within 7 days of entry. Give a reason; an opposite entry is recorded and the original stays, marked Undone with who, when and why.'),
+        c('盘点调整、期初导入、经销商发货、发柜 / 完工入库 / 到港入仓不在这里撤销（盘点请重新盘点，其他在各自模块处理）；入库后货已经出掉的，库存不够时不能撤销。', 'Counts, opening stock, dealer shipments and container / finished-goods / arrival moves are not undone here; goods in cannot be undone once the units have left.'),
+        c('应收账款：发票的“金额”改为“Invoice 总金额”。', 'Receivables: the invoice “Amount” now reads “Invoice total”.'),
+      ] },
     { version:'1.78', date:'2026-11-26T12:00:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
       short:c('任务不再自动变“放弃”；OKR 任务的截止日期自己改；库存流水显示中英文名', 'No more automatic Abandoned; set your own OKR task dates; names in stock movements'),
       title:c('任务状态和截止日期、库存流水显示产品名', 'Task status and dates, product names in stock movements'),
