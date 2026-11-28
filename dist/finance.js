@@ -84,7 +84,7 @@
       <div class="fin-chips">${chips.map(([k, l, n]) => `<button class="${ui.status === k ? 'on' : ''}" data-fin="status" data-v="${k}">${esc(l)} <b>${n}</b></button>`).join('')}</div>
       <div class="fin-table-wrap"><table class="fin-table"><thead><tr>
         <th>${tr('单号', 'Invoice')}</th><th>${tr('负责人', 'Responsible')}</th><th>${tr('开票日期', 'Invoice date')}</th><th>${tr('到期日', 'Due')}</th><th>${tr('客户 / 联系人', 'Customer / contact')}</th>
-        <th>${tr('类型', 'Type')}</th><th>${tr('订单号', 'Order #')}</th><th class="num">${tr('金额', 'Total')}</th><th>${tr('发货', 'Dispatch')}</th><th>${tr('付款方式', 'Method')}</th>
+        <th>${tr('类型', 'Type')}</th><th>${tr('订单号', 'Order #')}</th><th class="num">${tr('Invoice 总金额', 'Invoice total')}</th><th>${tr('发货', 'Dispatch')}</th><th>${tr('付款方式', 'Method')}</th>
         <th>${tr('状态', 'Status')}</th><th class="num">${tr('已收', 'Received')}</th><th class="num">${tr('待收', 'Outstanding')}</th><th>${tr('收款占比', 'Paid')}</th></tr></thead><tbody>
         ${items.length ? items.map(i => `<tr class="fin-row ${i.overdue ? 'late' : ''}" data-fin="open" data-id="${esc(i.id)}" tabindex="0">
           <td class="mono">${esc(i.number)}${i.fileCount ? ` <span class="fin-clip" title="${tr('附件', 'Files')}">${icon('paperclip')}${i.fileCount}</span>` : ''}</td><td>${esc(i.responsibleName || '—')}</td>
@@ -123,7 +123,7 @@
       <label class="field"><span>${tr('账期', 'Payment term')}</span><select name="paymentTerm" data-fin-term data-fin-due-src>${Object.entries(TERM).map(([k, p]) => opt(k, w(p), v.paymentTerm)).join('')}</select></label>
       <label class="field" data-fin-days ${v.paymentTerm === 'custom' ? '' : 'hidden'}><span>${tr('账期天数', 'Days')}</span><input name="termDays" type="number" min="0" max="365" value="${esc(v.termDays ?? '')}" data-fin-due-src></label>
       <label class="field"><span>${tr('到期日（按账期自动算，可改）', 'Due date (from the term; you can change it)')}</span><input name="dueDate" type="date" min="2000-01-01" value="${esc(v.dueDate || '')}" data-fin-due></label>
-      <label class="field"><span>${tr('金额（USD）', 'Total (USD)')}</span><input name="amount" type="number" step="0.01" min="0" required value="${esc(v.amount ?? '')}"></label>
+      <label class="field"><span>${tr('Invoice 总金额（USD）', 'Invoice total (USD)')}</span><input name="amount" type="number" step="0.01" min="0" required value="${esc(v.amount ?? '')}"></label>
       <label class="field"><span>${tr('付款方式', 'Payment method')}</span><select name="payMethod">${Object.entries(METHOD).map(([k, p]) => opt(k, w(p), v.payMethod)).join('')}</select></label>
       <label class="field"><span>${tr('是否已发货', 'Dispatched?')}</span><select name="dispatched" data-fin-shipped>${opt('no', tr('未发货', 'Not yet'), v.dispatched ? 'yes' : 'no')}${opt('yes', tr('已发货', 'Dispatched'), v.dispatched ? 'yes' : 'no')}</select></label>
       <label class="field" data-fin-shipdate ${v.dispatched ? '' : 'hidden'}><span>${tr('发货日期', 'Dispatched on')}</span><input name="dispatchedOn" type="date" min="2000-01-01" value="${esc(v.dispatchedOn || '')}"></label>
