@@ -22,6 +22,13 @@
   // Version numbers follow KC's scheme (v1.1, v1.2 … v1.10, v1.11). Keep every release; never trim the list.
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
+    { version:'1.80', date:'2026-11-28T18:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
+      short:c('库存管理显示库存货值（按 MSRP 或到岸价），只给审批', 'Stock value by MSRP or landed cost in Inventory, for approvers only'),
+      title:c('库存货值', 'Stock value'),
+      changes:[
+        c('库存管理页面顶部显示库存总货值和每个仓库的货值，可以切换“按 MSRP”或“按到岸价”。产品资料没填价格的 SKU 会单独提示没有计入。', 'Inventory shows the total stock value and the value per warehouse, by MSRP or by landed cost. SKUs without the price in the product library are listed as not counted.'),
+        c('只有库存“审批”权限的人和主管理员能看到货值；查看、管理权限的人看不到。', 'Only stock approvers and main admins see the values; view and manage access do not.'),
+      ] },
     { version:'1.79', date:'2026-11-28T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
       short:c('上传支持 iPhone 的 HEIC 照片、单个文件 10 MB；出入库录错 7 天内可撤销；收款保存前确认', 'Upload iPhone HEIC photos, 10 MB per file; undo stock movements within 7 days; confirm before saving receivables'),
       title:c('库存流水可撤销', 'Undo stock movements'),
