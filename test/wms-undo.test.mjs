@@ -10,3 +10,11 @@ test('WMS log: undo button follows canUndo, undone entries are marked, undo reas
   assert.match(src, /已撤销/);
   assert.match(src, /\(\?:撤销：\|Undo: \)/);
 });
+
+// 库存货值 (owner, 2026-11-28): MSRP or landed-cost value bar, only when the server sends values (approvers, main admins).
+test('WMS value bar: only with values from the server, switch between MSRP and landed cost', () => {
+  const src = readFileSync(new URL('../dist/wms.js', import.meta.url), 'utf8');
+  assert.match(src, /const V = data\.values; if \(!V\) return '';/);
+  assert.match(src, /data-wms="value-by" data-v="\$\{k\}"/);
+  assert.match(src, /\['msrp', tr\('按 MSRP', 'By MSRP'\)\], \['landed', tr\('按到岸价', 'By landed cost'\)\]/);
+});

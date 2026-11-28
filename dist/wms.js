@@ -66,6 +66,18 @@
     try { await ctx.api.post(`/wms/movements/${encodeURIComponent(id)}/undo`, { reason:reason.trim() }); ctx.toast?.(tr('已撤销，库存已恢复', 'Undone; stock restored')); history.list = null; data = null; await load(); if (ui.sku) loadHistory(ui.sku); }
     catch (e) { ctx.toast?.(e.message || tr('撤销失败', 'Could not undo')); }
   }
+  /* 库存货值 (owner, 2026-11-28): by MSRP or by landed cost, per warehouse and in total. The server only sends values
+     to warehouse approvers and main admins; everyone else sees no value at all. The chosen basis is remembered per browser. */
+  const valueBy = () => { try { return localStorage.getItem('workos.wms.valueBy') === 'landed' ? 'landed' : 'msrp'; } catch { return 'msrp'; } };
+  function valueBar() {
+    const V = data.values; if (!V) return '';
+    const by = valueBy(), miss = data.locations.reduce((n, l) => n + Number(V.unpriced?.[by]?.[l.id] || 0), 0);
+    return `<div class="wms-value"><div class="wms-value-main"><span>${icon('currency-dollar')} ${tr('库存货值', 'Stock value')}</span>
+        <div class="wms-seg">${[['msrp', tr('按 MSRP', 'By MSRP')], ['landed', tr('按到岸价', 'By landed cost')]].map(([k, label]) => `<button class="${by === k ? 'on' : ''}" data-wms="value-by" data-v="${k}">${label}</button>`).join('')}</div>
+        <b class="wms-value-total">${usd(V.total[by])}</b><small>${tr('仅审批和主管理员可见', 'Visible to approvers and main admins only')}</small></div>
+      <div class="wms-value-locs">${data.locations.map(l => `<span>${esc(word(l))} <b>${usd(V[by][l.id])}</b></span>`).join('')}</div>
+      ${miss ? `<div class="wms-value-miss">${icon('warning')} ${tr(`有 ${miss} 个 SKU × 仓库有库存但产品资料没填${by === 'landed' ? '到岸价' : ' MSRP'}，没有计入`, `${miss} SKU × warehouse rows with stock have no ${by === 'landed' ? 'landed cost' : 'MSRP'} in the product library and are not counted`)}</div>` : ''}</div>`;
+  }
   async function loadHistory(sku) {
     Object.assign(history, { sku, list:null, loading:true });
     try { const r = await ctx.api.get('/wms/movements?sku=' + encodeURIComponent(sku)); if (history.sku === sku) history.list = r.movements; }
@@ -92,7 +104,8 @@
       <div class="page-heading"><div><div class="eyebrow">WORK OS · WMS</div><h1>${tr('库存管理', 'Inventory')}</h1><p>${tr('按 SKU 和库位记录库存。每一次入库、出库、调拨和盘点调整都会留下流水；盘点调整要由有库存审批权限的人确认后才生效。', 'Stock per SKU and location. Every goods-in, goods-out, transfer and count adjustment is logged; count adjustments take effect once someone with stock approval confirms.')}${data.lastImport ? `<br><small class="wms-hint">${tr(`期初库存截至 ${String(data.lastImport.asOf).slice(0, 10)}`, `Opening stock as of ${String(data.lastImport.asOf).slice(0, 10)}`)}</small>` : ''}</p></div>
         <div class="heading-actions"><button class="btn" data-wms="template">${icon('file-arrow-down')} ${tr('下载标准模板', 'Download template')}</button>${data.items.length ? `<button class="btn" data-wms="export" title="${tr('用标准模板导出全部 SKU 的现有库存，改完可以直接用“批量更新库存”传回来', 'All SKUs in the standard template; edit and upload it back with Bulk update')}">${icon('download-simple')} ${tr('导出所有库存', 'Export all stock')}</button>` : ''}${data.canImport ? `<button class="btn" data-wms="import">${icon('upload-simple')} ${tr('批量更新库存', 'Bulk update stock')}</button>` : ''}<button class="btn" data-wms="records">${icon('clock-counter-clockwise')} ${tr('导入 / 导出记录', 'Import / export log')}</button>${window.WorkOSErpAccess?.button?.('warehouse') || ''}</div></div>
       ${data.canOperate ? '' : `<div class="wms-note">${icon('eye')} ${tr('你的仓库库存权限是“查看”：可以看库存和流水，不能加减数量。需要管理权限请联系主管在“供应链权限管理”里开通。', 'Your warehouse access is view-only: you can see stock and movements but not change quantities. Ask a manager to grant Manage in Supply chain permissions.')}</div>`}
-      <div class="wms-kpis">${data.locations.map(l => `<button class="wms-kpi ${ui.loc === l.id ? 'on' : ''}" data-wms="loc" data-v="${esc(l.id)}"><span>${esc(word(l))}</span><b>${fmtN(data.items.reduce((s, it) => s + Number(it.qty?.[l.id] || 0), 0))}</b><em>${data.items.filter(it => Number(it.qty?.[l.id] || 0) > 0).length} SKU${data.values ? ` · ${data.values.cost ? tr('成本货值', 'cost') : tr('零售货值', 'retail')} ${usd(data.values.cost ? data.values.cost[l.id] : data.values.msrp[l.id])}` : ''}</em></button>`).join('')}
+      ${valueBar()}
+      <div class="wms-kpis">${data.locations.map(l => `<button class="wms-kpi ${ui.loc === l.id ? 'on' : ''}" data-wms="loc" data-v="${esc(l.id)}"><span>${esc(word(l))}</span><b>${fmtN(data.items.reduce((s, it) => s + Number(it.qty?.[l.id] || 0), 0))}</b><em>${data.items.filter(it => Number(it.qty?.[l.id] || 0) > 0).length} SKU${data.values ? ` · ${valueBy() === 'landed' ? tr('到岸价货值', 'landed') : tr('MSRP 货值', 'MSRP')} ${usd(data.values[valueBy()][l.id])}` : ''}</em></button>`).join('')}
         <div class="wms-kpi ${pending.length ? 'warn' : ''}"><span>${tr('待确认', 'Awaiting confirmation')}</span><b>${pending.length}</b><em>${tr('盘点调整', 'count adjustments')}</em></div>
         <div class="wms-kpi"><span>${tr('今日流水', 'Today')}</span><b>${today}</b><em>${tr('条操作', 'movements')}</em></div></div>
       ${!data.items.length ? `<div class="wms-note">${icon('info')} ${data.canImport ? tr('还没有库存数据。请点右上角“下载标准模板”，填好后用“批量更新库存”上传（Excel 另存为 CSV）。', 'No stock yet. Download the standard template at the top right, fill it in and upload it with Bulk update stock (Excel saved as CSV).') : tr('还没有库存数据，等待管理员导入期初库存。', 'No stock yet; waiting for an administrator to import the opening balance.')}</div>` : ''}
@@ -559,6 +572,7 @@
     if (a === 'history') { ui.sku = b.dataset.sku || null; ui.tab = 'log'; ui.q = ''; return ctx.rerender(); }
     if (a === 'op') return openOp(b.dataset.type, b.dataset.sku);
     if (a === 'undo') return undoMovement(b.dataset.id);
+    if (a === 'value-by') { try { localStorage.setItem('workos.wms.valueBy', b.dataset.v); } catch { /* the page still switches */ } return ctx.rerender(); }
     if (a === 'bins') return binsDialog(b.dataset.sku);
     if (a === 'binmgr') return binMgrDialog();
     if (a === 'bm-edit') { bm.edit = b.dataset.code; return paintBinMgr(); }
