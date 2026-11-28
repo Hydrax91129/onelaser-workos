@@ -579,7 +579,7 @@
     return files.length ? `<ul class="okb-evidence">${files.map(f => `<li><a href="${esc(apiBase() + '/tasks/' + encodeURIComponent(f.taskId) + '/attachments/' + encodeURIComponent(f.id))}" target="_blank" rel="noopener">${icon('paperclip')} ${esc(f.name)}</a></li>`).join('')}</ul>` : '';
   }
   async function uploadEvidence(taskId, file) {
-    if (file.size > 8 * 1024 * 1024) throw new Error(tr(`${file.name} 超过 8 MB`, `${file.name} is larger than 8 MB`));
+    if (file.size > 10 * 1024 * 1024) throw new Error(tr(`${file.name} 超过 10 MB`, `${file.name} is larger than 10 MB`));
     const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] || ''); r.onerror = () => rej(new Error(tr('文件读取失败', 'Could not read the file'))); r.readAsDataURL(file); });
     return ctx.api.post('/tasks/' + encodeURIComponent(taskId) + '/attachments', { name:file.name, mime:file.type || 'application/octet-stream', dataBase64:b64 });
   }

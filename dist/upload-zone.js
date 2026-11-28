@@ -26,7 +26,9 @@
   const mb = n => (n / 1048576).toFixed(n < 1048576 ? 1 : 0) + ' MB';
 
   function html({ id, lang = 'zh', accept = [], multiple = true, maxBytes = 0, hint = '', label = '' }) {
-    const limits = [hint, maxBytes ? `≤ ${mb(maxBytes)}` : ''].filter(Boolean).join(' · ');
+    // iPhone photos (HEIC) are converted to JPG before upload by heic.js (owner, 2026-11-28).
+    const heic = accept.some(x => /^image\/(jpeg|png|webp)$/.test(x)) && hint && !/heic/i.test(hint) ? ' · HEIC' : '';
+    const limits = [hint + heic, maxBytes ? `≤ ${mb(maxBytes)}` : ''].filter(Boolean).join(' · ');
     return `<div class="up-zone" data-upload-zone="${esc(id)}" tabindex="0" role="button" aria-label="${esc(label || t(lang, 'drop'))}">
       <i class="ph ph-upload-simple" aria-hidden="true"></i>
       <span class="up-text"><b>${esc(label || t(lang, 'drop'))}</b>${limits ? `<small>${esc(limits)}</small>` : ''}</span>

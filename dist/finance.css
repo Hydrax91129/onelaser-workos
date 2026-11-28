@@ -62,3 +62,4 @@ html[data-theme=dark] .fin-kpi,html[data-theme=dark] .fin-aging,html[data-theme=
 html[data-theme=dark] .fin-table th{background:#23252f;color:#b8bccb}html[data-theme=dark] .fin-table td{border-color:#2a2d38}html[data-theme=dark] .fin-row:hover td{background:#252836}
 html[data-theme=dark] .fin-badge.soft,html[data-theme=dark] .fin-seg,html[data-theme=dark] .fin-agebar,html[data-theme=dark] .fin-bar{background:#2a2d38;color:#c7cbd8}html[data-theme=dark] .fin-aging-bars b{color:#eee}
 html[data-theme=dark] .fin-note{background:#1d2742;color:#9db7ff}html[data-theme=dark] .fin-pct{color:#c7cbd8}
+.fin-save-row{justify-content:space-between;padding-top:12px;border-top:1px solid var(--border,#e4e7ef);margin-top:14px}.fin-save{min-height:42px;padding:10px 26px;font-size:15px;font-weight:600}

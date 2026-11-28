@@ -55,6 +55,17 @@
     finally { loading = false; ctx.rerender(); }
   }
   /* The summary carries only the latest 500 movements; one SKU's full history comes from the server. */
+  /* 撤销 (owner, 2026-11-28): a warehouse manager undoes a goods in / out / transfer entered by mistake, within 7 days.
+     The server writes the opposite movement; the original stays in the log marked 已撤销. */
+  async function undoMovement(id) {
+    const m = (history.list || data.movements).find(x => x.id === id) || data.movements.find(x => x.id === id); if (!m) return;
+    const what = `${tr(TYPES[m.type]?.[0] || m.type, TYPES[m.type]?.[1] || m.type)} · ${m.sku} · ${fmtN(Math.abs(m.qty))} · ${word(loc(m.location))}${m.toLocation ? ' → ' + word(loc(m.toLocation)) : ''}`;
+    const reason = prompt(tr(`撤销这条流水？\n${what}\n\n系统会反向记一笔，原记录保留。请写撤销原因：`, `Undo this movement?\n${what}\n\nAn opposite entry is recorded; the original is kept. Why is it undone?`));
+    if (reason == null) return;
+    if (reason.trim().length < 2) { ctx.toast?.(tr('请写明撤销原因。', 'Say why it is undone.')); return; }
+    try { await ctx.api.post(`/wms/movements/${encodeURIComponent(id)}/undo`, { reason:reason.trim() }); ctx.toast?.(tr('已撤销，库存已恢复', 'Undone; stock restored')); history.list = null; data = null; await load(); if (ui.sku) loadHistory(ui.sku); }
+    catch (e) { ctx.toast?.(e.message || tr('撤销失败', 'Could not undo')); }
+  }
   async function loadHistory(sku) {
     Object.assign(history, { sku, list:null, loading:true });
     try { const r = await ctx.api.get('/wms/movements?sku=' + encodeURIComponent(sku)); if (history.sku === sku) history.list = r.movements; }
@@ -191,7 +202,7 @@
     return `<div class="wms-filters"><div class="wms-seg">${types.map(([k, label]) => `<button class="${ui.type === k ? 'on' : ''}" data-wms="type" data-v="${k}">${esc(label)}</button>`).join('')}</div>
       ${ui.sku ? `<span class="wms-hint">${tr('只看', 'Only')} <b class="mono">${esc(ui.sku)}</b>${history.loading ? ` · ${tr('正在读取完整流水…', 'loading full history…')}` : history.list ? ` · ${tr(`完整流水 ${history.list.length} 条`, `full history, ${history.list.length}`)}` : ''} <button class="wms-link" data-wms="history" data-sku="">${tr('看全部', 'Show all')}</button></span>` : `<span class="wms-hint">${tr('显示最近 500 条；点库存表里的“流水”可看单个 SKU 的完整记录', 'Latest 500 shown; use “Log” on a stock row for one SKU’s full history')}</span>`}</div>
       <div class="wms-table-wrap"><table class="wms-table"><thead><tr><th>${tr('操作日期', 'Date')}</th><th>${tr('类型', 'Type')}</th><th>${tr('操作方式', 'How')}</th><th>SKU</th><th>${tr('中文名', 'Chinese name')}</th><th>${tr('英文名', 'English name')}</th><th>${tr('仓库', 'Warehouse')}</th><th class="num">${tr('数量', 'Qty')}</th><th>${tr('原因', 'Reason')}</th><th>${tr('单号', 'Reference')}</th><th>${tr('操作人', 'By')}</th><th>${tr('状态', 'Status')}</th></tr></thead><tbody>
-      ${list.map(m => { const [zh, en, , cls] = TYPES[m.type] || [m.type, m.type, '', '']; const st = STATES[m.status] || STATES.done; return `<tr><td class="nowrap">${esc(m.opDate || '')}<small title="${tr('录入时间', 'Recorded at')}">${tr('录入', 'rec.')} ${when(m.createdAt)}</small></td><td><span class="wms-type ${cls}">${tr(zh, en)}</span></td><td class="nowrap">${esc(methodLabel(m))}${m.method === 'batch' || m.method === 'import' || m.method === 'dealer' && m.batchSkus > 1 ? `<small>${tr(`本批 ${m.batchSkus} 个 SKU · 共 ${fmtN(m.batchUnits)} 件`, `${m.batchSkus} SKUs · ${fmtN(m.batchUnits)} units in this batch`)}</small>` : ''}</td><td class="mono nowrap">${esc(m.sku)}</td><td class="wms-name">${esc(m.nameZh || '—')}</td><td class="wms-name">${esc(m.nameEn || '—')}</td><td class="nowrap">${esc(word(loc(m.location)))}${m.toLocation ? ` → ${esc(word(loc(m.toLocation)))}` : ''}</td><td class="num ${m.qty < 0 ? 'neg' : 'pos'}">${m.type === 'transfer' ? '' : m.qty > 0 ? '+' : ''}${fmtN(m.qty)}</td><td>${esc(reasonText(m.reason))}</td><td class="mono">${esc(m.reference || '—')}</td><td>${esc(m.byName)}${m.approvedByName ? `<small>${tr('确认', 'confirmed')}：${esc(m.approvedByName)}</small>` : ''}</td><td><span class="wms-state ${st[2]}">${tr(st[0], st[1])}</span>${m.status === 'pending' && m.confirmers?.length ? `<small class="wms-who">${tr('可确认：', 'Can confirm: ')}${esc(m.confirmers.join(tr('、', ', ')))}</small>` : ''}</td></tr>`; }).join('') || `<tr><td colspan="12" class="wms-empty">${tr('还没有流水', 'No movements yet')}</td></tr>`}
+      ${list.map(m => { const [zh, en, , cls] = TYPES[m.type] || [m.type, m.type, '', '']; const st = STATES[m.status] || STATES.done; return `<tr><td class="nowrap">${esc(m.opDate || '')}<small title="${tr('录入时间', 'Recorded at')}">${tr('录入', 'rec.')} ${when(m.createdAt)}</small></td><td><span class="wms-type ${cls}">${tr(zh, en)}</span></td><td class="nowrap">${esc(methodLabel(m))}${m.method === 'batch' || m.method === 'import' || m.method === 'dealer' && m.batchSkus > 1 ? `<small>${tr(`本批 ${m.batchSkus} 个 SKU · 共 ${fmtN(m.batchUnits)} 件`, `${m.batchSkus} SKUs · ${fmtN(m.batchUnits)} units in this batch`)}</small>` : ''}</td><td class="mono nowrap">${esc(m.sku)}</td><td class="wms-name">${esc(m.nameZh || '—')}</td><td class="wms-name">${esc(m.nameEn || '—')}</td><td class="nowrap">${esc(word(loc(m.location)))}${m.toLocation ? ` → ${esc(word(loc(m.toLocation)))}` : ''}</td><td class="num ${m.qty < 0 ? 'neg' : 'pos'}">${m.type === 'transfer' ? '' : m.qty > 0 ? '+' : ''}${fmtN(m.qty)}</td><td>${esc(reasonText(m.reason))}</td><td class="mono">${esc(m.reference || '—')}</td><td>${esc(m.byName)}${m.approvedByName ? `<small>${tr('确认', 'confirmed')}：${esc(m.approvedByName)}</small>` : ''}</td><td>${m.reversed ? `<span class="wms-state undone" title="${esc(tr(`${m.reversed.byName} 于 ${when(m.reversed.at)} 撤销：${m.reversed.reason}`, `Undone by ${m.reversed.byName} on ${when(m.reversed.at)}: ${m.reversed.reason}`))}">${tr('已撤销', 'Undone')}</span><small class="wms-who">${esc(m.reversed.byName)} · ${esc(m.reversed.reason)}</small>` : `<span class="wms-state ${st[2]}">${tr(st[0], st[1])}</span>`}${m.reverses ? `<small class="wms-who">${tr('撤销记录', 'Undo entry')}</small>` : ''}${m.canUndo ? `<button class="wms-link wms-undo" data-wms="undo" data-id="${esc(m.id)}" title="${tr('录错了？7 天内可以撤销：系统反向记一笔，原记录保留', 'Entered by mistake? Undo within 7 days: an opposite entry is recorded and the original is kept')}">${tr('撤销', 'Undo')}</button>` : ''}${m.status === 'pending' && m.confirmers?.length ? `<small class="wms-who">${tr('可确认：', 'Can confirm: ')}${esc(m.confirmers.join(tr('、', ', ')))}</small>` : ''}</td></tr>`; }).join('') || `<tr><td colspan="12" class="wms-empty">${tr('还没有流水', 'No movements yet')}</td></tr>`}
     </tbody></table></div>`;
   }
 
@@ -213,6 +224,7 @@
     if ((m = /^(?:完工入库|Finished goods in) (.*)$/.exec(t))) return tr(`完工入库 ${m[1]}`, `Finished goods in ${m[1]}`);
     if ((m = /^(?:到港入仓|Arrival received) (.*)$/.exec(t))) return tr(`到港入仓 ${m[1]}`, `Arrival received ${m[1]}`);
     if ((m = /^(?:期初导入（截至 (.*)）|Opening stock \(as of (.*)\))$/.exec(t))) return tr(`期初导入（截至 ${m[1] || m[2]}）`, `Opening stock (as of ${m[1] || m[2]})`);
+    if ((m = /^(?:撤销：|Undo: )(.*)$/.exec(t))) return tr(`撤销：${m[1]}`, `Undo: ${m[1]}`);
     if ((m = /^(?:Dealer order|经销商订单) (.*)$/.exec(t))) return tr(`经销商订单 ${m[1]}`, `Dealer order ${m[1]}`);
     return t;
   }
@@ -546,6 +558,7 @@
     if (a === 'sort') { if (ui.sort === b.dataset.v) ui.dir = -ui.dir; else { ui.sort = b.dataset.v; ui.dir = ['sku', 'name', 'type', 'bin'].includes(b.dataset.v) ? 1 : -1; } return ctx.rerender(); }
     if (a === 'history') { ui.sku = b.dataset.sku || null; ui.tab = 'log'; ui.q = ''; return ctx.rerender(); }
     if (a === 'op') return openOp(b.dataset.type, b.dataset.sku);
+    if (a === 'undo') return undoMovement(b.dataset.id);
     if (a === 'bins') return binsDialog(b.dataset.sku);
     if (a === 'binmgr') return binMgrDialog();
     if (a === 'bm-edit') { bm.edit = b.dataset.code; return paintBinMgr(); }

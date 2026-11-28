@@ -84,7 +84,7 @@
       <div class="fin-chips">${chips.map(([k, l, n]) => `<button class="${ui.status === k ? 'on' : ''}" data-fin="status" data-v="${k}">${esc(l)} <b>${n}</b></button>`).join('')}</div>
       <div class="fin-table-wrap"><table class="fin-table"><thead><tr>
         <th>${tr('单号', 'Invoice')}</th><th>${tr('负责人', 'Responsible')}</th><th>${tr('开票日期', 'Invoice date')}</th><th>${tr('到期日', 'Due')}</th><th>${tr('客户 / 联系人', 'Customer / contact')}</th>
-        <th>${tr('类型', 'Type')}</th><th>${tr('订单号', 'Order #')}</th><th class="num">${tr('金额', 'Total')}</th><th>${tr('发货', 'Dispatch')}</th><th>${tr('付款方式', 'Method')}</th>
+        <th>${tr('类型', 'Type')}</th><th>${tr('订单号', 'Order #')}</th><th class="num">${tr('Invoice 总金额', 'Invoice total')}</th><th>${tr('发货', 'Dispatch')}</th><th>${tr('付款方式', 'Method')}</th>
         <th>${tr('状态', 'Status')}</th><th class="num">${tr('已收', 'Received')}</th><th class="num">${tr('待收', 'Outstanding')}</th><th>${tr('收款占比', 'Paid')}</th></tr></thead><tbody>
         ${items.length ? items.map(i => `<tr class="fin-row ${i.overdue ? 'late' : ''}" data-fin="open" data-id="${esc(i.id)}" tabindex="0">
           <td class="mono">${esc(i.number)}${i.fileCount ? ` <span class="fin-clip" title="${tr('附件', 'Files')}">${icon('paperclip')}${i.fileCount}</span>` : ''}</td><td>${esc(i.responsibleName || '—')}</td>
@@ -123,7 +123,7 @@
       <label class="field"><span>${tr('账期', 'Payment term')}</span><select name="paymentTerm" data-fin-term data-fin-due-src>${Object.entries(TERM).map(([k, p]) => opt(k, w(p), v.paymentTerm)).join('')}</select></label>
       <label class="field" data-fin-days ${v.paymentTerm === 'custom' ? '' : 'hidden'}><span>${tr('账期天数', 'Days')}</span><input name="termDays" type="number" min="0" max="365" value="${esc(v.termDays ?? '')}" data-fin-due-src></label>
       <label class="field"><span>${tr('到期日（按账期自动算，可改）', 'Due date (from the term; you can change it)')}</span><input name="dueDate" type="date" min="2000-01-01" value="${esc(v.dueDate || '')}" data-fin-due></label>
-      <label class="field"><span>${tr('金额（USD）', 'Total (USD)')}</span><input name="amount" type="number" step="0.01" min="0" required value="${esc(v.amount ?? '')}"></label>
+      <label class="field"><span>${tr('Invoice 总金额（USD）', 'Invoice total (USD)')}</span><input name="amount" type="number" step="0.01" min="0" required value="${esc(v.amount ?? '')}"></label>
       <label class="field"><span>${tr('付款方式', 'Payment method')}</span><select name="payMethod">${Object.entries(METHOD).map(([k, p]) => opt(k, w(p), v.payMethod)).join('')}</select></label>
       <label class="field"><span>${tr('是否已发货', 'Dispatched?')}</span><select name="dispatched" data-fin-shipped>${opt('no', tr('未发货', 'Not yet'), v.dispatched ? 'yes' : 'no')}${opt('yes', tr('已发货', 'Dispatched'), v.dispatched ? 'yes' : 'no')}</select></label>
       <label class="field" data-fin-shipdate ${v.dispatched ? '' : 'hidden'}><span>${tr('发货日期', 'Dispatched on')}</span><input name="dispatchedOn" type="date" min="2000-01-01" value="${esc(v.dispatchedOn || '')}"></label>
@@ -212,7 +212,7 @@
         <div class="fin-kpi"><span>${tr('收款占比', 'Paid')}</span><b>${Math.round(c.paidPct)}%</b><em>${bar(c.paidPct)}</em></div>${c.deposited ? `<div class="fin-kpi"><span>${tr('支票待到账', 'Check to clear')}</span><b>${usd(c.deposited)}</b></div>` : ''}
         <div class="fin-kpi ${c.overdue ? 'red' : ''}"><span>${tr('到期日', 'Due')}</span><b>${esc(c.dueDate || '—')}</b><em>${c.overdue ? tr(`已逾期 ${c.daysOverdue} 天`, `${c.daysOverdue} days overdue`) : ''}</em></div></div>
       ${c.canEdit ? `<section class="fin-sec"><h3>${icon('pencil-simple')} ${tr('发票信息', 'Invoice details')}</h3><form id="fin-edit">${formFields(c, data?.people || [])}
-        <div class="fin-actions"><button class="btn" type="submit">${tr('保存修改', 'Save changes')}</button><button class="fin-link danger" type="button" data-fin="archive">${tr('删除这条应收', 'Delete this invoice')}</button></div><p class="wms-error" role="alert"></p></form></section>`
+        <div class="fin-actions fin-save-row"><button class="fin-link danger" type="button" data-fin="archive">${tr('删除这条应收', 'Delete this invoice')}</button><button class="btn primary fin-save" type="submit">${icon('floppy-disk')} ${tr('保存修改', 'Save changes')}</button></div><p class="wms-error" role="alert"></p></form></section>`
         : `<dl class="fin-facts"><div><dt>${tr('负责人', 'Responsible')}</dt><dd>${esc(c.responsibleName || '—')}</dd></div><div><dt>${tr('客户公司', 'Company')}</dt><dd>${esc(c.customer || '—')}</dd></div>
           <div><dt>${tr('联系人', 'Contact')}</dt><dd>${esc(c.contact || '—')}${c.contactEmail ? ` · <a href="mailto:${esc(c.contactEmail)}">${esc(c.contactEmail)}</a>` : ''}</dd></div>
           <div><dt>${tr('联系电话', 'Phone')}</dt><dd>${c.contactPhone ? `<a href="tel:${esc(c.contactPhone)}">${esc(phoneText(c.contactPhone))}</a>` : '—'}</dd></div>
@@ -284,6 +284,11 @@
     const btn = f.querySelector('button[type="submit"]'); if (btn) btn.disabled = true;
     try {
       if (f.id === 'fin-new' || f.id === 'fin-edit') { const bad = contactError(readForm(f)); if (bad) throw new Error(bad); }
+      // Owner (2026-11-28): receivables are serious; confirm in both languages before saving changes.
+      if (f.id === 'fin-edit') {
+        const v = readForm(f), who = v.customer || v.contact;
+        if (!confirm(`财务收款是公司非常严肃的业务，少收、不收都是渎职。你确定你填入的信息是准确的吗？\nAccounts receivable is serious company business: collecting too little, or nothing, is a breach of duty. Are you sure everything you entered is accurate?\n\n${who ? who + ' · ' : ''}Invoice ${usd(v.amount)}${v.dueDate ? ' · ' + tr('到期', 'due') + ' ' + v.dueDate : ''}`)) { if (btn) btn.disabled = false; return; }
+      }
       if (f.id === 'fin-new') {
         const r = await ctx.api.post('/finance/receivables', readForm(f));
         if (pending.length) await uploadFiles(r.id, pending); pending = [];

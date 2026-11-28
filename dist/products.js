@@ -751,7 +751,7 @@
     const f = t.closest('form'), kind = f.dataset.kind, err = f.querySelector('.pd-error'), slot = f.querySelector('[data-pd-import-preview]');
     err.textContent = ''; slot.innerHTML = ''; importState = { kind, rows:null };
     const file = t.files?.[0]; if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { err.textContent = tr('文件太大（超过 5MB）。', 'File too large (over 5 MB).'); return; }
+    if (file.size > 10 * 1024 * 1024) { err.textContent = tr('文件太大（超过 10 MB）。', 'File too large (over 10 MB).'); return; }
     try {
       const r = readImport(kind, await file.text());
       if (r.problems.length) { err.innerHTML = r.problems.slice(0, 8).map(esc).join('<br>') + (r.problems.length > 8 ? `<br>${tr(`…另有 ${r.problems.length - 8} 处`, `…and ${r.problems.length - 8} more`)}` : ''); return; }
