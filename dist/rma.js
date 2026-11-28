@@ -104,7 +104,7 @@
   function newDialog() {
     const skus = data.skus.map(s => `<option value="${esc(s.sku)}">${esc(retName(s.name))}</option>`).join('');
     newPhotos = [];
-    window.WorkOSUpload?.register('rma-new-photos', { lang:lang(), accept:IMG_MIME, multiple:true, maxBytes:5 * 1024 * 1024, onFiles:files => { newPhotos.push(...files); paintNewPhotos(); return tr(`已选 ${newPhotos.length} 张`, `${newPhotos.length} selected`); } });
+    window.WorkOSUpload?.register('rma-new-photos', { lang:lang(), accept:IMG_MIME, multiple:true, maxBytes:10 * 1024 * 1024, onFiles:files => { newPhotos.push(...files); paintNewPhotos(); return tr(`已选 ${newPhotos.length} 张`, `${newPhotos.length} selected`); } });
     ctx.modal(tr('登记退货', 'Register a return'), `<form id="rma-new" class="wms-form" data-upload-scope="rma-new-photos">
       <div class="form-grid">
         <label class="field"><span>${tr('主 SKU（产品资料里的）', 'Main SKU (from the product library)')}</span><input name="mainSku" required list="rma-main-skus" autocomplete="off" placeholder="${tr('输入或选择产品资料里的 SKU', 'Type or pick a product-library SKU')}" data-rma-main><datalist id="rma-main-skus">${(data.mainSkus || []).map(s => `<option value="${esc(s.sku)}">${esc(mainName(s))}</option>`).join('')}</datalist><small class="hint" data-rma-main-hint></small></label>
@@ -120,7 +120,7 @@
         <label class="field full"><span>${tr('退货原因 + 退款情况描述', 'Return reason + refund details')}</span><textarea name="reason" required minlength="2" maxlength="2000" rows="3" placeholder="${tr('例如：开机不出光；已全额退款 $3,499', 'e.g. no laser output; refunded $3,499 in full')}"></textarea></label>
         <label class="field full"><span>${tr('退货外观与配件情况', 'Condition and accessories on return')}</span><input name="condition" required minlength="2" maxlength="1000" placeholder="${tr('例如：外箱破损，缺少排风管', 'e.g. box damaged, exhaust hose missing')}"></label>
         <div class="field full"><span>${tr('收货照片', 'Photos on receipt')}</span><p class="wms-hint" style="margin:2px 0 6px">${tr('拍下收到时的样子：外箱、机身各面、铭牌和序列号、损坏的地方、缺少的配件，用来做退货分析。', 'Show it as it arrived: the box, every side, the label and serial, any damage and missing parts, for the return analysis.')}</p>
-          ${window.WorkOSUpload ? window.WorkOSUpload.html({ id:'rma-new-photos', lang:lang(), accept:IMG_MIME, multiple:true, maxBytes:5 * 1024 * 1024, hint:tr('PNG、JPG、WebP', 'PNG, JPG, WebP') }) : ''}<div class="rma-new-thumbs" data-rma-new-thumbs></div></div>
+          ${window.WorkOSUpload ? window.WorkOSUpload.html({ id:'rma-new-photos', lang:lang(), accept:IMG_MIME, multiple:true, maxBytes:10 * 1024 * 1024, hint:tr('PNG、JPG、WebP', 'PNG, JPG, WebP') }) : ''}<div class="rma-new-thumbs" data-rma-new-thumbs></div></div>
       </div><p class="wms-hint">${tr('退货 SKU 物料表里还没有时，登记会自动新建；大货 SKU 照常从列表里选。', 'A return SKU not in the item list yet is created when you register; pick regular SKUs from the list.')}</p><p class="wms-error" role="alert"></p></form>`,
       `<button class="btn" data-live-action="close">${tr('取消', 'Cancel')}</button><button class="btn primary" type="submit" form="rma-new">${tr('登记', 'Register')}</button>`);
   }
@@ -231,7 +231,7 @@
     const list = [...files].filter(f => /^image\/(png|jpeg|webp|gif)$/.test(f.type)); if (!list.length) { if (err) err.textContent = tr('只能上传 PNG、JPEG、WebP 或 GIF 图片。', 'Only PNG, JPEG, WebP or GIF images.'); return; }
     busy = true; let failed = '';
     for (const f of list) {
-      if (f.size > 5 * 1024 * 1024) { failed = tr(`${f.name} 超过 5 MB`, `${f.name} is over 5 MB`); continue; }
+      if (f.size > 10 * 1024 * 1024) { failed = tr(`${f.name} 超过 10 MB`, `${f.name} is over 10 MB`); continue; }
       const name = f.name && f.name !== 'image.png' ? f.name : `${kind}-${Date.now()}.${(f.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`;
       try { await ctx.api.post(`/rma/${encodeURIComponent(detail.id)}/photos`, { kind, name, mime:f.type, dataBase64:await b64(f) }); } catch (e) { failed = e.message || tr('上传失败', 'Upload failed'); }
     }

@@ -23,12 +23,15 @@
   // short: one line for the version badge at the top right; changes: the full notes for this page.
   const RELEASES = [
     { version:'1.79', date:'2026-11-28T12:00:00-08:00', frontend:'', backend:'', author:KC, deployer:KC,
-      short:c('出入库录错了，7 天内可以撤销；发票金额改名“Invoice 总金额”', 'Undo a wrong stock movement within 7 days; invoice amount renamed “Invoice total”'),
+      short:c('上传支持 iPhone 的 HEIC 照片、单个文件 10 MB；出入库录错 7 天内可撤销；收款保存前确认', 'Upload iPhone HEIC photos, 10 MB per file; undo stock movements within 7 days; confirm before saving receivables'),
       title:c('库存流水可撤销', 'Undo stock movements'),
       changes:[
         c('库存管理 → 出入库流水：有库存“管理”权限的人，可以在录入后 7 天内撤销录错的入库、出库或调拨。要写撤销原因；系统反向记一笔，原记录保留并标“已撤销”，写明谁、什么时候、为什么。', 'Inventory → Movements: people who manage stock can undo a wrong goods in, goods out or transfer within 7 days of entry. Give a reason; an opposite entry is recorded and the original stays, marked Undone with who, when and why.'),
         c('盘点调整、期初导入、经销商发货、发柜 / 完工入库 / 到港入仓不在这里撤销（盘点请重新盘点，其他在各自模块处理）；入库后货已经出掉的，库存不够时不能撤销。', 'Counts, opening stock, dealer shipments and container / finished-goods / arrival moves are not undone here; goods in cannot be undone once the units have left.'),
-        c('应收账款：发票的“金额”改为“Invoice 总金额”。', 'Receivables: the invoice “Amount” now reads “Invoice total”.'),
+        c('所有上传都支持 iPhone 的 HEIC 照片：在你的电脑上自动转成 JPG 再上传（照片不会发到别处），所有页面都能预览。', 'Every upload accepts iPhone HEIC photos: they are converted to JPG on your computer before upload (nothing is sent elsewhere) and preview everywhere.'),
+        c('单个文件上限统一提高到 10 MB（原来退货照片 5 MB、任务附件 8 MB、Bug 截图 3 MB）。', 'Files can be up to 10 MB each everywhere (was 5 MB for return photos, 8 MB for task files, 3 MB for bug screenshots).'),
+                c('应收账款：发票的“金额”改为“Invoice 总金额”。', 'Receivables: the invoice “Amount” now reads “Invoice total”.'),
+        c('应收账款：“保存修改”按钮放到右边并加大，删除放左边；保存前中英文确认“财务收款是公司非常严肃的业务，少收、不收都是渎职，你确定信息准确吗？”。', 'Receivables: Save changes is now the large button on the right with delete on the left, and saving asks you to confirm, in Chinese and English, that everything is accurate.'),
       ] },
     { version:'1.78', date:'2026-11-26T12:00:00-08:00', frontend:'', backend:'', author:ELIAN, deployer:ELIAN,
       short:c('任务不再自动变“放弃”；OKR 任务的截止日期自己改；库存流水显示中英文名', 'No more automatic Abandoned; set your own OKR task dates; names in stock movements'),

@@ -212,7 +212,7 @@
         <div class="fin-kpi"><span>${tr('收款占比', 'Paid')}</span><b>${Math.round(c.paidPct)}%</b><em>${bar(c.paidPct)}</em></div>${c.deposited ? `<div class="fin-kpi"><span>${tr('支票待到账', 'Check to clear')}</span><b>${usd(c.deposited)}</b></div>` : ''}
         <div class="fin-kpi ${c.overdue ? 'red' : ''}"><span>${tr('到期日', 'Due')}</span><b>${esc(c.dueDate || '—')}</b><em>${c.overdue ? tr(`已逾期 ${c.daysOverdue} 天`, `${c.daysOverdue} days overdue`) : ''}</em></div></div>
       ${c.canEdit ? `<section class="fin-sec"><h3>${icon('pencil-simple')} ${tr('发票信息', 'Invoice details')}</h3><form id="fin-edit">${formFields(c, data?.people || [])}
-        <div class="fin-actions"><button class="btn" type="submit">${tr('保存修改', 'Save changes')}</button><button class="fin-link danger" type="button" data-fin="archive">${tr('删除这条应收', 'Delete this invoice')}</button></div><p class="wms-error" role="alert"></p></form></section>`
+        <div class="fin-actions fin-save-row"><button class="fin-link danger" type="button" data-fin="archive">${tr('删除这条应收', 'Delete this invoice')}</button><button class="btn primary fin-save" type="submit">${icon('floppy-disk')} ${tr('保存修改', 'Save changes')}</button></div><p class="wms-error" role="alert"></p></form></section>`
         : `<dl class="fin-facts"><div><dt>${tr('负责人', 'Responsible')}</dt><dd>${esc(c.responsibleName || '—')}</dd></div><div><dt>${tr('客户公司', 'Company')}</dt><dd>${esc(c.customer || '—')}</dd></div>
           <div><dt>${tr('联系人', 'Contact')}</dt><dd>${esc(c.contact || '—')}${c.contactEmail ? ` · <a href="mailto:${esc(c.contactEmail)}">${esc(c.contactEmail)}</a>` : ''}</dd></div>
           <div><dt>${tr('联系电话', 'Phone')}</dt><dd>${c.contactPhone ? `<a href="tel:${esc(c.contactPhone)}">${esc(phoneText(c.contactPhone))}</a>` : '—'}</dd></div>
@@ -284,6 +284,11 @@
     const btn = f.querySelector('button[type="submit"]'); if (btn) btn.disabled = true;
     try {
       if (f.id === 'fin-new' || f.id === 'fin-edit') { const bad = contactError(readForm(f)); if (bad) throw new Error(bad); }
+      // Owner (2026-11-28): receivables are serious; confirm in both languages before saving changes.
+      if (f.id === 'fin-edit') {
+        const v = readForm(f), who = v.customer || v.contact;
+        if (!confirm(`财务收款是公司非常严肃的业务，少收、不收都是渎职。你确定你填入的信息是准确的吗？\nAccounts receivable is serious company business: collecting too little, or nothing, is a breach of duty. Are you sure everything you entered is accurate?\n\n${who ? who + ' · ' : ''}Invoice ${usd(v.amount)}${v.dueDate ? ' · ' + tr('到期', 'due') + ' ' + v.dueDate : ''}`)) { if (btn) btn.disabled = false; return; }
+      }
       if (f.id === 'fin-new') {
         const r = await ctx.api.post('/finance/receivables', readForm(f));
         if (pending.length) await uploadFiles(r.id, pending); pending = [];

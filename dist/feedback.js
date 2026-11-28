@@ -7,7 +7,7 @@
   'use strict';
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   const icon = n => `<i class="ph ph-${n}" aria-hidden="true"></i>`;
-  const MAX_IMAGES = 6, MAX_BYTES = 3 * 1024 * 1024, TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+  const MAX_IMAGES = 6, MAX_BYTES = 10 * 1024 * 1024, TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
   let ctx = null, images = [], sending = false, lastFocus = null, list = null, listLoading = false, listError = '';
   const tr = (zh, en) => (ctx?.lang?.() === 'en' ? en : zh);
 
@@ -33,7 +33,7 @@
       <form id="fb-form">
         <label class="fb-label" for="fb-text">${tr('遇到什么问题，或者有什么建议？', 'What went wrong, or what would you improve?')}</label>
         <textarea id="fb-text" name="body" maxlength="5000" rows="5" placeholder="${tr('例如：在“库存管理”点“导入期初库存”后没反应。可以直接 Ctrl/⌘ + V 粘贴截图。', 'e.g. “Import opening stock” does nothing on the Inventory page. You can paste screenshots with Ctrl/⌘ + V.')}">${esc(document.getElementById('fb-text')?.value || '')}</textarea>
-        <div class="fb-drop" data-feedback-drop tabindex="0" role="button" aria-label="${tr('添加截图', 'Add screenshots')}">${icon('image')}<span>${tr('把截图拖到这里、直接粘贴，或', 'Drag screenshots here, paste them, or')} <b>${tr('点击选择图片', 'click to choose')}</b></span><small>${tr(`最多 ${MAX_IMAGES} 张，每张不超过 3MB`, `Up to ${MAX_IMAGES} images, 3 MB each`)}</small><input type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden data-feedback-file></div>
+        <div class="fb-drop" data-feedback-drop tabindex="0" role="button" aria-label="${tr('添加截图', 'Add screenshots')}">${icon('image')}<span>${tr('把截图拖到这里、直接粘贴，或', 'Drag screenshots here, paste them, or')} <b>${tr('点击选择图片', 'click to choose')}</b></span><small>${tr(`最多 ${MAX_IMAGES} 张，每张不超过 10 MB`, `Up to ${MAX_IMAGES} images, 10 MB each`)}</small><input type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden data-feedback-file></div>
         ${images.length ? `<div class="fb-thumbs">${thumbs()}</div>` : ''}
         <p class="fb-meta">${icon('info')} ${tr('会一起附上你的名字和当前页面，方便我们定位问题。', 'Your name and the current page are attached so we can find the problem.')}</p>
         <p class="fb-error" role="alert">${esc(error)}</p>
@@ -52,7 +52,7 @@
     let error = '';
     for (const f of files) {
       if (!TYPES.includes(f.type)) { error = tr('只支持 PNG、JPG、GIF、WebP 图片。', 'Only PNG, JPG, GIF and WebP images.'); continue; }
-      if (f.size > MAX_BYTES) { error = tr(`“${f.name || '图片'}”超过 3MB。`, `“${f.name || 'image'}” is over 3 MB.`); continue; }
+      if (f.size > MAX_BYTES) { error = tr(`“${f.name || '图片'}”超过 10 MB。`, `“${f.name || 'image'}” is over 10 MB.`); continue; }
       if (images.length >= MAX_IMAGES) { error = tr(`最多 ${MAX_IMAGES} 张图片。`, `Up to ${MAX_IMAGES} images.`); break; }
       try { images.push({ name:f.name || `screenshot-${images.length + 1}.png`, type:f.type, data:await readFile(f), url:'' }); images[images.length - 1].url = `data:${f.type};base64,${images[images.length - 1].data}`; }
       catch { error = tr('图片读取失败，请再试一次。', 'Could not read the image; try again.'); }
